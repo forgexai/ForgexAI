@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { usePrivyAuth } from "@/hooks/usePrivyAuth";
 import WorkflowLoop from "./WorkflowLoop";
 
 export default function HeroSection() {
@@ -15,6 +17,18 @@ export default function HeroSection() {
   ];
   
   const [currentPhrase, setCurrentPhrase] = useState(0);
+  const router = useRouter();
+  const { authenticated, login, ready } = usePrivyAuth();
+
+  const handleLaunchStudio = async () => {
+    if (!ready) return;
+    
+    if (authenticated) {
+      router.push('/dashboard');
+    } else {
+      await login();
+    }
+  };
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -26,8 +40,8 @@ export default function HeroSection() {
 
   return (
     <section className="min-h-screen text-white relative overflow-hidden">
-      <motion.div
-        className="absolute inset-0 bg-gradient-to-br from-[#9945FF] via-[#14F195] to-[#00BBFF] bg-[length:200%_200%]"
+        <motion.div
+          className="absolute inset-0 bg-gradient-to-br from-[#1a0033] via-[#2d1b69] to-[#0f172a] bg-[length:200%_200%]"
         animate={{
           backgroundPosition: ["0% 0%", "100% 100%", "0% 0%"],
         }}
@@ -41,7 +55,7 @@ export default function HeroSection() {
         <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 shadow-lg">
           <Badge className="mb-6">Now in Beta</Badge>
           <h1 className="text-5xl md:text-6xl font-bold leading-tight text-white drop-shadow-xl">
-            Build Autonomous Solana Agents — Visually.
+            Build Autonomous Solana Agents — <span className="text-[#ff6b35]">Visually.</span>
           </h1>
           <p className="text-lg md:text-xl text-gray-200 mt-4 max-w-2xl">
             Drag, connect, and deploy AI agents that automate your on-chain world. No code. Fully non-custodial.
@@ -67,7 +81,9 @@ export default function HeroSection() {
             >
               <Button 
                 size="lg" 
-                className="bg-gradient-to-r from-[#9945FF]  cursor-pointer via-[#14F195] to-[#00BBFF] text-white border-0 hover:opacity-90"
+                onClick={handleLaunchStudio}
+                disabled={!ready}
+                className="bg-gradient-to-r from-[#ff6b35] to-[#f7931e] cursor-pointer text-white border-0 hover:opacity-90"
               >
                 Launch Studio
               </Button>
@@ -79,7 +95,7 @@ export default function HeroSection() {
               <Button 
                 variant="outline" 
                 size="lg"
-                className="border-white text-black cursor-pointer  hover:bg-clip-text hover:bg-gradient-to-r hover:from-[#9945FF] hover:via-[#14F195] hover:to-[#00BBFF]"
+                className="border-white text-black hover:text-white cursor-pointer  hover:bg-clip-text hover:bg-gradient-to-r hover:from-[#9945FF] hover:via-[#14F195] hover:to-[#00BBFF]"
               >
                 View Templates
               </Button>

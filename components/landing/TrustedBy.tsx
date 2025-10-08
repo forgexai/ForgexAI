@@ -1,3 +1,5 @@
+import { Zap, Layers, Coins, TrendingUp } from "lucide-react";
+
 export default function TrustedBy() {
   return (
     <section className="bg-white/5 backdrop-blur-md py-6 border-t border-white/10">
@@ -6,39 +8,36 @@ export default function TrustedBy() {
           Powered by the Solana ecosystem — integrated with Jupiter, Tensor, Kamino, and Drift.
         </p>
         <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12">
-          {/* Jupiter Logo */}
-          <div className="opacity-60 hover:opacity-100 transition-opacity duration-300">
-            <svg width="120" height="40" viewBox="0 0 120 40" className="grayscale hover:grayscale-0 transition-all duration-300">
-              <rect x="10" y="15" width="100" height="10" rx="5" fill="currentColor" />
-              <text x="60" y="25" textAnchor="middle" className="text-xs fill-white">Jupiter</text>
-            </svg>
+          {/* Jupiter */}
+          <div className="opacity-60 hover:opacity-100 transition-all duration-300 group">
+            <div className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-white/5 transition-colors">
+              <Zap className="w-6 h-6 text-[#9945FF] group-hover:scale-110 transition-transform" />
+              <span className="text-sm font-medium text-white">Jupiter</span>
+            </div>
           </div>
           
-          {/* Tensor Logo */}
-          <div className="opacity-60 hover:opacity-100 transition-opacity duration-300">
-            <svg width="120" height="40" viewBox="0 0 120 40" className="grayscale hover:grayscale-0 transition-all duration-300">
-              <circle cx="20" cy="20" r="8" fill="currentColor" />
-              <circle cx="40" cy="20" r="8" fill="currentColor" />
-              <circle cx="60" cy="20" r="8" fill="currentColor" />
-              <text x="80" y="25" textAnchor="middle" className="text-xs fill-white">Tensor</text>
-            </svg>
+          {/* Tensor */}
+          <div className="opacity-60 hover:opacity-100 transition-all duration-300 group">
+            <div className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-white/5 transition-colors">
+              <Layers className="w-6 h-6 text-[#14F195] group-hover:scale-110 transition-transform" />
+              <span className="text-sm font-medium text-white">Tensor</span>
+            </div>
           </div>
           
-          {/* Kamino Logo */}
-          <div className="opacity-60 hover:opacity-100 transition-opacity duration-300">
-            <svg width="120" height="40" viewBox="0 0 120 40" className="grayscale hover:grayscale-0 transition-all duration-300">
-              <polygon points="20,10 30,25 20,40 10,25" fill="currentColor" />
-              <text x="50" y="25" textAnchor="middle" className="text-xs fill-white">Kamino</text>
-            </svg>
+          {/* Kamino */}
+          <div className="opacity-60 hover:opacity-100 transition-all duration-300 group">
+            <div className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-white/5 transition-colors">
+              <Coins className="w-6 h-6 text-[#00BBFF] group-hover:scale-110 transition-transform" />
+              <span className="text-sm font-medium text-white">Kamino</span>
+            </div>
           </div>
           
-          {/* Drift Logo */}
-          <div className="opacity-60 hover:opacity-100 transition-opacity duration-300">
-            <svg width="120" height="40" viewBox="0 0 120 40" className="grayscale hover:grayscale-0 transition-all duration-300">
-              <rect x="10" y="10" width="20" height="20" rx="3" fill="currentColor" />
-              <rect x="35" y="10" width="20" height="20" rx="3" fill="currentColor" />
-              <text x="70" y="25" textAnchor="middle" className="text-xs fill-white">Drift</text>
-            </svg>
+          {/* Drift */}
+          <div className="opacity-60 hover:opacity-100 transition-all duration-300 group">
+            <div className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-white/5 transition-colors">
+              <TrendingUp className="w-6 h-6 text-[#FF6B35] group-hover:scale-110 transition-transform" />
+              <span className="text-sm font-medium text-white">Drift</span>
+            </div>
           </div>
         </div>
       </div>

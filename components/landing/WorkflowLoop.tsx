@@ -1,8 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 
 export default function WorkflowLoop() {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
   const workflowNodes = [
     { id: 0, label: "On Message", angle: 0 },
     { id: 1, label: "Logic Check", angle: 72 },
@@ -15,12 +21,24 @@ export default function WorkflowLoop() {
   const centerX = 280;
   const centerY = 250;
 
+  if (!isClient) {
+    return (
+      <div className="relative w-full h-[420px] md:h-[500px] flex items-center justify-center">
+        <div className="relative max-w-[600px] mx-auto w-full h-full">
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-gradient-to-br from-[#ff6b35] to-[#f7931e] shadow-[0_0_30px_rgba(255,107,53,0.6)] flex items-center justify-center">
+            <img src="/sol.svg" alt="Solana" width="30" height="30" className="brightness-0 invert" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative w-full h-[420px] md:h-[500px] flex items-center justify-center">
       <div className="relative max-w-[600px] mx-auto w-full h-full">
          {/* Central Solana logo/glow */}
          <motion.div
-           className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-gradient-to-br from-[#9945FF] to-[#14F195] shadow-[0_0_30px_rgba(153,69,255,0.6)] flex items-center justify-center"
+           className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-gradient-to-br from-[#ff6b35] to-[#f7931e] shadow-[0_0_30px_rgba(255,107,53,0.6)] flex items-center justify-center"
            animate={{
              scale: [1, 1.1, 1],
              opacity: [0.8, 1, 0.8],
@@ -42,7 +60,7 @@ export default function WorkflowLoop() {
           return (
              <motion.div
                key={node.id}
-               className="absolute w-20 h-20 rounded-full bg-gradient-to-br from-[#9945FF] to-[#14F195] shadow-[0_0_20px_rgba(153,69,255,0.5)] flex items-center justify-center text-white text-sm font-medium text-center px-2 z-10"
+               className="absolute w-20 h-20 rounded-full bg-gradient-to-br from-[#ff6b35] to-[#f7931e] shadow-[0_0_20px_rgba(255,107,53,0.5)] flex items-center justify-center text-white text-sm font-medium text-center px-2 z-10"
               style={{
                 left: x - 32,
                 top: y - 32,
@@ -67,9 +85,9 @@ export default function WorkflowLoop() {
          <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
            <defs>
              <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-               <stop offset="0%" stopColor="#9945FF" />
-               <stop offset="50%" stopColor="#14F195" />
-               <stop offset="100%" stopColor="#00BBFF" />
+               <stop offset="0%" stopColor="#ff6b35" />
+               <stop offset="50%" stopColor="#f7931e" />
+               <stop offset="100%" stopColor="#ff8c42" />
              </linearGradient>
            </defs>
 

@@ -7,11 +7,11 @@ import { ReactNode } from "react";
 function ClientProvider({ children }: { children: ReactNode }) {
   return (
     <PrivyProvider
-      appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID!}
+      appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || ""}
       config={{
         appearance: {
           theme: "dark",
-          accentColor: "#8b5cf6", // ShadCN violet-500
+          accentColor: "#8b5cf6",
         },
         loginMethods: ["google", "wallet"],
         embeddedWallets: {
@@ -19,14 +19,9 @@ function ClientProvider({ children }: { children: ReactNode }) {
           requireUserPasswordOnCreate: false,
           noPromptOnSignature: false,
         },
-        embeddedWalletsConfig: {
-          solana: {
-            createOnLogin: "users-without-wallets",
-          },
-        },
       }}
     >
-      <Toaster />
+      <Toaster position="top-right" duration={2000} />
       {children}
     </PrivyProvider>
   );
