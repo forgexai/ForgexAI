@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
 import { useAtom } from "jotai";
 import ReactFlow, {
   Background,
@@ -35,6 +35,62 @@ function FlowCanvas() {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
 
+  useEffect(() => {
+    const handleAddNode = (event: CustomEvent) => {
+      const { type, label, category } = event.detail;
+      
+      if (!reactFlowInstance) return;
+
+      const getNodeType = (category: string) => {
+        switch (category) {
+          case "Core":
+            return "condition";
+          case "Logic":
+            return "condition";
+          case "Solana":
+            return "solana";
+          case "Data":
+            return "condition";
+          case "Output":
+            return "telegram";
+          default:
+            return "condition";
+        }
+      };
+
+      const position = reactFlowInstance.screenToFlowPosition({
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2,
+      });
+
+      const newNode: Node = {
+        id: `${type}-${Date.now()}`,
+        type: getNodeType(category),
+        position,
+        data: { 
+          label,
+          category 
+        },
+      };
+
+      setNodes((nds) => [...nds, newNode]);
+    };
+
+    window.addEventListener('addNode', handleAddNode as EventListener);
+    return () => {
+      window.removeEventListener('addNode', handleAddNode as EventListener);
+    };
+  }, [reactFlowInstance, setNodes]);
+
+  // Update existing edges to use orange color
+  useEffect(() => {
+    setEdges((eds) => eds.map(edge => ({
+      ...edge,
+      style: { stroke: "#f97316", strokeWidth: 2 },
+      animated: true
+    })));
+  }, [setEdges]);
+
   const onNodesChange = useCallback(
     (changes: any) => {
       setNodes((nds) => applyNodeChanges(changes, nds));
@@ -58,7 +114,11 @@ function FlowCanvas() {
 
   const onConnect = useCallback(
     (connection: Connection) => {
-      setEdges((eds) => addEdge(connection, eds));
+      setEdges((eds) => addEdge({
+        ...connection,
+        style: { stroke: "#f97316", strokeWidth: 2 },
+        animated: true
+      }, eds));
     },
     [setEdges]
   );
@@ -118,7 +178,7 @@ function FlowCanvas() {
   );
 
   return (
-    <div ref={reactFlowWrapper} className="flex-1 bg-[#0B0C10] relative">
+    <div ref={reactFlowWrapper} className="flex-1 bg-[#111827] relative" style={{ height: '100%', width: '100%' }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -130,12 +190,16 @@ function FlowCanvas() {
         onDragOver={onDragOver}
         onInit={setReactFlowInstance}
         fitView
-        className="bg-[#0B0C10]"
+        style={{ width: '100%', height: '100%' }}
+        className="bg-[#111827]"
+        deleteKeyCode={['Backspace', 'Delete']}
+        multiSelectionKeyCode={['Meta', 'Ctrl']}
+        selectionKeyCode={['Meta', 'Ctrl']}
         defaultEdgeOptions={{
           animated: true,
-          style: { stroke: "#9945FF", strokeWidth: 2 },
+          style: { stroke: "#f97316", strokeWidth: 2 },
         }}
-        connectionLineStyle={{ stroke: "#9945FF", strokeWidth: 2 }}
+        connectionLineStyle={{ stroke: "#f97316", strokeWidth: 2 }}
         proOptions={{ hideAttribution: true }}
         minZoom={0.1}
         maxZoom={4}
@@ -146,12 +210,12 @@ function FlowCanvas() {
       >
         <Background 
           variant="dots" 
-          gap={16} 
-          size={1} 
-          color="#374151"
+          gap={20} 
+          size={1.5} 
+          color="#6B7280"
         />
         <MiniMap 
-          nodeColor="#9945FF"
+          nodeColor="#f97316"
           maskColor="rgba(0, 0, 0, 0.6)"
           className="bg-[#1A1B23] border border-white/10 rounded-lg"
         />
