@@ -1,14 +1,31 @@
 "use client";
 
-import { Toaster } from "@/components/ui/sonner";
-import { ReactNode } from "react";
+import React from "react";
+import { PrivyProvider } from "@privy-io/react-auth";
+import { toSolanaWalletConnectors } from "@privy-io/react-auth/solana";
 
-function ClientProvider({ children }: { children: ReactNode }) {
+function ClientProvider({ children }: { children: React.ReactNode }) {
   return (
-    <>
-      <Toaster />
+    <PrivyProvider
+      appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || ""}
+      clientId={process.env.NEXT_PUBLIC_PRIVY_CLIENT_ID || ""}
+      config={{
+        loginMethods: ["wallet","google", "email"],
+        appearance: {
+          theme: "dark",
+          accentColor: "#ff6b35",
+          walletChainType: "solana",  
+          walletList: ["phantom", "backpack", "solflare"],
+        },
+        externalWallets: {
+          solana: {
+            connectors: toSolanaWalletConnectors(),
+          },
+        },
+      }}
+    >
       {children}
-    </>
+    </PrivyProvider>
   );
 }
 
