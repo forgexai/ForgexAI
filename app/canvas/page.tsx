@@ -1,18 +1,18 @@
 import { AuthGuard } from "@/components/auth/AuthGuard";
-import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { SidebarLeft } from "@/components/dashboard/SidebarLeft";
+import { CanvasHeader } from "@/components/canvas/CanvasHeader";
 import { CanvasArea } from "@/components/dashboard/CanvasArea";
-import { SidebarRight } from "@/components/dashboard/SidebarRight";
+import { NodePaletteButton } from "@/components/canvas/NodePaletteButton";
+import { NodeInspectorButton } from "@/components/canvas/NodeInspectorButton";
 
 export default function CanvasPage() {
   return (
     <AuthGuard>
-      <div className="flex flex-col h-screen w-full bg-[#0B0C10] text-white">
-        <DashboardHeader />
-        <div className="flex flex-1 overflow-hidden">
-          <SidebarLeft />
+      <div className="flex flex-col h-screen w-full bg-[#111827] text-white">
+        <CanvasHeader />
+        <div className="flex-1 relative" style={{ height: 'calc(100vh - 4rem)' }}>
           <CanvasArea />
-          <SidebarRight />
+          <NodePaletteButton />
+          <NodeInspectorButton />
         </div>
       </div>
     </AuthGuard>
