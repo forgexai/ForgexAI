@@ -83,6 +83,7 @@ export function NodeInspectorButton() {
     );
 
     toast.success("Node updated successfully");
+    setIsModalOpen(false);
   };
 
   const handleDeleteNode = () => {
@@ -110,14 +111,20 @@ export function NodeInspectorButton() {
           setSelectedNode(null);
         }
       }}>
-        <DialogContent className="bg-[#1A1B23] border-white/10 text-white max-w-2xl max-h-[80vh] overflow-hidden">
+        <DialogContent 
+          className="bg-[#1A1B23] border-white/10 text-white max-w-2xl max-h-[80vh] overflow-hidden"
+          aria-describedby="node-inspector-description"
+        >
           <DialogHeader className="flex flex-row items-center justify-between pr-8">
             <DialogTitle>Node Inspector</DialogTitle>
+            <div id="node-inspector-description" className="sr-only">
+              Inspect and edit node properties including label, description, and parameters
+            </div>
             <div className="flex gap-2">
               <Button
                 onClick={handleSaveChanges}
                 disabled={!!jsonError}
-                className="bg-[#9945FF] hover:bg-[#7d3acc] text-white cursor-pointer"
+                className="bg-orange-500 hover:bg-orange-600 text-white cursor-pointer"
                 size="sm"
               >
                 Save Changes
@@ -130,8 +137,8 @@ export function NodeInspectorButton() {
                 className="bg-red-600 hover:bg-red-700 cursor-pointer"
                 title="Delete Node"
               >
-                <Trash2 className="w-4 h-4 mr-1" />
-                Delete
+                <Trash2 className="w-4 h-4 " />
+                
               </Button>
             </div>
           </DialogHeader>

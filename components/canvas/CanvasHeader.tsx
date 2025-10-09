@@ -136,12 +136,12 @@ export function CanvasHeader() {
 
   return (
     <>
-      <div className="h-16 bg-[#1A1B23] border-b border-white/10 flex items-center justify-between px-6">
-        <div className="flex items-center gap-3">
+      <div className="h-16 bg-[#1A1B23] border-b border-white/10 flex items-center justify-between px-8">
+        <div className="flex items-center gap-4">
           <Button
             variant="ghost"
             size="sm"
-            className="text-gray-400 hover:text-white hover:bg-white/10"
+            className="text-gray-400 hover:text-white hover:bg-white/10 px-3 py-2"
           >
             <ChevronLeft className="w-4 h-4" />
           </Button>
@@ -152,12 +152,12 @@ export function CanvasHeader() {
               onChange={(e) => setWorkflowName(e.target.value)}
               onBlur={handleNameSave}
               onKeyPress={handleNameKeyPress}
-              className="bg-transparent border-none text-white font-semibold text-lg px-0 py-0 h-auto focus:ring-0 focus:border-none"
+              className="bg-transparent border-none text-white font-semibold text-lg px-3 py-2 h-auto focus:ring-0 focus:border-none hover:bg-white/5 rounded"
               autoFocus
             />
           ) : (
             <h1 
-              className="text-lg font-semibold text-white cursor-pointer hover:bg-white/5 px-2 py-1 rounded"
+              className="text-lg font-semibold text-white cursor-pointer hover:bg-white/5 px-3 py-2 rounded transition-colors"
               onClick={handleNameEdit}
             >
               {workflowName}
@@ -170,7 +170,7 @@ export function CanvasHeader() {
             variant="outline"
             size="sm"
             onClick={handleSaveWorkflow}
-            className="border-gray-700 text-white hover:bg-white/10"
+            className="border-gray-700 text-black cursor-pointer px-4 py-2"
           >
             <Save className="w-4 h-4 mr-2" />
             Save
@@ -180,7 +180,7 @@ export function CanvasHeader() {
             variant="outline"
             size="sm"
             onClick={handleLoadWorkflow}
-            className="border-gray-700 text-white hover:bg-white/10"
+            className="border-gray-700 text-black cursor-pointer px-4 py-2"
           >
             <Download className="w-4 h-4 mr-2" />
             Load
@@ -190,7 +190,7 @@ export function CanvasHeader() {
             size="sm"
             onClick={() => setIsDeployModalOpen(true)}
             disabled={!authenticated}
-            className="bg-gradient-to-r from-[#9945FF] to-[#00BBFF] text-white hover:opacity-90"
+            className="bg-[#9945FF] text-white cursor-pointer hover:bg-[#9945FF]/80"
           >
             <Send className="w-4 h-4 mr-2" />
             Deploy to Telegram
@@ -257,7 +257,7 @@ export function CanvasHeader() {
             <Button
               onClick={handleDeployToTelegram}
               disabled={isDeploying || !botToken.trim()}
-              className="bg-gradient-to-r from-[#9945FF] via-[#14F195] to-[#00BBFF] text-white hover:opacity-90"
+              className="bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:opacity-90"
             >
               {isDeploying ? "Deploying..." : "Confirm Deploy"}
             </Button>

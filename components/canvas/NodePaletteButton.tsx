@@ -90,16 +90,16 @@ export function NodePaletteButton() {
     <>
       <Button
         onClick={() => setIsModalOpen(true)}
-        className="absolute top-4 left-4 w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg z-10"
+        className="absolute top-4 left-4 w-14 h-14 rounded-full bg-orange-500 hover:bg-orange-600 text-white shadow-lg z-10"
         size="icon"
       >
-        <Plus className="w-6 h-6" />
+        <Plus className="w-12 h-12" />
       </Button>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setIsModalOpen(false)} />
-          <div className="relative w-80 bg-[#1A1B23] border-r border-white/10 h-full">
+        <div className="fixed inset-0 z-50 flex animate-in fade-in duration-200">
+          <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" onClick={() => setIsModalOpen(false)} />
+          <div className="relative w-80 bg-[#1A1B23] border-r border-white/10 h-full animate-in slide-in-from-left duration-300">
             <div className="p-4 border-b border-white/10">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-white">Add Nodes</h2>
@@ -119,7 +119,7 @@ export function NodePaletteButton() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search nodes"
-                  className="pl-10 pr-10 bg-[#0B0C10] border-blue-500 text-white placeholder-gray-400"
+                  className="pl-10 pr-10 bg-[#0B0C10] border-orange-500 text-white placeholder-gray-400"
                 />
                 {searchQuery && (
                   <Button

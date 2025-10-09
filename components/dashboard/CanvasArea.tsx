@@ -82,6 +82,15 @@ function FlowCanvas() {
     };
   }, [reactFlowInstance, setNodes]);
 
+  // Update existing edges to use orange color
+  useEffect(() => {
+    setEdges((eds) => eds.map(edge => ({
+      ...edge,
+      style: { stroke: "#f97316", strokeWidth: 2 },
+      animated: true
+    })));
+  }, [setEdges]);
+
   const onNodesChange = useCallback(
     (changes: any) => {
       setNodes((nds) => applyNodeChanges(changes, nds));
@@ -105,7 +114,11 @@ function FlowCanvas() {
 
   const onConnect = useCallback(
     (connection: Connection) => {
-      setEdges((eds) => addEdge(connection, eds));
+      setEdges((eds) => addEdge({
+        ...connection,
+        style: { stroke: "#f97316", strokeWidth: 2 },
+        animated: true
+      }, eds));
     },
     [setEdges]
   );
@@ -184,9 +197,9 @@ function FlowCanvas() {
         selectionKeyCode={['Meta', 'Ctrl']}
         defaultEdgeOptions={{
           animated: true,
-          style: { stroke: "#9945FF", strokeWidth: 2 },
+          style: { stroke: "#f97316", strokeWidth: 2 },
         }}
-        connectionLineStyle={{ stroke: "#9945FF", strokeWidth: 2 }}
+        connectionLineStyle={{ stroke: "#f97316", strokeWidth: 2 }}
         proOptions={{ hideAttribution: true }}
         minZoom={0.1}
         maxZoom={4}
@@ -202,7 +215,7 @@ function FlowCanvas() {
           color="#6B7280"
         />
         <MiniMap 
-          nodeColor="#9945FF"
+          nodeColor="#f97316"
           maskColor="rgba(0, 0, 0, 0.6)"
           className="bg-[#1A1B23] border border-white/10 rounded-lg"
         />
