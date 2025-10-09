@@ -11,10 +11,10 @@ export default function WorkflowLoop() {
   }, []);
   const workflowNodes = [
     { id: 0, label: "On Message", angle: 0 },
-    { id: 1, label: "Logic Check", angle: 72 },
-    { id: 2, label: "Swap", angle: 144 },
-    { id: 3, label: "Alert", angle: 216 },
-    { id: 4, label: "Memory", angle: 288 },
+    { id: 1, label: "Setup Memory", angle: 72 },
+    { id: 2, label: "Connect Wallet", angle: 144 },
+    { id: 3, label: "Set Trigger", angle: 216 },
+    { id: 4, label: "Deploy", angle: 288 },
   ];
 
   const radius = 220;
@@ -25,8 +25,8 @@ export default function WorkflowLoop() {
     return (
       <div className="relative w-full h-[420px] md:h-[500px] flex items-center justify-center">
         <div className="relative max-w-[600px] mx-auto w-full h-full">
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-gradient-to-br from-[#ff6b35] to-[#f7931e] shadow-[0_0_30px_rgba(255,107,53,0.6)] flex items-center justify-center">
-            <img src="/sol.svg" alt="Solana" width="30" height="30" className="brightness-0 invert" />
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-18 h-18 rounded-full bg-gradient-to-br from-[#ff6b35] to-[#f7931e] shadow-[0_0_30px_rgba(255,107,53,0.6)] flex items-center justify-center">
+            <img src="/sol.svg" alt="Solana" width="36" height="36" className="brightness-0 invert" />
           </div>
         </div>
       </div>

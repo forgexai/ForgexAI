@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { nodesAtom, edgesAtom } from "@/lib/state/atoms";
 import { toast } from "sonner";
 import { Save, Download, Send } from "lucide-react";
+import Image from "next/image";
 
 export function DashboardHeader() {
   const [nodes] = useAtom(nodesAtom);
@@ -123,7 +124,14 @@ export function DashboardHeader() {
     <>
       <div className="h-16 bg-[#1A1B23] border-b border-white/10 flex items-center justify-between px-6">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-bold bg-gradient-to-r from-[#9945FF] to-[#00BBFF] bg-clip-text text-transparent">
+          <Image
+            src="/logo.jpg"
+            alt="ForgexAI Logo"
+            width={32}
+            height={32}
+            className="rounded"
+          />
+          <h1 className="text-xl font-bold text-white bg-clip-text text-transparent">
             ForgexAI Studio
           </h1>
         </div>
@@ -133,7 +141,7 @@ export function DashboardHeader() {
             variant="outline"
             size="sm"
             onClick={handleSaveWorkflow}
-            className="border-gray-700 text-black cursor-pointer"
+            className="border-gray-700 text-black cursor-pointer text-white"
           >
             <Save className="w-4 h-4 mr-2" />
             Save
@@ -143,7 +151,7 @@ export function DashboardHeader() {
             variant="outline"
             size="sm"
             onClick={handleLoadWorkflow}
-            className="border-gray-700  text-black cursor-pointer"
+            className="border-gray-700  text-black cursor-pointer text-white"
           >
             <Download className="w-4 h-4 mr-2" />
             Load
@@ -153,7 +161,7 @@ export function DashboardHeader() {
             size="sm"
             onClick={() => setIsDeployModalOpen(true)}
             disabled={!authenticated}
-            className="bg-gradient-to-r from-[#9945FF]  to-[#00BBFF] text-white hover:opacity-90"
+            className="bg-gradient-to-r from-[#9945FF]  to-[#00BBFF] text-white hover:opacity-90 cursor-pointer"
           >
             <Send className="w-4 h-4 mr-2" />
             Deploy to Telegram

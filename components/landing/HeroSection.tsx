@@ -26,7 +26,7 @@ export default function HeroSection() {
     if (authenticated) {
       router.push('/workflows');
     } else {
-      await login();
+      login();
     }
   };
 
@@ -55,10 +55,10 @@ export default function HeroSection() {
         <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 shadow-lg">
           <Badge className="mb-6">Now in Beta</Badge>
           <h1 className="text-5xl md:text-6xl font-bold leading-tight text-white drop-shadow-xl">
-            Build Autonomous Solana Agents — <span className="text-[#ff6b35]">Visually.</span>
+             Your AI Persona, Live in  <span className="text-[#ff6b35]">Minutes.</span>
           </h1>
           <p className="text-lg md:text-xl text-gray-200 mt-4 max-w-2xl">
-            Drag, connect, and deploy AI agents that automate your on-chain world. No code. Fully non-custodial.
+          Drag-and-drop builder for AI with persistent memory and built-in wallet. Deploy to Telegram, Twitter, Slack—instantly.
           </p>
           <div className="mt-6 h-8 overflow-hidden">
             <AnimatePresence mode="wait">
@@ -85,7 +85,7 @@ export default function HeroSection() {
                 disabled={!ready}
                 className="bg-gradient-to-r from-[#ff6b35] to-[#f7931e] cursor-pointer text-white border-0 hover:opacity-90"
               >
-                Launch Studio
+                Launch in minutes
               </Button>
             </motion.div>
             <motion.div
