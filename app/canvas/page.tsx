@@ -4,7 +4,7 @@ import { SidebarLeft } from "@/components/dashboard/SidebarLeft";
 import { CanvasArea } from "@/components/dashboard/CanvasArea";
 import { SidebarRight } from "@/components/dashboard/SidebarRight";
 
-export default function DashboardPage() {
+export default function CanvasPage() {
   return (
     <AuthGuard>
       <div className="flex flex-col h-screen w-full bg-[#0B0C10] text-white">

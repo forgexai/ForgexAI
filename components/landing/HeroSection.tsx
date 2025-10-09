@@ -24,7 +24,7 @@ export default function HeroSection() {
     if (!ready) return;
     
     if (authenticated) {
-      router.push('/dashboard');
+      router.push('/workflows');
     } else {
       await login();
     }
