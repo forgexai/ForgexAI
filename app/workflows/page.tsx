@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { usePrivyAuth } from "@/hooks/usePrivyAuth";
 import { 
   Workflow,  
   Play,  
@@ -32,9 +33,19 @@ const evaluationItems = [
 export default function WorkflowsPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('workflows');
+  const { logout } = usePrivyAuth();
 
   const handleAddWorkflow = () => {
     router.push('/canvas');
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
   return (
@@ -90,6 +101,15 @@ export default function WorkflowsPage() {
             <Button variant="ghost" size="sm" className="w-full justify-start cursor-pointer">
               <Settings className="w-4 h-4 mr-3" />
               Settings
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="w-full justify-start cursor-pointer"
+              onClick={handleLogout}
+            >
+              <Settings className="w-4 h-4 mr-3" />
+              Logout
             </Button>
           </div>
         </div>

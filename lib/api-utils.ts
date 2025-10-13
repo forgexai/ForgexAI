@@ -274,6 +274,7 @@ class ForgexApiClient {
   }>> {
     return this.request("/api/users/auth/logout", {
       method: "POST",
+      body: JSON.stringify({}),
     });
   }
 
