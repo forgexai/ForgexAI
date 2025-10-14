@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DeleteWorkflowDialog } from "@/components/workflows/DeleteWorkflowDialog";
+import { ViewExecutionsModal } from "@/components/workflows/ViewExecutionsModal";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
@@ -96,6 +97,8 @@ export default function WorkflowsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [workflowToDelete, setWorkflowToDelete] = useState<{ id: string; name: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [executionsModalOpen, setExecutionsModalOpen] = useState(false);
+  const [selectedWorkflow, setSelectedWorkflow] = useState<{ id: string; name: string } | null>(null);
   const { logout, forgexAuth } = usePrivyAuth();
 
   const handleAddWorkflow = () => {
@@ -169,6 +172,11 @@ export default function WorkflowsPage() {
     // TODO: Implement runWorkflow API call
     console.log('Run workflow:', workflowId);
     toast.success('Workflow execution started');
+  };
+
+  const handleViewExecutions = (workflowId: string, workflowName: string) => {
+    setSelectedWorkflow({ id: workflowId, name: workflowName });
+    setExecutionsModalOpen(true);
   };
 
   useEffect(() => {
@@ -495,18 +503,31 @@ export default function WorkflowsPage() {
                        
                           </div>
                           
-                          {/* Run Workflow Button at Bottom */}
+                          {/* Action Buttons at Bottom */}
                           <div className="mt-4 pt-4 border-t border-white/10">
-                            <Button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRunWorkflow(workflow.id);
-                              }}
-                              className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-green-500/25"
-                            >
-                              <PlayIcon className="w-4 h-4 mr-2" />
-                              Run Workflow
-                            </Button>
+                            <div className="flex space-x-2">
+                              <Button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleViewExecutions(workflow.id, workflow.name);
+                                }}
+                                variant="outline"
+                                className="flex-1 border-gray-700 text-black hover:bg-white/80 cursor-pointer py-2 text-sm font-medium rounded-lg transition-all duration-200"
+                              >
+                                <Clock className="w-4 h-4 mr-2" />
+                                View Executions
+                              </Button>
+                              <Button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRunWorkflow(workflow.id);
+                                }}
+                                className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-green-500/25"
+                              >
+                                <PlayIcon className="w-4 h-4 mr-2" />
+                                Run Workflow
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -525,6 +546,13 @@ export default function WorkflowsPage() {
         workflowName={workflowToDelete?.name || null}
         isDeleting={isDeleting}
         onConfirm={confirmDeleteWorkflow}
+      />
+
+      <ViewExecutionsModal
+        open={executionsModalOpen}
+        onOpenChange={setExecutionsModalOpen}
+        workflowId={selectedWorkflow?.id || ""}
+        workflowName={selectedWorkflow?.name || ""}
       />
     </AuthGuard>
   );

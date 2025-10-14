@@ -467,7 +467,7 @@ class ForgexApiClient {
     if (params?.offset) queryParams.set("offset", params.offset.toString());
 
     return this.request(
-      `/api/agents/workflows/${workflowId}/executions?${queryParams}`
+      `/agents/workflows/${workflowId}/executions?${queryParams}`
     );
   }
 
