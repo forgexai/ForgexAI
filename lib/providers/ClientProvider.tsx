@@ -10,11 +10,11 @@ function ClientProvider({ children }: { children: React.ReactNode }) {
       appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || ""}
       clientId={process.env.NEXT_PUBLIC_PRIVY_CLIENT_ID || ""}
       config={{
-        loginMethods: ["wallet","google", "email"],
+        loginMethods: ["wallet", "google", "email"],
         appearance: {
           theme: "dark",
           accentColor: "#ff6b35",
-          walletChainType: "solana",  
+          walletChainType: "solana-only",
           walletList: ["phantom", "backpack", "solflare"],
         },
         externalWallets: {
