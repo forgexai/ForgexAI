@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAtom } from "jotai";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
 import { useRouter } from "next/navigation";
@@ -21,16 +21,41 @@ import { defaultApiClient } from "@/lib/api-utils";
 import { toast } from "sonner";
 import { Save, Download, Plus, ChevronLeft } from "lucide-react";
 
-export function CanvasHeader() {
+interface CanvasHeaderProps {
+  workflowId?: string | null;
+  isEditMode?: boolean;
+}
+
+export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderProps) {
   const router = useRouter();
   const [nodes] = useAtom(nodesAtom);
   const [edges] = useAtom(edgesAtom);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [workflowDescription, setWorkflowDescription] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [workflowName, setWorkflowName] = useState("Untitled Workflow");
   const [isEditingName, setIsEditingName] = useState(false);
   const { authenticated } = usePrivyAuth();
+
+  // Load workflow details when in edit mode
+  useEffect(() => {
+    const loadWorkflowDetails = async () => {
+      if (isEditMode && workflowId) {
+        try {
+          const response = await defaultApiClient.getWorkflow(workflowId);
+          if (response.success && response.data) {
+            setWorkflowName(response.data.name);
+            setWorkflowDescription(response.data.description || "");
+          }
+        } catch (error) {
+          console.error('Error loading workflow details:', error);
+        }
+      }
+    };
+
+    loadWorkflowDetails();
+  }, [isEditMode, workflowId]);
 
   const handleSaveWorkflow = () => {
     const workflow = {
@@ -95,14 +120,14 @@ export function CanvasHeader() {
       // Transform nodes to match API format
       const transformedNodes = nodes.map(node => ({
         id: node.id,
-        type: node.type === 'condition' ? 'input' : 
-              node.type === 'solana' ? 'protocol' : 
-              node.type === 'telegram' ? 'output' : 'input',
-        category: node.type === 'condition' ? 'trigger' :
+        type: (node.type === 'condition' ? 'input' : 
+               node.type === 'solana' ? 'protocol' : 
+               node.type === 'telegram' ? 'output' : 'input') as "input" | "logic" | "data" | "output" | "protocol",
+        category: (node.type === 'condition' ? 'trigger' :
                   node.type === 'solana' ? 'protocol' :
-                  node.type === 'telegram' ? 'communication' : 'trigger',
+                  node.type === 'telegram' ? 'communication' : 'trigger') as "trigger" | "condition" | "transform" | "protocol" | "memory" | "communication",
         name: node.data?.label || node.type,
-        description: node.data?.description || `${node.type} node`,
+        description: node.data?.description || "",
         inputs: node.data?.inputs || [],
         outputs: node.data?.outputs || [],
         config: node.data?.config || {},
@@ -145,6 +170,74 @@ export function CanvasHeader() {
       console.error("Create workflow error:", error);
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleSaveChanges = async () => {
+    if (!workflowId) {
+      toast.error("No workflow ID found");
+      return;
+    }
+
+    if (!workflowName.trim()) {
+      toast.error("Please enter a workflow name");
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      // Transform nodes to match API format
+      const transformedNodes = nodes.map(node => ({
+        id: node.id,
+        type: (node.type === 'condition' ? 'input' : 
+               node.type === 'solana' ? 'protocol' : 
+               node.type === 'telegram' ? 'output' : 'input') as "input" | "logic" | "data" | "output" | "protocol",
+        category: (node.type === 'condition' ? 'trigger' :
+                  node.type === 'solana' ? 'protocol' :
+                  node.type === 'telegram' ? 'communication' : 'trigger') as "trigger" | "condition" | "transform" | "protocol" | "memory" | "communication",
+        name: node.data?.label || node.type,
+        description: node.data?.description || "",
+        inputs: node.data?.inputs || [],
+        outputs: node.data?.outputs || [],
+        config: node.data?.config || {},
+        position: node.position
+      }));
+
+      // Transform edges to match API format
+      const transformedConnections = edges.map(edge => ({
+        id: edge.id,
+        sourceNodeId: edge.source,
+        sourceOutputId: edge.sourceHandle || 'output',
+        targetNodeId: edge.target,
+        targetInputId: edge.targetHandle || 'input'
+      }));
+
+      const workflowData = {
+        name: workflowName,
+        description: workflowDescription || `A workflow updated on ${new Date().toLocaleDateString()}`,
+        nodes: transformedNodes,
+        connections: transformedConnections,
+        config: {
+          isActive: true,
+          scheduleType: "manual" as const
+        },
+        status: "published" as const
+      };
+
+      const response = await defaultApiClient.updateWorkflow(workflowId, workflowData);
+
+      if (response.success) {
+        toast.success("Workflow updated successfully!");
+        router.push('/workflows');
+      } else {
+        toast.error(response.error || "Failed to update workflow");
+      }
+    } catch (error) {
+      toast.error("Failed to update workflow. Please try again.");
+      console.error("Update workflow error:", error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -219,15 +312,27 @@ export function CanvasHeader() {
             Load
           </Button>
 
-          <Button
-            size="sm"
-            onClick={() => setIsCreateModalOpen(true)}
-            disabled={!authenticated}
-            className="bg-gradient-to-r from-[#ff6b35] to-[#f7931e] text-white cursor-pointer hover:opacity-90"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Create Workflow
-          </Button>
+          {isEditMode ? (
+            <Button
+              size="sm"
+              onClick={handleSaveChanges}
+              disabled={!authenticated || isSaving}
+              className="bg-gradient-to-r from-green-500 to-green-600 text-white cursor-pointer hover:opacity-90"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              {isSaving ? "Saving..." : "Save Changes"}
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              onClick={() => setIsCreateModalOpen(true)}
+              disabled={!authenticated}
+              className="bg-gradient-to-r from-[#ff6b35] to-[#f7931e] text-white cursor-pointer hover:opacity-90"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Create Workflow
+            </Button>
+          )}
         </div>
       </div>
 

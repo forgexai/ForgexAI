@@ -126,6 +126,20 @@ export function getForgexSessionToken(): string | undefined {
 export function initializeApiClient(): void {
   const storedToken = getStoredSessionToken();
   if (storedToken) {
+    console.log('Initializing API client with stored token');
+    defaultApiClient.setAuthToken(storedToken);
+  } else {
+    console.warn('No stored auth token found for API client initialization');
+  }
+}
+
+/**
+ * Refresh API client auth token from storage
+ * Call this before making API requests to ensure token is current
+ */
+export function refreshApiClientAuth(): void {
+  const storedToken = getStoredSessionToken();
+  if (storedToken) {
     defaultApiClient.setAuthToken(storedToken);
   }
 }

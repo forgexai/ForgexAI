@@ -168,12 +168,18 @@ class ForgexApiClient {
   ): Promise<ApiResponse<T>> {
     const url = `${this.config.baseUrl}${endpoint}`;
     const headers: Record<string, string> = {
-      "Content-Type": "application/json",
       ...(options.headers as Record<string, string>),
     };
 
+    // Only add Content-Type for requests with a body
+    if (options.body) {
+      headers["Content-Type"] = "application/json";
+    }
+
     if (this.config.authToken) {
       headers.Authorization = `Bearer ${this.config.authToken}`;
+    } else {
+      console.warn('No auth token found for API request to:', endpoint);
     }
 
     try {
@@ -394,6 +400,10 @@ class ForgexApiClient {
     return this.request(`/agents/workflows?${queryParams}`);
   }
 
+  async getWorkflow(workflowId: string): Promise<ApiResponse<Workflow>> {
+    return this.request(`/agents/workflows/${workflowId}`);
+  }
+
   async createWorkflow(workflow: {
     name: string;
     description?: string;
@@ -404,6 +414,31 @@ class ForgexApiClient {
     return this.request("/agents/workflows", {
       method: "POST",
       body: JSON.stringify(workflow),
+    });
+  }
+
+  async updateWorkflow(workflowId: string, workflow: {
+    name?: string;
+    description?: string;
+    nodes?: WorkflowNode[];
+    connections?: WorkflowConnection[];
+    config?: {
+      isActive?: boolean;
+      scheduleType?: "manual" | "cron" | "event";
+      cronExpression?: string;
+      triggerEvents?: string[];
+    };
+    status?: "draft" | "published" | "paused" | "error";
+  }): Promise<ApiResponse<Workflow>> {
+    return this.request(`/agents/workflows/${workflowId}`, {
+      method: "PUT",
+      body: JSON.stringify(workflow),
+    });
+  }
+
+  async deleteWorkflow(workflowId: string): Promise<ApiResponse<{ success: boolean }>> {
+    return this.request(`/agents/workflows/${workflowId}`, {
+      method: "DELETE",
     });
   }
 
