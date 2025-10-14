@@ -30,6 +30,7 @@ import {
   Lock,
   RefreshCw
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface NodeTemplate {
   id: string;
@@ -276,22 +277,33 @@ export function NodePaletteButton() {
                           {category.nodes.map((node) => {
                             const IconComponent = node.icon;
                             return (
-                              <Button
-                                key={node.id}
-                                onClick={() => handleNodeClick(node)}
-                                variant="ghost"
-                                className="w-full justify-start p-2 text-gray-300 hover:text-white hover:bg-white/5 h-auto"
-                              >
-                                <div className="flex items-start gap-3 w-full">
-                                  <IconComponent className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
-                                  <div className="flex-1 text-left">
-                                    <div className="text-sm font-medium">{node.label}</div>
-                                    <div className="text-xs text-gray-500 mt-1 line-clamp-2">
-                                      {node.description}
+                              <TooltipProvider key={node.id}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      onClick={() => handleNodeClick(node)}
+                                      variant="ghost"
+                                      className="w-full justify-start p-2 text-gray-300 hover:text-white hover:bg-white/5 h-auto"
+                                    >
+                                      <div className="flex items-start gap-3 w-full min-w-0">
+                                        <IconComponent className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                                        <div className="flex-1 text-left min-w-0">
+                                          <div className="text-sm font-medium">{node.label}</div>
+                                          <div className="text-xs text-gray-500 mt-1 break-words leading-tight">
+                                            {node.description}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="right" className="max-w-xs">
+                                    <div className="text-sm">
+                                      <div className="font-medium mb-1">{node.label}</div>
+                                      <div className="text-gray-300">{node.description}</div>
                                     </div>
-                                  </div>
-                                </div>
-                              </Button>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             );
                           })}
                         </div>

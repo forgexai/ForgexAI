@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useAtom } from "jotai";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,6 +20,7 @@ import { toast } from "sonner";
 import { Save, Download, Send, ChevronLeft } from "lucide-react";
 
 export function CanvasHeader() {
+  const router = useRouter();
   const [nodes] = useAtom(nodesAtom);
   const [edges] = useAtom(edgesAtom);
   const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
@@ -134,6 +136,10 @@ export function CanvasHeader() {
     }
   };
 
+  const handleBackClick = () => {
+    router.push('/workflows');
+  };
+
   return (
     <>
       <div className="h-16 bg-[#1A1B23] border-b border-white/10 flex items-center justify-between px-8">
@@ -141,6 +147,7 @@ export function CanvasHeader() {
           <Button
             variant="ghost"
             size="sm"
+            onClick={handleBackClick}
             className="text-gray-400 hover:text-white hover:bg-white/10 px-3 py-2"
           >
             <ChevronLeft className="w-4 h-4" />
