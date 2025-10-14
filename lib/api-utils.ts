@@ -446,7 +446,7 @@ class ForgexApiClient {
     workflowId: string,
     inputData: Record<string, any> = {}
   ): Promise<ApiResponse<ExecutionResult>> {
-    return this.request(`/api/agents/workflows/${workflowId}/execute`, {
+    return this.request(`/agents/workflows/${workflowId}/execute`, {
       method: "POST",
       body: JSON.stringify({ inputData }),
     });

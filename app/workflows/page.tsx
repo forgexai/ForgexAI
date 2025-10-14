@@ -34,7 +34,8 @@ import {
   MoreVertical,
   Edit,
   Trash2,
-  Play as PlayIcon
+  Play as PlayIcon,
+  Loader2
 } from "lucide-react";
 import Image from "next/image";
 
@@ -99,6 +100,7 @@ export default function WorkflowsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [executionsModalOpen, setExecutionsModalOpen] = useState(false);
   const [selectedWorkflow, setSelectedWorkflow] = useState<{ id: string; name: string } | null>(null);
+  const [executingWorkflow, setExecutingWorkflow] = useState<string | null>(null);
   const { logout, forgexAuth } = usePrivyAuth();
 
   const handleAddWorkflow = () => {
@@ -132,7 +134,6 @@ export default function WorkflowsPage() {
   const confirmDeleteWorkflow = async () => {
     if (!workflowToDelete) return;
 
-    // Check if user is authenticated
     if (!forgexAuth.isAuthenticated) {
       toast.error('Please log in to delete workflows');
       setDeleteDialogOpen(false);
@@ -142,12 +143,10 @@ export default function WorkflowsPage() {
 
     setIsDeleting(true);
     try {
-      // Refresh auth token before making the request
       refreshApiClientAuth();
       const response = await defaultApiClient.deleteWorkflow(workflowToDelete.id);
       if (response.success) {
         toast.success('Workflow deleted successfully');
-        // Refresh workflows list
         const refreshResponse = await defaultApiClient.getWorkflows({
           limit: 20,
           offset: 0
@@ -168,10 +167,44 @@ export default function WorkflowsPage() {
     }
   };
 
-  const handleRunWorkflow = (workflowId: string) => {
-    // TODO: Implement runWorkflow API call
-    console.log('Run workflow:', workflowId);
-    toast.success('Workflow execution started');
+  const handleRunWorkflow = async (workflowId: string) => {
+    try {
+      setExecutingWorkflow(workflowId);
+      
+      refreshApiClientAuth();
+      
+      toast.loading('Starting workflow execution...', { id: 'workflow-execution' });
+      
+      const workflowResponse = await defaultApiClient.getWorkflow(workflowId);
+      
+      if (!workflowResponse.success || !workflowResponse.data) {
+        toast.error('Failed to load workflow for execution', { id: 'workflow-execution' });
+        return;
+      }
+      
+      const workflow = workflowResponse.data;
+      
+      const response = await defaultApiClient.executeWorkflow(workflowId, workflow);
+      
+      if (response.success && response.data) {
+        toast.success('Workflow executed successfully!', { id: 'workflow-execution' });
+        
+        const { status, duration, results } = response.data;
+        const durationText = duration < 1000 ? `${duration}ms` : `${(duration / 1000).toFixed(1)}s`;
+        
+        toast.success(
+          `Execution completed in ${durationText}. ${results.length} result${results.length !== 1 ? 's' : ''} generated.`,
+          { duration: 5000 }
+        );
+      } else {
+        toast.error(response.error || 'Failed to execute workflow', { id: 'workflow-execution' });
+      }
+    } catch (error) {
+      console.error('Error executing workflow:', error);
+      toast.error('Failed to execute workflow', { id: 'workflow-execution' });
+    } finally {
+      setExecutingWorkflow(null);
+    }
   };
 
   const handleViewExecutions = (workflowId: string, workflowName: string) => {
@@ -522,10 +555,20 @@ export default function WorkflowsPage() {
                                   e.stopPropagation();
                                   handleRunWorkflow(workflow.id);
                                 }}
-                                className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-green-500/25"
+                                disabled={executingWorkflow === workflow.id}
+                                className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-green-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                <PlayIcon className="w-4 h-4 mr-2" />
-                                Run Workflow
+                                {executingWorkflow === workflow.id ? (
+                                  <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Executing...
+                                  </>
+                                ) : (
+                                  <>
+                                    <PlayIcon className="w-4 h-4 mr-2" />
+                                    Run Workflow
+                                  </>
+                                )}
                               </Button>
                             </div>
                           </div>
