@@ -446,7 +446,7 @@ class ForgexApiClient {
     workflowId: string,
     inputData: Record<string, any> = {}
   ): Promise<ApiResponse<ExecutionResult>> {
-    return this.request(`/api/agents/workflows/${workflowId}/execute`, {
+    return this.request(`/agents/workflows/${workflowId}/execute`, {
       method: "POST",
       body: JSON.stringify({ inputData }),
     });
@@ -467,7 +467,7 @@ class ForgexApiClient {
     if (params?.offset) queryParams.set("offset", params.offset.toString());
 
     return this.request(
-      `/api/agents/workflows/${workflowId}/executions?${queryParams}`
+      `/agents/workflows/${workflowId}/executions?${queryParams}`
     );
   }
 
@@ -569,8 +569,11 @@ class ForgexApiClient {
   async scheduleWorkflow(
     workflowId: string,
     params: {
+      workflowId: string;
       cronExpression: string;
       inputData?: Record<string, any>;
+      name: string;
+      description?: string;
     }
   ): Promise<ApiResponse<{
     scheduleId: string;
@@ -578,7 +581,7 @@ class ForgexApiClient {
     cronExpression: string;
     scheduled: boolean;
   }>> {
-    return this.request(`/api/system/workflows/${workflowId}/schedule`, {
+    return this.request(`/system/schedules`, {
       method: "POST",
       body: JSON.stringify(params),
     });
@@ -587,14 +590,14 @@ class ForgexApiClient {
   async getSchedules(): Promise<ApiResponse<{
     schedules: Schedule[];
   }>> {
-    return this.request("/api/system/schedules");
+    return this.request("/system/schedules");
   }
 
   async cancelSchedule(scheduleId: string): Promise<ApiResponse<{
     success: boolean;
     cancelled: string;
   }>> {
-    return this.request(`/api/system/schedules/${scheduleId}`, {
+    return this.request(`/system/schedules/${scheduleId}`, {
       method: "DELETE",
     });
   }
