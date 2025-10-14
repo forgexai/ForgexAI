@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAtom } from "jotai";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,19 +15,47 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { nodesAtom, edgesAtom } from "@/lib/state/atoms";
+import { defaultApiClient } from "@/lib/api-utils";
 import { toast } from "sonner";
-import { Save, Download, Send, ChevronLeft } from "lucide-react";
+import { Save, Download, Plus, ChevronLeft } from "lucide-react";
 
-export function CanvasHeader() {
+interface CanvasHeaderProps {
+  workflowId?: string | null;
+  isEditMode?: boolean;
+}
+
+export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderProps) {
+  const router = useRouter();
   const [nodes] = useAtom(nodesAtom);
   const [edges] = useAtom(edgesAtom);
-  const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
-  const [botToken, setBotToken] = useState("");
-  const [isDeploying, setIsDeploying] = useState(false);
-  const [workflowName, setWorkflowName] = useState("Untitled Chatflow");
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [workflowDescription, setWorkflowDescription] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [workflowName, setWorkflowName] = useState("Untitled Workflow");
   const [isEditingName, setIsEditingName] = useState(false);
   const { authenticated } = usePrivyAuth();
+
+  // Load workflow details when in edit mode
+  useEffect(() => {
+    const loadWorkflowDetails = async () => {
+      if (isEditMode && workflowId) {
+        try {
+          const response = await defaultApiClient.getWorkflow(workflowId);
+          if (response.success && response.data) {
+            setWorkflowName(response.data.name);
+            setWorkflowDescription(response.data.description || "");
+          }
+        } catch (error) {
+          console.error('Error loading workflow details:', error);
+        }
+      }
+    };
+
+    loadWorkflowDetails();
+  }, [isEditMode, workflowId]);
 
   const handleSaveWorkflow = () => {
     const workflow = {
@@ -74,49 +103,141 @@ export function CanvasHeader() {
     input.click();
   };
 
-  const handleDeployToTelegram = async () => {
-    if (!botToken.trim()) {
-      toast.error("Please enter a bot token");
+  const handleCreateWorkflow = async () => {
+    if (!workflowName.trim()) {
+      toast.error("Please enter a workflow name");
       return;
     }
 
     if (nodes.length === 0) {
-      toast.error("Please add nodes to your workflow before deploying");
+      toast.error("Please add nodes to your workflow before creating");
       return;
     }
 
-    setIsDeploying(true);
+    setIsCreating(true);
 
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/deploy-agent`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            botToken,
-            workflow: {
-              nodes,
-              edges,
-            },
-          }),
-        }
-      );
+      // Transform nodes to match API format
+      const transformedNodes = nodes.map(node => ({
+        id: node.id,
+        type: (node.type === 'condition' ? 'input' : 
+               node.type === 'solana' ? 'protocol' : 
+               node.type === 'telegram' ? 'output' : 'input') as "input" | "logic" | "data" | "output" | "protocol",
+        category: (node.type === 'condition' ? 'trigger' :
+                  node.type === 'solana' ? 'protocol' :
+                  node.type === 'telegram' ? 'communication' : 'trigger') as "trigger" | "condition" | "transform" | "protocol" | "memory" | "communication",
+        name: node.data?.label || node.type,
+        description: node.data?.description || "",
+        inputs: node.data?.inputs || [],
+        outputs: node.data?.outputs || [],
+        config: node.data?.config || {},
+        position: node.position
+      }));
 
-      if (!response.ok) {
-        throw new Error("Deployment failed");
+      // Transform edges to match API format
+      const transformedConnections = edges.map(edge => ({
+        id: edge.id,
+        sourceNodeId: edge.source,
+        sourceOutputId: edge.sourceHandle || 'output',
+        targetNodeId: edge.target,
+        targetInputId: edge.targetHandle || 'input'
+      }));
+
+      const workflowData = {
+        name: workflowName,
+        description: workflowDescription || `A workflow created on ${new Date().toLocaleDateString()}`,
+        nodes: transformedNodes,
+        connections: transformedConnections,
+        config: {
+          isActive: true,
+          scheduleType: "manual" as const
+        },
+        status: "published" as const
+      };
+
+      const response = await defaultApiClient.createWorkflow(workflowData);
+
+      if (response.success) {
+        toast.success("Workflow created successfully!");
+        setIsCreateModalOpen(false);
+        setWorkflowDescription("");
+        router.push('/workflows');
+      } else {
+        toast.error(response.error || "Failed to create workflow");
       }
-
-      const data = await response.json();
-      toast.success("Agent deployed successfully!");
-      setIsDeployModalOpen(false);
-      setBotToken("");
     } catch (error) {
-      toast.error("Failed to deploy agent. Please try again.");
+      toast.error("Failed to create workflow. Please try again.");
+      console.error("Create workflow error:", error);
     } finally {
-      setIsDeploying(false);
+      setIsCreating(false);
+    }
+  };
+
+  const handleSaveChanges = async () => {
+    if (!workflowId) {
+      toast.error("No workflow ID found");
+      return;
+    }
+
+    if (!workflowName.trim()) {
+      toast.error("Please enter a workflow name");
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      // Transform nodes to match API format
+      const transformedNodes = nodes.map(node => ({
+        id: node.id,
+        type: (node.type === 'condition' ? 'input' : 
+               node.type === 'solana' ? 'protocol' : 
+               node.type === 'telegram' ? 'output' : 'input') as "input" | "logic" | "data" | "output" | "protocol",
+        category: (node.type === 'condition' ? 'trigger' :
+                  node.type === 'solana' ? 'protocol' :
+                  node.type === 'telegram' ? 'communication' : 'trigger') as "trigger" | "condition" | "transform" | "protocol" | "memory" | "communication",
+        name: node.data?.label || node.type,
+        description: node.data?.description || "",
+        inputs: node.data?.inputs || [],
+        outputs: node.data?.outputs || [],
+        config: node.data?.config || {},
+        position: node.position
+      }));
+
+      // Transform edges to match API format
+      const transformedConnections = edges.map(edge => ({
+        id: edge.id,
+        sourceNodeId: edge.source,
+        sourceOutputId: edge.sourceHandle || 'output',
+        targetNodeId: edge.target,
+        targetInputId: edge.targetHandle || 'input'
+      }));
+
+      const workflowData = {
+        name: workflowName,
+        description: workflowDescription || `A workflow updated on ${new Date().toLocaleDateString()}`,
+        nodes: transformedNodes,
+        connections: transformedConnections,
+        config: {
+          isActive: true,
+          scheduleType: "manual" as const
+        },
+        status: "published" as const
+      };
+
+      const response = await defaultApiClient.updateWorkflow(workflowId, workflowData);
+
+      if (response.success) {
+        toast.success("Workflow updated successfully!");
+        router.push('/workflows');
+      } else {
+        toast.error(response.error || "Failed to update workflow");
+      }
+    } catch (error) {
+      toast.error("Failed to update workflow. Please try again.");
+      console.error("Update workflow error:", error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -134,6 +255,10 @@ export function CanvasHeader() {
     }
   };
 
+  const handleBackClick = () => {
+    router.push('/workflows');
+  };
+
   return (
     <>
       <div className="h-16 bg-[#1A1B23] border-b border-white/10 flex items-center justify-between px-8">
@@ -141,6 +266,7 @@ export function CanvasHeader() {
           <Button
             variant="ghost"
             size="sm"
+            onClick={handleBackClick}
             className="text-gray-400 hover:text-white hover:bg-white/10 px-3 py-2"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -186,51 +312,51 @@ export function CanvasHeader() {
             Load
           </Button>
 
-          <Button
-            size="sm"
-            onClick={() => setIsDeployModalOpen(true)}
-            disabled={!authenticated}
-            className="bg-[#9945FF] text-white cursor-pointer hover:bg-[#9945FF]/80"
-          >
-            <Send className="w-4 h-4 mr-2" />
-            Deploy to Telegram
-          </Button>
+          {isEditMode ? (
+            <Button
+              size="sm"
+              onClick={handleSaveChanges}
+              disabled={!authenticated || isSaving}
+              className="bg-gradient-to-r from-green-500 to-green-600 text-white cursor-pointer hover:opacity-90"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              {isSaving ? "Saving..." : "Save Changes"}
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              onClick={() => setIsCreateModalOpen(true)}
+              disabled={!authenticated}
+              className="bg-gradient-to-r from-[#ff6b35] to-[#f7931e] text-white cursor-pointer hover:opacity-90"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Create Workflow
+            </Button>
+          )}
         </div>
       </div>
 
-      <Dialog open={isDeployModalOpen} onOpenChange={setIsDeployModalOpen}>
+      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
         <DialogContent className="bg-[#1A1B23] border-white/10 text-white">
           <DialogHeader>
-            <DialogTitle>Deploy Agent to Telegram</DialogTitle>
+            <DialogTitle>Create Workflow</DialogTitle>
             <DialogDescription className="text-gray-400">
-              Enter your Telegram bot token to deploy your workflow as a Telegram agent.
+              Save your workflow to the cloud and make it available for execution.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="botToken" className="text-sm text-gray-300">
-                Telegram Bot Token
+              <Label htmlFor="workflowDescription" className="text-sm text-gray-300">
+                Description (Optional)
               </Label>
-              <Input
-                id="botToken"
-                type="password"
-                value={botToken}
-                onChange={(e) => setBotToken(e.target.value)}
-                placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
-                className="bg-[#0B0C10] border-gray-700 text-white"
+              <Textarea
+                id="workflowDescription"
+                value={workflowDescription}
+                onChange={(e) => setWorkflowDescription(e.target.value)}
+                placeholder="Describe what this workflow does..."
+                className="bg-[#0B0C10] border-gray-700 text-white min-h-[80px]"
               />
-              <p className="text-xs text-gray-500">
-                Get your bot token from{" "}
-                <a
-                  href="https://t.me/BotFather"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[#14F195] hover:underline"
-                >
-                  @BotFather
-                </a>
-              </p>
             </div>
 
             <div className="bg-[#0B0C10] border border-white/10 rounded-lg p-3">
@@ -249,17 +375,17 @@ export function CanvasHeader() {
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setIsDeployModalOpen(false)}
-              className="border-gray-700 text-white hover:bg-white/10"
+              onClick={() => setIsCreateModalOpen(false)}
+              className="border-gray-700 text-black cursor-pointer"
             >
               Cancel
             </Button>
             <Button
-              onClick={handleDeployToTelegram}
-              disabled={isDeploying || !botToken.trim()}
-              className="bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:opacity-90"
+              onClick={handleCreateWorkflow}
+              disabled={isCreating || !workflowName.trim()}
+              className="bg-gradient-to-r from-[#ff6b35] to-[#f7931e] text-white hover:opacity-90 cursor-pointer"
             >
-              {isDeploying ? "Deploying..." : "Confirm Deploy"}
+              {isCreating ? "Creating..." : "Create Workflow"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -152,4 +152,11 @@
   .bg-gradient-radial {
     background-image: radial-gradient(circle, var(--tw-gradient-stops));
   }
+  
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
 }
