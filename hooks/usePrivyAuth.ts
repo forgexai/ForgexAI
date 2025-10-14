@@ -135,6 +135,10 @@ export function usePrivyAuth() {
 
       defaultApiClient.setAuthToken(loginResponse.data.sessionToken);
 
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('authToken', loginResponse.data.sessionToken);
+      }
+
       setForgexAuth({
         isAuthenticated: true,
         sessionToken: loginResponse.data.sessionToken,
@@ -158,6 +162,26 @@ export function usePrivyAuth() {
   }, [authenticated, wallets, hasAttemptedAuth, setForgexAuth, setHasAttemptedAuth]);
 
   
+  // Check for existing session token on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !hasAttemptedAuth) {
+      const storedToken = sessionStorage.getItem('authToken');
+      if (storedToken) {
+        // Set the token in the API client
+        defaultApiClient.setAuthToken(storedToken);
+        
+        // Set auth state as authenticated
+        setForgexAuth(prev => ({
+          ...prev,
+          isAuthenticated: true,
+          sessionToken: storedToken,
+          isLoading: false,
+        }));
+        setHasAttemptedAuth(true);
+      }
+    }
+  }, [hasAttemptedAuth, setForgexAuth, setHasAttemptedAuth]);
+
   useEffect(() => {
     if (ready && authenticated && wallets && wallets.length > 0 && !hasAttemptedAuth) {
       authenticateWithForgex();
@@ -170,6 +194,10 @@ export function usePrivyAuth() {
       await defaultApiClient.logout();
       defaultApiClient.clearAuth();
       
+      // Clear session storage
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('authToken');
+      }
 
       setForgexAuth({
         isAuthenticated: false,

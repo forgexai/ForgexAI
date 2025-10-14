@@ -1,6 +1,5 @@
 // Authentication utilities for ForgexAI integration
 import { defaultApiClient } from './api-utils';
-import { logAuthFlow, logError } from './debug-auth';
 
 export interface AuthChallenge {
   message: string;
@@ -20,18 +19,14 @@ export interface AuthResult {
  */
 export async function generateAuthChallenge(walletAddress: string): Promise<AuthChallenge | null> {
   try {
-    logAuthFlow('Calling generateAuthChallenge API for:', walletAddress);
     const response = await defaultApiClient.generateAuthChallenge(walletAddress);
     
     if (!response.success || !response.data) {
-      logError('Failed to generate auth challenge:', response.error);
       return null;
     }
     
-    logAuthFlow('Auth challenge generated successfully');
     return response.data;
   } catch (error) {
-    logError('Error generating auth challenge:', error);
     return null;
   }
 }
@@ -60,8 +55,11 @@ export async function authenticateWithWallet(
       };
     }
     
-    // Store the session token
     defaultApiClient.setAuthToken(response.data.sessionToken);
+
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('authToken', response.data.sessionToken);
+    }
     
     return {
       success: true,
@@ -87,19 +85,36 @@ export async function logoutFromForgex(): Promise<void> {
     console.error('Error logging out from ForgexAI:', error);
   } finally {
     defaultApiClient.clearAuth();
+    
+    // Clear session storage
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('authToken');
+    }
   }
+}
+
+/**
+ * Get session token from session storage
+ */
+export function getStoredSessionToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return sessionStorage.getItem('authToken');
 }
 
 /**
  * Check if user is authenticated with ForgexAI
  */
 export function isForgexAuthenticated(): boolean {
-  return !!defaultApiClient.getConfig().authToken;
+  const apiToken = defaultApiClient.getConfig().authToken;
+  const storedToken = getStoredSessionToken();
+  return !!(apiToken || storedToken);
 }
 
 /**
  * Get the current ForgexAI session token
  */
 export function getForgexSessionToken(): string | undefined {
-  return defaultApiClient.getConfig().authToken;
+  const apiToken = defaultApiClient.getConfig().authToken;
+  const storedToken = getStoredSessionToken();
+  return apiToken || storedToken || undefined;
 }

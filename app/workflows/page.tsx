@@ -4,8 +4,9 @@ import { AuthGuard } from "@/components/auth/AuthGuard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
+import { defaultApiClient } from "@/lib/api-utils";
 import { 
   Workflow,  
   Play,  
@@ -15,6 +16,7 @@ import {
   Grid3X3,
   Plus,
   Settings,
+  LogOut,
   Sparkles
 } from "lucide-react";
 import Image from "next/image";
@@ -30,10 +32,29 @@ const evaluationItems = [
   { id: 'datasets', label: 'Datasets', icon: Database },
 ];
 
+interface UserProfile {
+  id: string;
+  walletAddress: string;
+  credits: number;
+  tier: string;
+  createdAt: string;
+  lastLogin: string;
+  isActive: boolean;
+}
+
+interface UserStats {
+  totalSpent: number;
+  totalEarned: number;
+  totalTransactions: number;
+}
+
 export default function WorkflowsPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('workflows');
-  const { logout } = usePrivyAuth();
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const { logout, forgexAuth } = usePrivyAuth();
 
   const handleAddWorkflow = () => {
     router.push('/canvas');
@@ -47,6 +68,29 @@ export default function WorkflowsPage() {
       console.error('Logout failed:', error);
     }
   };
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!forgexAuth.isAuthenticated) {
+        setProfileLoading(false);
+        return;
+      }
+
+      try {
+        const response = await defaultApiClient.getUserProfile();
+        if (response.success && response.data) {
+          setUserProfile(response.data.user);
+          setUserStats(response.data.stats);
+        }
+      } catch (error) {
+        console.error('Failed to fetch user profile:', error);
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, [forgexAuth.isAuthenticated]);
 
   return (
     <AuthGuard>
@@ -88,12 +132,40 @@ export default function WorkflowsPage() {
             })}
           </div>
 
+          {/* User Profile Section */}
+          {!profileLoading && userProfile && (
+            <div className="border-t border-white/10">
+              <div className="bg-[#1A1B23] rounded-lg p-4 space-y-4">
+                <div className="flex justify-around items-center">
+                  <div className="text-center space-y-2">
+                    <div className="text-sm text-gray-400">Current Plan</div>
+                    <div className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
+                      userProfile.tier === 'free' ? 'bg-gray-600 text-gray-200' :
+                      userProfile.tier === 'pro' ? 'bg-blue-600 text-blue-100' :
+                      'bg-purple-600 text-purple-100'
+                    }`}>
+                      {userProfile.tier.toUpperCase()}
+                    </div>
+                  </div>
+                  
+                  <div className="text-center space-y-1">
+                    <div className="text-sm text-gray-400">Credits</div>
+                    <div className="text-xl font-bold text-white">
+                      {userProfile.credits.toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+                
+                <Button className="w-full bg-gradient-to-r text-white from-blue-500 to-purple-600 hover:opacity-90 cursor-pointer">
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Upgrade Plan
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Settings Section */}
           <div className="p-4 border-t border-white/10 space-y-2">
-            <Button className="w-full justify-start bg-gradient-to-r text-white from-blue-500 to-purple-600 hover:opacity-90 cursor-pointer">
-              <Sparkles className="w-4 h-4 mr-3" />
-              Upgrade
-            </Button>
             {/* <Button variant="ghost" size="sm" className="w-full justify-start cursor-pointer">
               <Moon className="w-4 h-4 mr-3" />
               Dark Mode
@@ -108,7 +180,7 @@ export default function WorkflowsPage() {
               className="w-full justify-start cursor-pointer"
               onClick={handleLogout}
             >
-              <Settings className="w-4 h-4 mr-3" />
+              <LogOut className="w-4 h-4 mr-3" />
               Logout
             </Button>
           </div>
