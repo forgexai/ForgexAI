@@ -3,7 +3,7 @@
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { WorkflowsSection } from "@/components/workflows/WorkflowsSection";
-import { ExecutionsSection } from "@/components/executions/ExecutionsSection";
+import { SchedulesSection } from "@/components/schedules/SchedulesSection";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
@@ -59,9 +59,9 @@ export default function WorkflowsPage() {
         return (
           <WorkflowsSection />
         );
-      case 'executions':
+      case 'schedules':
         return (
-          <ExecutionsSection />
+          <SchedulesSection />
         );
       case 'marketplace':
         return (
@@ -166,8 +166,8 @@ export default function WorkflowsPage() {
     switch (activeSection) {
       case 'workflows':
         return 'Workflows';
-      case 'executions':
-        return 'Executions';
+      case 'schedules':
+        return 'Schedules';
       case 'marketplace':
         return 'Marketplace';
       default:
@@ -179,8 +179,8 @@ export default function WorkflowsPage() {
     switch (activeSection) {
       case 'workflows':
         return 'Build autonomous Solana agents with visual workflows';
-      case 'executions':
-        return 'View and manage workflow execution history';
+      case 'schedules':
+        return 'Monitor scheduled workflow executions';
       case 'marketplace':
         return 'Browse and install workflow templates';
       default:

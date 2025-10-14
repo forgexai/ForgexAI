@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
 import { 
   Workflow as WorkflowIcon,  
-  Play,  
+  Clock,  
   Store, 
   Search,
   Grid3X3,
@@ -18,7 +18,7 @@ import {
 
 const sidebarItems = [
   { id: 'workflows', label: 'Workflows', icon: WorkflowIcon },
-  { id: 'executions', label: 'Executions', icon: Play },
+  { id: 'schedules', label: 'Schedules', icon: Clock },
   { id: 'marketplace', label: 'Marketplace', icon: Store },
 ];
 

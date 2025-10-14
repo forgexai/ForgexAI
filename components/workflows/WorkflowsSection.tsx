@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DeleteWorkflowDialog } from "@/components/workflows/DeleteWorkflowDialog";
 import { ViewExecutionsModal } from "@/components/workflows/ViewExecutionsModal";
+import { ScheduleWorkflowModal } from "@/components/workflows/ScheduleWorkflowModal";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
 import { defaultApiClient } from "@/lib/api-utils";
 import { refreshApiClientAuth } from "@/lib/auth-utils";
@@ -22,7 +23,8 @@ import {
   Trash2,
   Play as PlayIcon,
   Loader2,
-  Clock
+  Clock,
+  Calendar
 } from "lucide-react";
 
 interface Workflow {
@@ -58,6 +60,8 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
   const [executingWorkflow, setExecutingWorkflow] = useState<string | null>(null);
   const [executionsModalOpen, setExecutionsModalOpen] = useState(false);
   const [selectedWorkflow, setSelectedWorkflow] = useState<{ id: string; name: string } | null>(null);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [workflowToSchedule, setWorkflowToSchedule] = useState<{ id: string; name: string } | null>(null);
   const { forgexAuth } = usePrivyAuth();
 
   const handleAddWorkflow = () => {
@@ -100,6 +104,11 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
   const handleViewExecutions = (workflowId: string, workflowName: string) => {
     setSelectedWorkflow({ id: workflowId, name: workflowName });
     setExecutionsModalOpen(true);
+  };
+
+  const handleScheduleWorkflow = (workflowId: string, workflowName: string) => {
+    setWorkflowToSchedule({ id: workflowId, name: workflowName });
+    setScheduleModalOpen(true);
   };
 
   const confirmDeleteWorkflow = async () => {
@@ -247,13 +256,24 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 w-8 p-0 hover:bg-white/10"
+                    className="h-8 w-8 p-0  text-white"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-[#1A1B23] border-white/10">
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleScheduleWorkflow(workflow.id, workflow.name);
+                    }}
+                    className="text-white hover:bg-white/10 cursor-pointer"
+                  >
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Schedule
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-white/10" />
                   <DropdownMenuItem
                     onClick={(e) => {
                       e.stopPropagation();
@@ -326,12 +346,22 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
         onConfirm={confirmDeleteWorkflow}
       />
 
-      <ViewExecutionsModal
-        open={executionsModalOpen}
-        onOpenChange={setExecutionsModalOpen}
-        workflowId={selectedWorkflow?.id || ""}
-        workflowName={selectedWorkflow?.name || ""}
-      />
-    </>
-  );
-}
+          <ViewExecutionsModal
+            open={executionsModalOpen}
+            onOpenChange={setExecutionsModalOpen}
+            workflowId={selectedWorkflow?.id || ""}
+            workflowName={selectedWorkflow?.name || ""}
+          />
+
+          <ScheduleWorkflowModal
+            open={scheduleModalOpen}
+            onOpenChange={setScheduleModalOpen}
+            workflowId={workflowToSchedule?.id || ""}
+            workflowName={workflowToSchedule?.name || ""}
+            onScheduleSuccess={() => {
+              toast.success("Workflow scheduled successfully!");
+            }}
+          />
+        </>
+      );
+    }

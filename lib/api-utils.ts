@@ -569,8 +569,11 @@ class ForgexApiClient {
   async scheduleWorkflow(
     workflowId: string,
     params: {
+      workflowId: string;
       cronExpression: string;
       inputData?: Record<string, any>;
+      name: string;
+      description?: string;
     }
   ): Promise<ApiResponse<{
     scheduleId: string;
@@ -578,7 +581,7 @@ class ForgexApiClient {
     cronExpression: string;
     scheduled: boolean;
   }>> {
-    return this.request(`/api/system/workflows/${workflowId}/schedule`, {
+    return this.request(`/system/schedules`, {
       method: "POST",
       body: JSON.stringify(params),
     });
@@ -587,14 +590,14 @@ class ForgexApiClient {
   async getSchedules(): Promise<ApiResponse<{
     schedules: Schedule[];
   }>> {
-    return this.request("/api/system/schedules");
+    return this.request("/system/schedules");
   }
 
   async cancelSchedule(scheduleId: string): Promise<ApiResponse<{
     success: boolean;
     cancelled: string;
   }>> {
-    return this.request(`/api/system/schedules/${scheduleId}`, {
+    return this.request(`/system/schedules/${scheduleId}`, {
       method: "DELETE",
     });
   }
