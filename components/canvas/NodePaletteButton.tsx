@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { defaultApiClient } from "@/lib/api-utils";
 import { 
   Search, 
   X, 
@@ -18,14 +19,35 @@ import {
   Send,
   Database,
   BarChart3,
-  Settings
+  Settings,
+  Zap,
+  Activity,
+  Shield,
+  TrendingUp,
+  Wallet,
+  Bot,
+  Globe,
+  Lock,
+  RefreshCw
 } from "lucide-react";
+
+interface NodeTemplate {
+  id: string;
+  type: string;
+  category: string;
+  name: string;
+  description: string;
+  inputs: any[];
+  outputs: any[];
+  config: any;
+}
 
 interface NodeType {
   id: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   category: string;
+  description: string;
 }
 
 interface NodeCategory {
@@ -34,31 +56,122 @@ interface NodeCategory {
   nodes: NodeType[];
 }
 
-const nodeTypes: NodeType[] = [
-  { id: "on-message", label: "On Message", icon: MessageSquare, category: "Core" },
-  { id: "on-schedule", label: "On Schedule", icon: Clock, category: "Core" },
-  { id: "if-else", label: "If/Else", icon: GitBranch, category: "Logic" },
-  { id: "user-approval", label: "User Approval", icon: UserCheck, category: "Logic" },
-  { id: "get-swap-quote", label: "Get Swap Quote", icon: Coins, category: "Solana" },
-  { id: "build-transaction", label: "Build Transaction", icon: FileText, category: "Solana" },
-  { id: "database-query", label: "Database Query", icon: Database, category: "Data" },
-  { id: "data-analysis", label: "Data Analysis", icon: BarChart3, category: "Data" },
-  { id: "send-telegram", label: "Send Telegram Message", icon: Send, category: "Output" },
-  { id: "system-log", label: "System Log", icon: Settings, category: "Output" },
-];
+// Icon mapping for different node types and categories
+const getNodeIcon = (template: NodeTemplate): React.ComponentType<{ className?: string }> => {
+  const { type, category, id } = template;
+  
+  // Trigger nodes
+  if (type === "input") {
+    if (id.includes("telegram") || id.includes("message")) return MessageSquare;
+    if (id.includes("schedule") || id.includes("timer")) return Clock;
+    if (id.includes("webhook")) return Globe;
+    return Zap;
+  }
+  
+  // Protocol nodes
+  if (type === "protocol") {
+    if (id.includes("jupiter") || id.includes("swap")) return Coins;
+    if (id.includes("kamino") || id.includes("solend") || id.includes("loan")) return Shield;
+    if (id.includes("tensor") || id.includes("nft")) return BarChart3;
+    if (id.includes("marinade") || id.includes("jito") || id.includes("staking")) return TrendingUp;
+    if (id.includes("drift") || id.includes("position")) return Activity;
+    if (id.includes("squads") || id.includes("treasury")) return Wallet;
+    if (id.includes("pyth") || id.includes("price")) return BarChart3;
+    return Bot;
+  }
+  
+  // Logic nodes
+  if (type === "logic") {
+    if (id.includes("if") || id.includes("condition")) return GitBranch;
+    if (id.includes("approval") || id.includes("user")) return UserCheck;
+    if (id.includes("variable") || id.includes("set")) return Settings;
+    return GitBranch;
+  }
+  
+  // Data nodes
+  if (type === "data") {
+    if (id.includes("transform")) return RefreshCw;
+    return Database;
+  }
+  
+  // Output nodes
+  if (type === "output") {
+    if (id.includes("telegram") || id.includes("message")) return Send;
+    return Settings;
+  }
+  
+  // Memory nodes
+  if (category === "memory") {
+    return Database;
+  }
+  
+  // Communication nodes
+  if (category === "communication") {
+    return Send;
+  }
+  
+  return Settings;
+};
 
-const categories: NodeCategory[] = [
-  { id: "core", label: "Core", nodes: nodeTypes.filter(node => node.category === "Core") },
-  { id: "logic", label: "Logic", nodes: nodeTypes.filter(node => node.category === "Logic") },
-  { id: "solana", label: "Solana", nodes: nodeTypes.filter(node => node.category === "Solana") },
-  { id: "data", label: "Data", nodes: nodeTypes.filter(node => node.category === "Data") },
-  { id: "output", label: "Output", nodes: nodeTypes.filter(node => node.category === "Output") },
-];
+const categoryLabels: Record<string, string> = {
+  "trigger": "Triggers",
+  "condition": "Logic",
+  "transform": "Data",
+  "protocol": "Protocols",
+  "memory": "Memory",
+  "communication": "Output"
+};
 
 export function NodePaletteButton() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+  const [nodeTemplates, setNodeTemplates] = useState<NodeTemplate[]>([]);
+  const [categories, setCategories] = useState<NodeCategory[]>([]);
+  const [loading, setLoading] = useState(true);
+
+
+  useEffect(() => {
+    const fetchNodeTemplates = async () => {
+      try {
+        const response = await defaultApiClient.getNodeTemplates();
+        if (response.success && response.data) {
+          setNodeTemplates(response.data.templates);
+          
+          const categoryMap = new Map<string, NodeType[]>();
+          
+          response.data.templates.forEach((template: NodeTemplate) => {
+            const nodeType: NodeType = {
+              id: template.id,
+              label: template.name,
+              icon: getNodeIcon(template),
+              category: template.category,
+              description: template.description
+            };
+            
+            if (!categoryMap.has(template.category)) {
+              categoryMap.set(template.category, []);
+            }
+            categoryMap.get(template.category)!.push(nodeType);
+          });
+          
+          const categoriesArray: NodeCategory[] = Array.from(categoryMap.entries()).map(([categoryId, nodes]) => ({
+            id: categoryId,
+            label: categoryLabels[categoryId] || categoryId,
+            nodes
+          }));
+          
+          setCategories(categoriesArray);
+        }
+      } catch (error) {
+        console.error('Failed to fetch node templates:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNodeTemplates();
+  }, []);
 
   const handleCategoryToggle = (categoryId: string) => {
     setExpandedCategories(prev => ({
@@ -82,7 +195,8 @@ export function NodePaletteButton() {
   const filteredCategories = categories.map(category => ({
     ...category,
     nodes: category.nodes.filter(node => 
-      node.label.toLowerCase().includes(searchQuery.toLowerCase())
+      node.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      node.description.toLowerCase().includes(searchQuery.toLowerCase())
     )
   })).filter(category => category.nodes.length > 0);
 
@@ -135,50 +249,62 @@ export function NodePaletteButton() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-4">
-              <div className="space-y-1">
-                {filteredCategories.map((category) => (
-                  <div key={category.id} className="border-b border-white/5 last:border-b-0">
-                    <Button
-                      onClick={() => handleCategoryToggle(category.id)}
-                      variant="ghost"
-                      className="w-full justify-between p-3 text-white hover:bg-white/5 h-auto"
-                    >
-                      <span className="text-sm font-medium">{category.label}</span>
-                      <ChevronDown 
-                        className={`w-4 h-4 transition-transform ${
-                          expandedCategories[category.id] ? "rotate-180" : ""
-                        }`} 
-                      />
-                    </Button>
-                    
-                    {expandedCategories[category.id] && (
-                      <div className="px-3 pb-3 space-y-1">
-                        {category.nodes.map((node) => {
-                          const IconComponent = node.icon;
-                          return (
-                            <Button
-                              key={node.id}
-                              onClick={() => handleNodeClick(node)}
-                              variant="ghost"
-                              className="w-full justify-start p-2 text-gray-300 hover:text-white hover:bg-white/5 h-auto"
-                            >
-                              <div className="flex items-center gap-3 w-full">
-                                <IconComponent className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                                <span className="text-sm">{node.label}</span>
-                              </div>
-                            </Button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {filteredCategories.length === 0 && searchQuery && (
-                  <div className="text-center py-8">
-                    <p className="text-sm text-gray-400">No nodes found matching "{searchQuery}"</p>
-                  </div>
-                )}
-              </div>
+              {loading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
+                  <p className="text-sm text-gray-400">Loading nodes...</p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {filteredCategories.map((category) => (
+                    <div key={category.id} className="border-b border-white/5 last:border-b-0">
+                      <Button
+                        onClick={() => handleCategoryToggle(category.id)}
+                        variant="ghost"
+                        className="w-full justify-between p-3 text-white hover:bg-white/5 h-auto"
+                      >
+                        <span className="text-sm font-medium">{category.label}</span>
+                        <ChevronDown 
+                          className={`w-4 h-4 transition-transform ${
+                            expandedCategories[category.id] ? "rotate-180" : ""
+                          }`} 
+                        />
+                      </Button>
+                      
+                      {expandedCategories[category.id] && (
+                        <div className="px-3 pb-3 space-y-1">
+                          {category.nodes.map((node) => {
+                            const IconComponent = node.icon;
+                            return (
+                              <Button
+                                key={node.id}
+                                onClick={() => handleNodeClick(node)}
+                                variant="ghost"
+                                className="w-full justify-start p-2 text-gray-300 hover:text-white hover:bg-white/5 h-auto"
+                              >
+                                <div className="flex items-start gap-3 w-full">
+                                  <IconComponent className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                                  <div className="flex-1 text-left">
+                                    <div className="text-sm font-medium">{node.label}</div>
+                                    <div className="text-xs text-gray-500 mt-1 line-clamp-2">
+                                      {node.description}
+                                    </div>
+                                  </div>
+                                </div>
+                              </Button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {filteredCategories.length === 0 && searchQuery && (
+                    <div className="text-center py-8">
+                      <p className="text-sm text-gray-400">No nodes found matching "{searchQuery}"</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

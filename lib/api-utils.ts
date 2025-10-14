@@ -375,7 +375,7 @@ class ForgexApiClient {
     categories: string[];
     protocols: string[];
   }>> {
-    return this.request("/api/agents/nodes/templates");
+    return this.request("/agents/nodes/templates");
   }
 
   async getWorkflows(params?: {
