@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
 import { defaultApiClient } from "@/lib/api-utils";
 import { 
-  Workflow,  
+  Workflow as WorkflowIcon,  
   Play,  
   Store, 
   Database,
@@ -17,12 +17,15 @@ import {
   Plus,
   Settings,
   LogOut,
-  Sparkles
+  Sparkles,
+  Calendar,
+  Clock,
+  MoreVertical
 } from "lucide-react";
 import Image from "next/image";
 
 const sidebarItems = [
-  { id: 'workflows', label: 'Workflows', icon: Workflow, active: true },
+  { id: 'workflows', label: 'Workflows', icon: WorkflowIcon, active: true },
   { id: 'executions', label: 'Executions', icon: Play },
   { id: 'marketplace', label: 'Marketplace', icon: Store },
 
@@ -48,12 +51,35 @@ interface UserStats {
   totalTransactions: number;
 }
 
+interface Workflow {
+  id: string;
+  userId: string;
+  name: string;
+  description: string;
+  nodes: any[];
+  connections: any[];
+  config: {
+    isActive: boolean;
+    scheduleType?: "manual" | "cron" | "event";
+    cronExpression?: string;
+    triggerEvents?: string[];
+  };
+  templateId?: string;
+  status: "draft" | "published" | "paused" | "error";
+  createdAt: string;
+  updatedAt: string;
+  deployments: any[];
+}
+
 export default function WorkflowsPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('workflows');
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const [workflowsLoading, setWorkflowsLoading] = useState(true);
+  const [workflowsError, setWorkflowsError] = useState<string | null>(null);
   const { logout, forgexAuth } = usePrivyAuth();
 
   const handleAddWorkflow = () => {
@@ -89,7 +115,33 @@ export default function WorkflowsPage() {
       }
     };
 
+    const fetchWorkflows = async () => {
+      if (!forgexAuth.isAuthenticated) {
+        setWorkflowsLoading(false);
+        return;
+      }
+
+      try {
+        setWorkflowsError(null);
+        const response = await defaultApiClient.getWorkflows({
+          limit: 20,
+          offset: 0
+        });
+        if (response.success && response.data) {
+          setWorkflows(response.data.workflows);
+        } else {
+          setWorkflowsError(response.error || 'Failed to fetch workflows');
+        }
+      } catch (error) {
+        setWorkflowsError('Failed to fetch workflows');
+        console.error('Failed to fetch workflows:', error);
+      } finally {
+        setWorkflowsLoading(false);
+      }
+    };
+
     fetchUserProfile();
+    fetchWorkflows();
   }, [forgexAuth.isAuthenticated]);
 
   return (
@@ -220,51 +272,123 @@ export default function WorkflowsPage() {
                 </Button>
               </div>
 
-              {/* Empty State */}
-              <div className="flex-1 flex flex-col items-center justify-center px-8">
-                <div className="w-64 h-48 mb-8 relative">
-                  {/* Monitor illustration */}
-                  <div className="w-full h-32 bg-[#1A1B23] border border-white/20 rounded-lg relative">
-                    <div className="absolute inset-2 bg-[#0B0C10] rounded border border-white/10"></div>
-                    <div className="absolute top-4 left-4 right-4 h-1 bg-white/20 rounded"></div>
-                    <div className="absolute top-6 left-4 right-4 h-1 bg-white/10 rounded"></div>
-                    <div className="absolute top-8 left-4 right-4 h-1 bg-white/10 rounded"></div>
+              {/* Workflows Content */}
+              <div className="flex-1 px-8 overflow-y-auto">
+                {workflowsLoading ? (
+                  <div className="flex items-center justify-center h-64">
+                    <div className="text-gray-400">Loading workflows...</div>
                   </div>
-                  
-                  {/* Character blobs */}
-                  <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
-                    <div className="w-4 h-4 bg-white rounded-full flex items-center justify-center">
-                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                ) : workflowsError ? (
+                  <div className="flex items-center justify-center h-64">
+                    <div className="text-red-400">Error: {workflowsError}</div>
+                  </div>
+                ) : workflows.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full min-h-[400px]">
+                    <div className="w-64 h-48 mb-8 relative">
+                      {/* Monitor illustration */}
+                      <div className="w-full h-32 bg-[#1A1B23] border border-white/20 rounded-lg relative">
+                        <div className="absolute inset-2 bg-[#0B0C10] rounded border border-white/10"></div>
+                        <div className="absolute top-4 left-4 right-4 h-1 bg-white/20 rounded"></div>
+                        <div className="absolute top-6 left-4 right-4 h-1 bg-white/10 rounded"></div>
+                        <div className="absolute top-8 left-4 right-4 h-1 bg-white/10 rounded"></div>
+                      </div>
+                      
+                      {/* Character blobs */}
+                      <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
+                        <div className="w-4 h-4 bg-white rounded-full flex items-center justify-center">
+                          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                        </div>
+                      </div>
+                      <div className="absolute top-4 -right-2 w-6 h-6 bg-purple-400 rounded-full flex items-center justify-center">
+                        <div className="w-3 h-3 bg-white rounded-full flex items-center justify-center">
+                          <div className="w-1.5 h-1.5 bg-purple-400 rounded-full"></div>
+                        </div>
+                      </div>
+                      <div className="absolute bottom-2 -left-2 w-5 h-5 bg-purple-600 rounded-full flex items-center justify-center">
+                        <div className="w-2 h-2 bg-white rounded-full flex items-center justify-center">
+                          <div className="w-1 h-1 bg-purple-600 rounded-full"></div>
+                        </div>
+                      </div>
+                      <div className="absolute bottom-4 right-4 w-4 h-4 bg-purple-300 rounded-full flex items-center justify-center">
+                        <div className="w-2 h-2 bg-white rounded-full flex items-center justify-center">
+                          <div className="w-1 h-1 bg-purple-300 rounded-full"></div>
+                        </div>
+                      </div>
                     </div>
+                    
+                    <h3 className="text-2xl font-semibold mb-2">No Workflows Yet</h3>
+                    <p className="text-gray-400 mb-6 text-center max-w-md">
+                      Create your first autonomous Solana agent workflow to get started with visual automation
+                    </p>
+                    <Button 
+                      onClick={handleAddWorkflow}
+                      className="bg-gradient-to-r from-[#ff6b35] text-white to-[#f7931e] hover:opacity-90 cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4 mr-2 " />
+                      Create Your First Workflow
+                    </Button>
                   </div>
-                  <div className="absolute top-4 -right-2 w-6 h-6 bg-purple-400 rounded-full flex items-center justify-center">
-                    <div className="w-3 h-3 bg-white rounded-full flex items-center justify-center">
-                      <div className="w-1.5 h-1.5 bg-purple-400 rounded-full"></div>
-                    </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-8">
+                    {workflows.map((workflow) => (
+                      <div
+                        key={workflow.id}
+                        className="bg-[#1A1B23] border border-white/10 rounded-lg p-6 hover:border-white/20 transition-colors cursor-pointer"
+                        onClick={() => router.push(`/canvas?workflow=${workflow.id}`)}
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                              <WorkflowIcon className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                              <h3 className="text-lg font-semibold text-white">{workflow.name}</h3>
+                              <p className="text-sm text-gray-400">{workflow.description || 'No description'}</p>
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-400">Status</span>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              workflow.status === 'published' ? 'bg-green-600 text-green-100' :
+                              workflow.status === 'draft' ? 'bg-yellow-600 text-yellow-100' :
+                              workflow.status === 'paused' ? 'bg-orange-600 text-orange-100' :
+                              'bg-red-600 text-red-100'
+                            }`}>
+                              {workflow.status}
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-400">Nodes</span>
+                            <span className="text-sm text-white">{workflow.nodes.length}</span>
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-400">Created</span>
+                            <div className="flex items-center space-x-1 text-sm text-gray-300">
+                              <Calendar className="w-3 h-3" />
+                              <span>{new Date(workflow.createdAt).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-400">Updated</span>
+                            <div className="flex items-center space-x-1 text-sm text-gray-300">
+                              <Clock className="w-3 h-3" />
+                              <span>{new Date(workflow.updatedAt).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="absolute bottom-2 -left-2 w-5 h-5 bg-purple-600 rounded-full flex items-center justify-center">
-                    <div className="w-2 h-2 bg-white rounded-full flex items-center justify-center">
-                      <div className="w-1 h-1 bg-purple-600 rounded-full"></div>
-                    </div>
-                  </div>
-                  <div className="absolute bottom-4 right-4 w-4 h-4 bg-purple-300 rounded-full flex items-center justify-center">
-                    <div className="w-2 h-2 bg-white rounded-full flex items-center justify-center">
-                      <div className="w-1 h-1 bg-purple-300 rounded-full"></div>
-                    </div>
-                  </div>
-                </div>
-                
-                <h3 className="text-2xl font-semibold mb-2">No Workflows Yet</h3>
-                <p className="text-gray-400 mb-6 text-center max-w-md">
-                  Create your first autonomous Solana agent workflow to get started with visual automation
-                </p>
-                <Button 
-                  onClick={handleAddWorkflow}
-                  className="bg-gradient-to-r from-[#ff6b35] text-white to-[#f7931e] hover:opacity-90 cursor-pointer"
-                >
-                  <Plus className="w-4 h-4 mr-2 " />
-                  Create Your First Workflow
-                </Button>
+                )}
               </div>
             </div>
           </div>

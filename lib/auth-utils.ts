@@ -118,3 +118,14 @@ export function getForgexSessionToken(): string | undefined {
   const storedToken = getStoredSessionToken();
   return apiToken || storedToken || undefined;
 }
+
+/**
+ * Initialize API client with stored auth token
+ * Call this on app startup to restore authentication
+ */
+export function initializeApiClient(): void {
+  const storedToken = getStoredSessionToken();
+  if (storedToken) {
+    defaultApiClient.setAuthToken(storedToken);
+  }
+}

@@ -391,7 +391,7 @@ class ForgexApiClient {
     if (params?.offset) queryParams.set("offset", params.offset.toString());
     if (params?.status) queryParams.set("status", params.status);
 
-    return this.request(`/api/agents/workflows?${queryParams}`);
+    return this.request(`/agents/workflows?${queryParams}`);
   }
 
   async createWorkflow(workflow: {
@@ -401,7 +401,7 @@ class ForgexApiClient {
     connections?: WorkflowConnection[];
     templateId?: string;
   }): Promise<ApiResponse<Workflow>> {
-    return this.request("/api/agents/workflows", {
+    return this.request("/agents/workflows", {
       method: "POST",
       body: JSON.stringify(workflow),
     });
