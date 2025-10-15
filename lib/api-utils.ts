@@ -527,6 +527,24 @@ class ForgexApiClient {
     });
   }
 
+  async deployWorkflow(params: {
+    workflowId: string;
+    platform: "telegram" | "discord" | "mcp" | "webhook";
+    config: {
+      botToken?: string;
+      chatId?: string;
+      webhookUrl?: string;
+      [key: string]: any;
+    };
+    name: string;
+    description?: string;
+  }): Promise<ApiResponse<DeploymentConfig>> {
+    return this.request("/deployments", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+  }
+
   // ============================================================================
   // SECRETS MANAGEMENT ENDPOINTS
   // ============================================================================

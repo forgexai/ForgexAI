@@ -13,6 +13,7 @@ import {
 import { DeleteWorkflowDialog } from "@/components/workflows/DeleteWorkflowDialog";
 import { ViewExecutionsModal } from "@/components/workflows/ViewExecutionsModal";
 import { ScheduleWorkflowModal } from "@/components/workflows/ScheduleWorkflowModal";
+import { DeployWorkflowModal } from "@/components/workflows/DeployWorkflowModal";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
 import { defaultApiClient } from "@/lib/api-utils";
 import { refreshApiClientAuth } from "@/lib/auth-utils";
@@ -24,7 +25,8 @@ import {
   Play as PlayIcon,
   Loader2,
   Clock,
-  Calendar
+  Calendar,
+  Rocket
 } from "lucide-react";
 
 interface Workflow {
@@ -62,6 +64,8 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
   const [selectedWorkflow, setSelectedWorkflow] = useState<{ id: string; name: string } | null>(null);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [workflowToSchedule, setWorkflowToSchedule] = useState<{ id: string; name: string } | null>(null);
+  const [deployModalOpen, setDeployModalOpen] = useState(false);
+  const [workflowToDeploy, setWorkflowToDeploy] = useState<{ id: string; name: string } | null>(null);
   const { forgexAuth } = usePrivyAuth();
 
   const handleAddWorkflow = () => {
@@ -109,6 +113,11 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
   const handleScheduleWorkflow = (workflowId: string, workflowName: string) => {
     setWorkflowToSchedule({ id: workflowId, name: workflowName });
     setScheduleModalOpen(true);
+  };
+
+  const handleDeployWorkflow = (workflowId: string, workflowName: string) => {
+    setWorkflowToDeploy({ id: workflowId, name: workflowName });
+    setDeployModalOpen(true);
   };
 
   const confirmDeleteWorkflow = async () => {
@@ -273,6 +282,16 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
                     <Calendar className="w-4 h-4 mr-2" />
                     Schedule
                   </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeployWorkflow(workflow.id, workflow.name);
+                    }}
+                    className="text-white hover:bg-white/10 cursor-pointer"
+                  >
+                    <Rocket className="w-4 h-4 mr-2" />
+                    Deploy
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-white/10" />
                   <DropdownMenuItem
                     onClick={(e) => {
@@ -361,6 +380,13 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
             onScheduleSuccess={() => {
               toast.success("Workflow scheduled successfully!");
             }}
+          />
+
+          <DeployWorkflowModal
+            isOpen={deployModalOpen}
+            onClose={() => setDeployModalOpen(false)}
+            workflowId={workflowToDeploy?.id || ""}
+            workflowName={workflowToDeploy?.name || ""}
           />
         </>
       );
