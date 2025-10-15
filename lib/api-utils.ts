@@ -511,7 +511,7 @@ class ForgexApiClient {
     if (params?.limit) queryParams.set("limit", params.limit.toString());
     if (params?.offset) queryParams.set("offset", params.offset.toString());
 
-    return this.request(`/api/deployments?${queryParams}`);
+    return this.request(`/deployments?${queryParams}`);
   }
 
   async controlDeployment(

@@ -14,11 +14,13 @@ import {
   Settings,
   LogOut,
   Sparkles,
+  Rocket,
 } from "lucide-react";
 
 const sidebarItems = [
   { id: 'workflows', label: 'Workflows', icon: WorkflowIcon },
   { id: 'schedules', label: 'Schedules', icon: Clock },
+  { id: 'deployments', label: 'Deployments', icon: Rocket },
   { id: 'marketplace', label: 'Marketplace', icon: Store },
 ];
 
