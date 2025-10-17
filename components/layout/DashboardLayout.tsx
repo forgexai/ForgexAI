@@ -9,7 +9,6 @@ import {
   Clock,  
   Store, 
   Search,
-  Grid3X3,
   Plus,
   Settings,
   LogOut,
@@ -191,9 +190,7 @@ export function DashboardLayout({
                         className="pl-10 w-80 bg-[#1A1B23] border-white/10"
                       />
                     </div>
-                    <Button variant="ghost" size="sm" className="cursor-pointer">
-                      <Grid3X3 className="w-4 h-4" />
-                    </Button>
+                    /
                   </>
                 )}
               </div>

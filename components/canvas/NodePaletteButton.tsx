@@ -30,6 +30,29 @@ import {
   Lock,
   RefreshCw
 } from "lucide-react";
+
+// Icon mapping for serialization
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  MessageSquare,
+  Clock,
+  GitBranch,
+  UserCheck,
+  Coins,
+  FileText,
+  Send,
+  Database,
+  BarChart3,
+  Settings,
+  Zap,
+  Activity,
+  Shield,
+  TrendingUp,
+  Wallet,
+  Bot,
+  Globe,
+  Lock,
+  RefreshCw
+};
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface NodeTemplate {
@@ -46,7 +69,7 @@ interface NodeTemplate {
 interface NodeType {
   id: string;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: string;
   category: string;
   description: string;
 }
@@ -57,61 +80,53 @@ interface NodeCategory {
   nodes: NodeType[];
 }
 
-// Icon mapping for different node types and categories
-const getNodeIcon = (template: NodeTemplate): React.ComponentType<{ className?: string }> => {
+const getNodeIcon = (template: NodeTemplate): string => {
   const { type, category, id } = template;
   
-  // Trigger nodes
   if (type === "input") {
-    if (id.includes("telegram") || id.includes("message")) return MessageSquare;
-    if (id.includes("schedule") || id.includes("timer")) return Clock;
-    if (id.includes("webhook")) return Globe;
-    return Zap;
+    if (id.includes("telegram") || id.includes("message")) return "MessageSquare";
+    if (id.includes("schedule") || id.includes("timer")) return "Clock";
+    if (id.includes("webhook")) return "Globe";
+    return "Zap";
   }
   
-  // Protocol nodes
   if (type === "protocol") {
-    if (id.includes("jupiter") || id.includes("swap")) return Coins;
-    if (id.includes("kamino") || id.includes("solend") || id.includes("loan")) return Shield;
-    if (id.includes("tensor") || id.includes("nft")) return BarChart3;
-    if (id.includes("marinade") || id.includes("jito") || id.includes("staking")) return TrendingUp;
-    if (id.includes("drift") || id.includes("position")) return Activity;
-    if (id.includes("squads") || id.includes("treasury")) return Wallet;
-    if (id.includes("pyth") || id.includes("price")) return BarChart3;
-    return Bot;
+    if (id.includes("jupiter") || id.includes("swap")) return "Coins";
+    if (id.includes("kamino") || id.includes("solend") || id.includes("loan")) return "Shield";
+    if (id.includes("tensor") || id.includes("nft")) return "BarChart3";
+    if (id.includes("marinade") || id.includes("jito") || id.includes("staking")) return "TrendingUp";
+    if (id.includes("drift") || id.includes("position")) return "Activity";
+    if (id.includes("squads") || id.includes("treasury")) return "Wallet";
+    if (id.includes("pyth") || id.includes("price")) return "BarChart3";
+    return "Bot";
   }
   
-  // Logic nodes
   if (type === "logic") {
-    if (id.includes("if") || id.includes("condition")) return GitBranch;
-    if (id.includes("approval") || id.includes("user")) return UserCheck;
-    if (id.includes("variable") || id.includes("set")) return Settings;
-    return GitBranch;
+    if (id.includes("if") || id.includes("condition")) return "GitBranch";
+    if (id.includes("approval") || id.includes("user")) return "UserCheck";
+    if (id.includes("variable") || id.includes("set")) return "Settings";
+    return "GitBranch";
   }
   
-  // Data nodes
   if (type === "data") {
-    if (id.includes("transform")) return RefreshCw;
-    return Database;
+    if (id.includes("transform")) return "RefreshCw";
+    return "Database";
   }
   
-  // Output nodes
   if (type === "output") {
-    if (id.includes("telegram") || id.includes("message")) return Send;
-    return Settings;
+    if (id.includes("telegram") || id.includes("message")) return "Send";
+    return "Settings";
   }
   
-  // Memory nodes
   if (category === "memory") {
-    return Database;
+    return "Database";
   }
   
-  // Communication nodes
   if (category === "communication") {
-    return Send;
+    return "Send";
   }
   
-  return Settings;
+  return "Settings";
 };
 
 const categoryLabels: Record<string, string> = {
@@ -182,12 +197,19 @@ export function NodePaletteButton() {
   };
 
   const handleNodeClick = (nodeType: NodeType) => {
+    
+    const dragData = {
+      type: nodeType.id,
+      label: nodeType.label,
+      category: nodeType.category,
+      iconName: nodeType.icon,
+      description: nodeType.description
+    };
+    
+    (window as any).lastDroppedNodeData = dragData;
+    
     const event = new CustomEvent('addNode', { 
-      detail: { 
-        type: nodeType.id,
-        label: nodeType.label,
-        category: nodeType.category 
-      } 
+      detail: dragData
     });
     window.dispatchEvent(event);
     setIsModalOpen(false);
@@ -214,7 +236,7 @@ export function NodePaletteButton() {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex animate-in fade-in duration-200">
           <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" onClick={() => setIsModalOpen(false)} />
-          <div className="relative w-80 bg-[#1A1B23] border-r border-white/10 h-full animate-in slide-in-from-left duration-300">
+          <div className="relative w-80 bg-[#1A1B23] border-r border-white/10 h-full flex flex-col animate-in slide-in-from-left duration-300">
             <div className="p-4 border-b border-white/10">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-white">Add Nodes</h2>
@@ -275,7 +297,7 @@ export function NodePaletteButton() {
                       {expandedCategories[category.id] && (
                         <div className="px-3 pb-3 space-y-1">
                           {category.nodes.map((node) => {
-                            const IconComponent = node.icon;
+                            const IconComponent = iconMap[node.icon] || Settings;
                             return (
                               <TooltipProvider key={node.id}>
                                 <Tooltip>
@@ -285,13 +307,10 @@ export function NodePaletteButton() {
                                       variant="ghost"
                                       className="w-full justify-start p-2 text-gray-300 hover:text-white hover:bg-white/5 h-auto"
                                     >
-                                      <div className="flex items-start gap-3 w-full min-w-0">
-                                        <IconComponent className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                                      <div className="flex items-center gap-3 w-full min-w-0">
+                                        <IconComponent className="w-4 h-4 text-gray-400 flex-shrink-0" />
                                         <div className="flex-1 text-left min-w-0">
                                           <div className="text-sm font-medium">{node.label}</div>
-                                          <div className="text-xs text-gray-500 mt-1 break-words leading-tight">
-                                            {node.description}
-                                          </div>
                                         </div>
                                       </div>
                                     </Button>

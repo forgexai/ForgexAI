@@ -19,7 +19,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { nodesAtom, edgesAtom } from "@/lib/state/atoms";
 import { defaultApiClient } from "@/lib/api-utils";
 import { toast } from "sonner";
-import { Save, Download, Plus, ChevronLeft } from "lucide-react";
+import { Save, Download, ChevronLeft } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface CanvasHeaderProps {
   workflowId?: string | null;
@@ -38,7 +39,6 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
   const [isEditingName, setIsEditingName] = useState(false);
   const { authenticated } = usePrivyAuth();
 
-  // Load workflow details when in edit mode
   useEffect(() => {
     const loadWorkflowDetails = async () => {
       if (isEditMode && workflowId) {
@@ -134,7 +134,6 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
         position: node.position
       }));
 
-      // Transform edges to match API format
       const transformedConnections = edges.map(edge => ({
         id: edge.id,
         sourceNodeId: edge.source,
@@ -187,7 +186,6 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
     setIsSaving(true);
 
     try {
-      // Transform nodes to match API format
       const transformedNodes = nodes.map(node => ({
         id: node.id,
         type: (node.type === 'condition' ? 'input' : 
@@ -204,7 +202,6 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
         position: node.position
       }));
 
-      // Transform edges to match API format
       const transformedConnections = edges.map(edge => ({
         id: edge.id,
         sourceNodeId: edge.source,
@@ -292,25 +289,41 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
         </div>
 
         <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSaveWorkflow}
-            className="border-gray-700 text-black cursor-pointer px-4 py-2"
-          >
-            <Save className="w-4 h-4 mr-2" />
-            Save
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSaveWorkflow}
+                  className="border-gray-700 text-black cursor-pointer px-4 py-2"
+                >
+                  <Save className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Save</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleLoadWorkflow}
-            className="border-gray-700 text-black cursor-pointer px-4 py-2"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Load
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLoadWorkflow}
+                  className="border-gray-700 text-black cursor-pointer px-4 py-2"
+                >
+                  <Download className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Load</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
           {isEditMode ? (
             <Button
@@ -329,7 +342,6 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
               disabled={!authenticated}
               className="bg-gradient-to-r from-[#ff6b35] to-[#f7931e] text-white cursor-pointer hover:opacity-90"
             >
-              <Plus className="w-4 h-4 mr-2" />
               Create Workflow
             </Button>
           )}
