@@ -17,6 +17,7 @@ export default function CanvasPage() {
   const workflowId = searchParams.get('workflow');
   const mode = searchParams.get('mode');
   const isEditMode = mode === 'edit';
+  const isTemplateMode = mode === 'template';
   
   const [nodes, setNodes] = useAtom(nodesAtom);
   const [edges, setEdges] = useAtom(edgesAtom);
@@ -24,6 +25,12 @@ export default function CanvasPage() {
 
   useEffect(() => {
     const loadWorkflow = async () => {
+      if (isTemplateMode) {
+        // Template mode - nodes and edges are already set by the marketplace
+        toast.success('Template loaded successfully');
+        return;
+      }
+      
       if (isEditMode && workflowId) {
         setIsLoading(true);
         try {
@@ -89,7 +96,7 @@ export default function CanvasPage() {
     };
 
     loadWorkflow();
-  }, [workflowId, isEditMode, setNodes, setEdges]);
+  }, [workflowId, isEditMode, isTemplateMode, setNodes, setEdges]);
 
   if (isLoading) {
     return (
@@ -106,7 +113,7 @@ export default function CanvasPage() {
   return (
     <AuthGuard>
       <div className="flex flex-col h-screen w-full bg-[#111827] text-white">
-        <CanvasHeader workflowId={workflowId} isEditMode={isEditMode} />
+        <CanvasHeader workflowId={workflowId} isEditMode={isEditMode || isTemplateMode} />
         <div className="flex-1 relative" style={{ height: 'calc(100vh - 4rem)' }}>
           <CanvasArea workflowId={workflowId || undefined} />
           <NodePaletteButton />

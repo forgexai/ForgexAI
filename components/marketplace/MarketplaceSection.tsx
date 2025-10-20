@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAtom } from "jotai";
 import { defaultApiClient } from "@/lib/api-utils";
 import { refreshApiClientAuth } from "@/lib/auth-utils";
+import { nodesAtom, edgesAtom } from "@/lib/state/atoms";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -49,6 +52,9 @@ interface WorkflowTemplate {
 interface MarketplaceSectionProps {}
 
 export function MarketplaceSection({}: MarketplaceSectionProps) {
+  const router = useRouter();
+  const [nodes, setNodes] = useAtom(nodesAtom);
+  const [edges, setEdges] = useAtom(edgesAtom);
   const [templates, setTemplates] = useState<WorkflowTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +88,9 @@ export function MarketplaceSection({}: MarketplaceSectionProps) {
       
       const response = await defaultApiClient.getMarketplaceTemplates(params);
 
-      const templatesData = response?.data || [];
+      const templatesData =
+      response?.data?.data || response?.data || response?.data?.results || [];
+    
 
 if (Array.isArray(templatesData)) {
   setTemplates(templatesData as WorkflowTemplate[]);
@@ -159,6 +167,59 @@ if (Array.isArray(templatesData)) {
 
   const formatDate = (timestamp: { _seconds: number; _nanoseconds: number }) => {
     return new Date(timestamp._seconds * 1000).toLocaleDateString();
+  };
+
+  const transformTemplateToReactFlow = (template: WorkflowTemplate) => {
+    // Transform template nodes to React Flow format
+    const transformedNodes = template.nodes.map(node => {
+      // Map template node types to React Flow node types
+      let reactFlowType = 'condition'; // default
+      if (node.category === 'protocol') {
+        reactFlowType = 'solana';
+      } else if (node.category === 'communication') {
+        reactFlowType = 'telegram';
+      } else if (node.category === 'trigger') {
+        reactFlowType = 'condition';
+      } else if (node.category === 'logic') {
+        reactFlowType = 'condition';
+      }
+      
+      return {
+        id: node.id,
+        type: reactFlowType,
+        position: node.position,
+        data: {
+          label: node.name,
+          category: node.category,
+          description: node.description,
+          inputs: node.inputs,
+          outputs: node.outputs,
+          config: node.config
+        }
+      };
+    });
+
+    // Transform template connections to React Flow format
+    const transformedEdges = template.connections.map(connection => ({
+      id: connection.id,
+      source: connection.sourceNodeId,
+      target: connection.targetNodeId,
+      sourceHandle: connection.sourceOutputId,
+      targetHandle: connection.targetInputId,
+      style: { stroke: "#f97316", strokeWidth: 2 },
+      animated: true
+    }));
+
+    return { nodes: transformedNodes, edges: transformedEdges };
+  };
+
+  const handleUseTemplate = (template: WorkflowTemplate) => {
+    const { nodes: transformedNodes, edges: transformedEdges } = transformTemplateToReactFlow(template);
+    
+    setNodes(transformedNodes);
+    setEdges(transformedEdges);
+    
+    router.push('/canvas?mode=template');
   };
 
   if (loading) {
@@ -415,7 +476,11 @@ if (Array.isArray(templatesData)) {
                     <div className="text-sm text-gray-400">
                       Created {formatDate(template.createdAt)}
                     </div>
-                    <Button size="sm" className="gap-2 bg-blue-600 hover:bg-blue-700 text-white cursor-pointer">
+                    <Button 
+                      size="sm" 
+                      className="gap-2 bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+                      onClick={() => handleUseTemplate(template)}
+                    >
                       <Play className="w-4 h-4" />
                       Use Template
                     </Button>
