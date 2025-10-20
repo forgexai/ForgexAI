@@ -35,8 +35,36 @@ interface WorkflowTemplate {
   usageCount: number;
   rating: number;
   featured: boolean;
-  nodes: any[];
-  connections: any[];
+  nodes: Array<{
+    id: string;
+    type: string;
+    category: string;
+    name: string;
+    description: string;
+    inputs: Array<{
+      id: string;
+      name: string;
+      type: string;
+      required: boolean;
+      description?: string;
+      default?: any;
+    }>;
+    outputs: Array<{
+      id: string;
+      name: string;
+      type: string;
+      description?: string;
+    }>;
+    config: Record<string, any>;
+    position: { x: number; y: number };
+  }>;
+  connections: Array<{
+    id: string;
+    sourceNodeId: string;
+    sourceOutputId: string;
+    targetNodeId: string;
+    targetInputId: string;
+  }>;
   requiredInputs: Record<string, string>;
   isActive: boolean;
   createdAt: {
@@ -170,9 +198,9 @@ if (Array.isArray(templatesData)) {
   };
 
   const transformTemplateToReactFlow = (template: WorkflowTemplate) => {
-    // Transform template nodes to React Flow format
+
     const transformedNodes = template.nodes.map(node => {
-      // Map template node types to React Flow node types
+
       let reactFlowType = 'condition'; // default
       if (node.category === 'protocol') {
         reactFlowType = 'solana';
@@ -184,6 +212,201 @@ if (Array.isArray(templatesData)) {
         reactFlowType = 'condition';
       }
       
+      // Default values for required inputs
+      const INPUT_DEFAULT_VALUES: Record<string, any> = {
+        cronExpression: "0 */2 * * *",
+        interval: "*/5 * * * *",
+        
+        walletAddress: "Your Kamino lending wallet address",
+        inputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        outputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        collectionSlug: "your-collection-slug",
+        multisigAddress: "Your multisig address",
+        
+        healthFactor: 1.1,
+        threshold: 1.2,
+        currentPrice: 100,
+        targetPrice: 95,
+        condition: "above",
+        pendingCount: 1,
+        currentFloor: 50,
+        thresholdFloor: 60,
+        direction: "below",
+        lastKnownCount: 0,
+        
+        message: "Default message from template",
+        chatId: "@default_chat",
+        webhookUrl: "https://discord.com/api/webhooks/your-webhook-url",
+        sessionId: "default-session-id",
+      };
+
+      const formattedInputs = (node.inputs || []).map(input => {
+        const defaultValue = input.default ?? 
+          (input.required ? INPUT_DEFAULT_VALUES[input.id] : undefined);
+        
+        return {
+          id: input.id,
+          name: input.name,
+          type: input.type,
+          required: input.required || false,
+          description: input.description || '',
+          default: defaultValue
+        };
+      });
+
+      const formattedOutputs = (node.outputs || []).map(output => ({
+        id: output.id,
+        name: output.name,
+        type: output.type,
+        description: output.description || ''
+      }));
+
+      let enhancedOutputs = formattedOutputs;
+      if (node.category === 'logic' && !formattedOutputs.some(o => o.id === 'message')) {
+        enhancedOutputs = [
+          ...formattedOutputs,
+          {
+            id: 'message',
+            name: 'Message',
+            type: 'string',
+            description: 'Generated message output'
+          }
+        ];
+      }
+
+      let enhancedConfig = node.config || {};
+      
+      if (node.category === 'trigger' && node.name.toLowerCase().includes('schedule')) {
+        enhancedConfig = {
+          ...enhancedConfig,
+          cronExpression: "0 */2 * * *", // Every 2 hours
+          interval: "0 */2 * * *"
+        };
+      } else if (node.category === 'trigger' && node.name.toLowerCase().includes('price')) {
+        enhancedConfig = {
+          ...enhancedConfig,
+          interval: "*/5 * * * *" // Every 5 minutes
+        };
+      } else if (node.category === 'trigger' && node.name.toLowerCase().includes('nft')) {
+        enhancedConfig = {
+          ...enhancedConfig,
+          interval: "*/30 * * * *" // Every 30 minutes
+        };
+      } else if (node.category === 'trigger' && node.name.toLowerCase().includes('governance')) {
+        enhancedConfig = {
+          ...enhancedConfig,
+          interval: "0 */2 * * *" // Every 2 hours
+        };
+      }
+      
+      // Add default values for protocol nodes
+      if (node.category === 'protocol' && node.name.toLowerCase().includes('kamino')) {
+        enhancedConfig = {
+          ...enhancedConfig,
+          walletAddress: "Your Kamino lending wallet address",
+          protocol: "kamino",
+          method: "getHealthFactor"
+        };
+      } else if (node.category === 'protocol' && node.name.toLowerCase().includes('jupiter')) {
+        enhancedConfig = {
+          ...enhancedConfig,
+          inputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+          outputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+          protocol: "jupiter",
+          method: "getPrice"
+        };
+      } else if (node.category === 'protocol' && node.name.toLowerCase().includes('tensor')) {
+        enhancedConfig = {
+          ...enhancedConfig,
+          collectionSlug: "your-collection-slug",
+          protocol: "tensor",
+          method: "getFloorPrice"
+        };
+      }
+      
+      // Add default values for condition/logic nodes
+      if (node.category === 'logic' && node.name.toLowerCase().includes('risk')) {
+        enhancedConfig = {
+          ...enhancedConfig,
+          messageTemplate: "Health factor is {healthFactor}, which is below the threshold of {threshold}. Liquidation risk is high!",
+          generateMessage: true,
+          healthFactor: 1.1,
+          threshold: 1.2
+        };
+      } else if (node.category === 'logic' && node.name.toLowerCase().includes('price')) {
+        enhancedConfig = {
+          ...enhancedConfig,
+          messageTemplate: "Price alert: {currentPrice} is {condition} target price {targetPrice}",
+          generateMessage: true,
+          currentPrice: 100,
+          targetPrice: 95,
+          condition: "above"
+        };
+      } else if (node.category === 'logic' && node.name.toLowerCase().includes('proposal')) {
+        enhancedConfig = {
+          ...enhancedConfig,
+          messageTemplate: "New governance proposal detected: {pendingCount} pending proposals",
+          generateMessage: true,
+          pendingCount: 1
+        };
+      } else if (node.category === 'logic' && node.name.toLowerCase().includes('floor')) {
+        enhancedConfig = {
+          ...enhancedConfig,
+          messageTemplate: "Floor price alert: {currentFloor} is {direction} threshold {thresholdFloor}",
+          generateMessage: true,
+          currentFloor: 50,
+          thresholdFloor: 60,
+          direction: "below"
+        };
+      }
+      
+      // Add default values for communication nodes
+      if (node.category === 'communication' && node.name.toLowerCase().includes('telegram')) {
+        enhancedConfig = {
+          ...enhancedConfig,
+          platform: "telegram",
+          credits: 1,
+          message: "Default message from template", // Fallback message
+          chatId: "@default_chat",
+          parseMode: "Markdown"
+        };
+      } else if (node.category === 'communication' && node.name.toLowerCase().includes('discord')) {
+        enhancedConfig = {
+          ...enhancedConfig,
+          platform: "discord",
+          credits: 1,
+          message: "Default message from template", // Fallback message
+          webhookUrl: "https://discord.com/api/webhooks/your-webhook-url"
+        };
+      } else if (node.category === 'communication' && node.name.toLowerCase().includes('mcp')) {
+        enhancedConfig = {
+          ...enhancedConfig,
+          platform: "mcp",
+          credits: 1,
+          message: "Default message from template", // Fallback message
+          sessionId: "default-session-id",
+          tools: []
+        };
+      } else if (node.category === 'communication' && node.name.toLowerCase().includes('webhook')) {
+        enhancedConfig = {
+          ...enhancedConfig,
+          platform: "webhook",
+          credits: 1,
+          webhookUrl: "https://your-webhook-endpoint.com/webhook",
+          payload: { message: "Default message from template" }
+        };
+      }
+
+      // Create parameters object with current values for Node Inspector
+      const parameters = { ...enhancedConfig };
+      
+      // Add current values from inputs to parameters so Node Inspector can display them
+      formattedInputs.forEach(input => {
+        if (input.default !== undefined) {
+          parameters[input.id] = input.default;
+        }
+      });
+
       return {
         id: node.id,
         type: reactFlowType,
@@ -192,9 +415,11 @@ if (Array.isArray(templatesData)) {
           label: node.name,
           category: node.category,
           description: node.description,
-          inputs: node.inputs,
-          outputs: node.outputs,
-          config: node.config
+          inputs: formattedInputs,
+          outputs: enhancedOutputs,
+          config: enhancedConfig,
+          // Add parameters for Node Inspector to display current values
+          parameters: parameters
         }
       };
     });
@@ -215,6 +440,10 @@ if (Array.isArray(templatesData)) {
 
   const handleUseTemplate = (template: WorkflowTemplate) => {
     const { nodes: transformedNodes, edges: transformedEdges } = transformTemplateToReactFlow(template);
+    
+    console.log('Template being loaded:', template);
+    console.log('Transformed nodes:', transformedNodes);
+    console.log('Transformed edges:', transformedEdges);
     
     setNodes(transformedNodes);
     setEdges(transformedEdges);

@@ -24,9 +24,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 interface CanvasHeaderProps {
   workflowId?: string | null;
   isEditMode?: boolean;
+  isTemplateMode?: boolean;
 }
 
-export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderProps) {
+export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = false }: CanvasHeaderProps) {
   const router = useRouter();
   const [nodes] = useAtom(nodesAtom);
   const [edges] = useAtom(edgesAtom);
@@ -51,11 +52,14 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
         } catch (error) {
           console.error('Error loading workflow details:', error);
         }
+      } else if (isTemplateMode) {
+        setWorkflowName("Template Workflow");
+        setWorkflowDescription("A workflow created from a marketplace template");
       }
     };
 
     loadWorkflowDetails();
-  }, [isEditMode, workflowId]);
+  }, [isEditMode, isTemplateMode, workflowId]);
 
   const handleSaveWorkflow = () => {
     const workflow = {
@@ -127,7 +131,7 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
         category: node.data?.category || 'trigger' as "trigger" | "condition" | "transform" | "protocol" | "memory" | "communication",
         name: node.data?.label || node.type,
         description: node.data?.description || "",
-        inputs: (() => {
+        inputs: node.data?.inputs || (() => {
           switch (node.data?.category) {
             case 'communication':
               return [
@@ -150,11 +154,11 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
                     { id: "value", name: "Value", type: "any" as const, required: true, description: "Value to store" }
                   ];
                 } else {
-                  // Auto mode - value comes from connected nodes, no manual input needed
+
                   return [];
                 }
               } else {
-                return []; // No inputs required for retrieve/delete operations
+                return []; 
               }
             case 'trigger':
               return [
@@ -164,7 +168,7 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
               return [];
           }
         })(),
-        outputs: (() => {
+        outputs: node.data?.outputs || (() => {
           switch (node.data?.category) {
             case 'communication':
               return [
@@ -189,12 +193,11 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
           if (node.data?.category === 'memory') {
             config.key = workflowId;
           }
-          // For protocol nodes, add protocol and method
+
           if (node.data?.category === 'protocol') {
             config.protocol = config.protocol || 'jupiter';
             config.method = config.method || config.action || 'executeSwap';
           }
-          // For communication nodes, ensure chatId is included
           if (node.data?.category === 'communication') {
             config.chatId = config.chatId || '@default_chat';
           }
@@ -266,7 +269,7 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
         category: node.data?.category || 'trigger' as "trigger" | "condition" | "transform" | "protocol" | "memory" | "communication",
         name: node.data?.label || node.type,
         description: node.data?.description || "",
-        inputs: (() => {
+        inputs: node.data?.inputs || (() => {
           switch (node.data?.category) {
             case 'communication':
               return [
@@ -289,11 +292,10 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
                     { id: "value", name: "Value", type: "any" as const, required: true, description: "Value to store" }
                   ];
                 } else {
-                  // Auto mode - value comes from connected nodes, no manual input needed
                   return [];
                 }
               } else {
-                return []; // No inputs required for retrieve/delete operations
+                return []; 
               }
             case 'trigger':
               return [
@@ -303,7 +305,7 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
               return [];
           }
         })(),
-        outputs: (() => {
+        outputs: node.data?.outputs || (() => {
           switch (node.data?.category) {
             case 'communication':
               return [
@@ -324,16 +326,13 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
         })(),
         config: (() => {
           const config = { ...node.data?.parameters };
-          // For memory nodes, use workflow ID as memory key
           if (node.data?.category === 'memory') {
             config.key = workflowId;
           }
-          // For protocol nodes, add protocol and method
           if (node.data?.category === 'protocol') {
             config.protocol = config.protocol || 'jupiter';
             config.method = config.method || config.action || 'executeSwap';
           }
-          // For communication nodes, ensure chatId is included
           if (node.data?.category === 'communication') {
             config.chatId = config.chatId || '@default_chat';
           }
@@ -479,13 +478,13 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
             <Button
               size="sm"
               onClick={() => {
-                setNewWorkflowName("Untitled Workflow");
+                setNewWorkflowName(isTemplateMode ? "Template Workflow" : "Untitled Workflow");
                 setIsCreateModalOpen(true);
               }}
               disabled={!authenticated}
               className="bg-gradient-to-r from-[#ff6b35] to-[#f7931e] text-white cursor-pointer hover:opacity-90"
             >
-              Create Workflow
+              {isTemplateMode ? "Save Template as Workflow" : "Create Workflow"}
             </Button>
           )}
         </div>
@@ -494,9 +493,12 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
         <DialogContent className="bg-[#1A1B23] border-white/10 text-white">
           <DialogHeader>
-            <DialogTitle>Create Workflow</DialogTitle>
+            <DialogTitle>{isTemplateMode ? "Save Template as Workflow" : "Create Workflow"}</DialogTitle>
             <DialogDescription className="text-gray-400 pt-2">
-              Save your workflow to the cloud and make it available for execution.
+              {isTemplateMode 
+                ? "Save this template as your own workflow and make it available for execution."
+                : "Save your workflow to the cloud and make it available for execution."
+              }
             </DialogDescription>
           </DialogHeader>
 
@@ -540,7 +542,7 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
               disabled={isCreating || !newWorkflowName.trim()}
               className="bg-gradient-to-r from-[#ff6b35] to-[#f7931e] text-white hover:opacity-90 cursor-pointer"
             >
-              {isCreating ? "Creating..." : "Create Workflow"}
+              {isCreating ? "Creating..." : (isTemplateMode ? "Save as Workflow" : "Create Workflow")}
             </Button>
           </DialogFooter>
         </DialogContent>
