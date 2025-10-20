@@ -514,6 +514,21 @@ class ForgexApiClient {
     return this.request("/api/agents/templates");
   }
 
+  async getMarketplaceTemplates(params?: {
+    category?: string;
+    sort?: "popular" | "rating" | "recent" | "difficulty";
+    limit?: number;
+    offset?: number;
+  }): Promise<ApiResponse<any[]>> {
+    const queryParams = new URLSearchParams();
+    if (params?.category) queryParams.set("category", params.category);
+    if (params?.sort) queryParams.set("sort", params.sort);
+    if (params?.limit) queryParams.set("limit", params.limit.toString());
+    if (params?.offset) queryParams.set("offset", params.offset.toString());
+
+    return this.request(`/workflows/marketplace?${queryParams}`);
+  }
+
   // ============================================================================
   // DEPLOYMENT MANAGEMENT ENDPOINTS
   // ============================================================================
@@ -716,7 +731,7 @@ class ForgexApiClient {
     if (params?.limit) queryParams.set("limit", params.limit.toString());
     if (params?.offset) queryParams.set("offset", params.offset.toString());
 
-    return this.request(`/api/marketplace/listings?${queryParams}`);
+    return this.request(`/workflows/marketplace?${queryParams}`);
   }
 
   async getMarketplaceListing(listingId: string): Promise<ApiResponse<MarketplaceListing>> {
