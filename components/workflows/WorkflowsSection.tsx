@@ -170,8 +170,23 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
       }
       
       const workflow = workflowResponse.data;
+
+      const inputData: Record<string, any> = {};
       
-      const response = await defaultApiClient.executeWorkflow(workflowId, workflow);
+      workflow.nodes?.forEach(node => {
+        
+        if (node.config && Object.keys(node.config).length > 0) {
+          inputData[node.id] = { ...node.config };
+          
+          if (node.category === 'memory' && node.config.key) {
+            inputData[node.id].key = node.config.key;
+          }
+        } else {
+          inputData[node.id] = {};
+        }
+      });
+      
+      const response = await defaultApiClient.executeWorkflow(workflowId, inputData);
       
       if (response.success && response.data) {
         toast.success('Workflow executed successfully!', { id: 'workflow-execution' });

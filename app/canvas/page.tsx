@@ -82,6 +82,9 @@ export default function CanvasPage() {
         } finally {
           setIsLoading(false);
         }
+      } else {
+        setNodes([]);
+        setEdges([]);
       }
     };
 
@@ -105,7 +108,7 @@ export default function CanvasPage() {
       <div className="flex flex-col h-screen w-full bg-[#111827] text-white">
         <CanvasHeader workflowId={workflowId} isEditMode={isEditMode} />
         <div className="flex-1 relative" style={{ height: 'calc(100vh - 4rem)' }}>
-          <CanvasArea />
+          <CanvasArea workflowId={workflowId || undefined} />
           <NodePaletteButton />
           <NodeInspectorButton />
         </div>

@@ -27,7 +27,7 @@ const nodeTypes: NodeTypes = {
   default: GenericNode,
 };
 
-function FlowCanvas() {
+function FlowCanvas({ workflowId }: { workflowId?: string }) {
   const [nodes, setNodes] = useAtom(nodesAtom);
   const [edges, setEdges] = useAtom(edgesAtom);
   const [selectedNode, setSelectedNode] = useAtom(selectedNodeAtom);
@@ -67,6 +67,11 @@ function FlowCanvas() {
         y: window.innerHeight / 2,
       });
 
+      // Generate unique memory key for memory nodes using workflow ID
+      const generateMemoryKey = (workflowId: string) => {
+        return workflowId || 'temp';
+      };
+
       const newNode: Node = {
         id: `${type}-${Date.now()}`,
         type: getNodeType(category),
@@ -75,7 +80,19 @@ function FlowCanvas() {
           label,
           category,
           iconName,
-          description
+          description,
+          // Auto-generate memory key for memory nodes using workflow ID
+          ...(category === 'memory' && {
+            parameters: {
+              key: generateMemoryKey(workflowId || 'temp')
+            }
+          }),
+          // Add default chatId for communication nodes
+          ...(category === 'communication' && {
+            parameters: {
+              chatId: '@default_chat'
+            }
+          })
         },
       };
 
@@ -233,10 +250,14 @@ function FlowCanvas() {
   );
 }
 
-export function CanvasArea() {
+interface CanvasAreaProps {
+  workflowId?: string;
+}
+
+export function CanvasArea({ workflowId }: CanvasAreaProps) {
   return (
     <ReactFlowProvider>
-      <FlowCanvas />
+      <FlowCanvas workflowId={workflowId} />
     </ReactFlowProvider>
   );
 }

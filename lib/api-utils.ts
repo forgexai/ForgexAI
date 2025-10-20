@@ -152,6 +152,42 @@ export interface McpExecutionResult {
   timestamp: string;
 }
 
+export interface MarketplaceListing {
+  id: string;
+  workflowId: string;
+  sellerId: string;
+  sellerName?: string;
+  sellerWallet: string;
+  name: string;
+  description: string;
+  category: string;
+  tags: string[];
+  price: number;
+  pricing: {
+    type: "free" | "credits" | "sol";
+    amount: number;
+  };
+  thumbnail?: string;
+  screenshots?: string[];
+  featured: boolean;
+  verified: boolean;
+  status: "pending" | "active" | "paused" | "removed";
+  stats: {
+    views: number;
+    purchases: number;
+    rating: number;
+    ratingCount: number;
+  };
+  preview: {
+    nodes: number;
+    connections: number;
+    protocols: string[];
+  };
+  createdAt: string;
+  updatedAt: string;
+  publishedAt?: string;
+}
+
 class ForgexApiClient {
   private config: ApiConfig;
 
@@ -651,6 +687,217 @@ class ForgexApiClient {
     if (params?.limit) queryParams.set("limit", params.limit.toString());
 
     return this.request(`/api/mcp/context?${queryParams}`);
+  }
+
+  // ============================================================================
+  // MARKETPLACE ENDPOINTS
+  // ============================================================================
+
+  async getMarketplaceListings(params?: {
+    category?: string;
+    tag?: string;
+    featured?: boolean;
+    minPrice?: number;
+    maxPrice?: number;
+    sort?: "popular" | "rating" | "recent" | "price-low" | "price-high";
+    limit?: number;
+    offset?: number;
+  }): Promise<ApiResponse<{
+    listings: MarketplaceListing[];
+    total: number;
+  }>> {
+    const queryParams = new URLSearchParams();
+    if (params?.category) queryParams.set("category", params.category);
+    if (params?.tag) queryParams.set("tag", params.tag);
+    if (params?.featured !== undefined) queryParams.set("featured", params.featured.toString());
+    if (params?.minPrice !== undefined) queryParams.set("minPrice", params.minPrice.toString());
+    if (params?.maxPrice !== undefined) queryParams.set("maxPrice", params.maxPrice.toString());
+    if (params?.sort) queryParams.set("sort", params.sort);
+    if (params?.limit) queryParams.set("limit", params.limit.toString());
+    if (params?.offset) queryParams.set("offset", params.offset.toString());
+
+    return this.request(`/api/marketplace/listings?${queryParams}`);
+  }
+
+  async getMarketplaceListing(listingId: string): Promise<ApiResponse<MarketplaceListing>> {
+    return this.request(`/api/marketplace/listings/${listingId}`);
+  }
+
+  async getMarketplaceCategories(): Promise<ApiResponse<{
+    categories: Array<{
+      id: string;
+      name: string;
+      icon: string;
+    }>;
+  }>> {
+    return this.request("/api/marketplace/categories");
+  }
+
+  async purchaseWorkflow(listingId: string): Promise<ApiResponse<{
+    id: string;
+    listingId: string;
+    workflowId: string;
+    buyerId: string;
+    sellerId: string;
+    price: number;
+    pricingType: string;
+    status: string;
+    purchasedAt: string;
+  }>> {
+    return this.request(`/api/marketplace/listings/${listingId}/purchase`, {
+      method: "POST",
+    });
+  }
+
+  async getMyPurchases(params?: {
+    limit?: number;
+    offset?: number;
+  }): Promise<ApiResponse<{
+    purchases: Array<{
+      id: string;
+      listingId: string;
+      workflowId: string;
+      buyerId: string;
+      sellerId: string;
+      price: number;
+      pricingType: string;
+      status: string;
+      purchasedAt: string;
+      listing?: MarketplaceListing;
+    }>;
+    total: number;
+  }>> {
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.set("limit", params.limit.toString());
+    if (params?.offset) queryParams.set("offset", params.offset.toString());
+
+    return this.request(`/api/marketplace/purchases?${queryParams}`);
+  }
+
+  async getMyListings(params?: {
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<ApiResponse<{
+    listings: MarketplaceListing[];
+    total: number;
+  }>> {
+    const queryParams = new URLSearchParams();
+    if (params?.status) queryParams.set("status", params.status);
+    if (params?.limit) queryParams.set("limit", params.limit.toString());
+    if (params?.offset) queryParams.set("offset", params.offset.toString());
+
+    return this.request(`/api/marketplace/my-listings?${queryParams}`);
+  }
+
+  async publishWorkflowToMarketplace(params: {
+    workflowId: string;
+    name: string;
+    description: string;
+    category: string;
+    tags: string[];
+    pricing: {
+      type: "free" | "credits" | "sol";
+      amount: number;
+    };
+    thumbnail?: string;
+    screenshots?: string[];
+  }): Promise<ApiResponse<MarketplaceListing>> {
+    return this.request("/api/marketplace/listings", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+  }
+
+  async updateMarketplaceListing(
+    listingId: string,
+    updates: {
+      name?: string;
+      description?: string;
+      pricing?: {
+        type: "free" | "credits" | "sol";
+        amount: number;
+      };
+      tags?: string[];
+    }
+  ): Promise<ApiResponse<MarketplaceListing>> {
+    return this.request(`/api/marketplace/listings/${listingId}`, {
+      method: "PUT",
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async updateListingStatus(
+    listingId: string,
+    status: "active" | "paused"
+  ): Promise<ApiResponse<{
+    id: string;
+    status: string;
+    message: string;
+  }>> {
+    return this.request(`/api/marketplace/listings/${listingId}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  async deleteMarketplaceListing(listingId: string): Promise<ApiResponse<{
+    success: boolean;
+    message: string;
+  }>> {
+    return this.request(`/api/marketplace/listings/${listingId}`, {
+      method: "DELETE",
+    });
+  }
+
+  async addListingReview(
+    listingId: string,
+    review: {
+      rating: number;
+      comment: string;
+    }
+  ): Promise<ApiResponse<{
+    id: string;
+    listingId: string;
+    userId: string;
+    userName: string;
+    rating: number;
+    comment: string;
+    createdAt: string;
+    helpful: number;
+  }>> {
+    return this.request(`/api/marketplace/listings/${listingId}/reviews`, {
+      method: "POST",
+      body: JSON.stringify(review),
+    });
+  }
+
+  async getListingReviews(
+    listingId: string,
+    params?: {
+      limit?: number;
+      offset?: number;
+      sort?: "recent" | "helpful" | "rating-high" | "rating-low";
+    }
+  ): Promise<ApiResponse<{
+    reviews: Array<{
+      id: string;
+      listingId: string;
+      userId: string;
+      userName: string;
+      rating: number;
+      comment: string;
+      createdAt: string;
+      helpful: number;
+    }>;
+    total: number;
+  }>> {
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.set("limit", params.limit.toString());
+    if (params?.offset) queryParams.set("offset", params.offset.toString());
+    if (params?.sort) queryParams.set("sort", params.sort);
+
+    return this.request(`/api/marketplace/listings/${listingId}/reviews?${queryParams}`);
   }
 
   // ============================================================================
