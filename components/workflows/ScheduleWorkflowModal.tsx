@@ -33,15 +33,8 @@ interface ScheduleWorkflowModalProps {
 }
 
 const cronPresets = [
-  { label: "Every 5 minutes", value: "*/5 * * * *" },
-  { label: "Every 15 minutes", value: "*/15 * * * *" },
-  { label: "Every 30 minutes", value: "*/30 * * * *" },
   { label: "Every hour", value: "0 * * * *" },
-  { label: "Every 2 hours", value: "0 */2 * * *" },
-  { label: "Every 3 hours", value: "0 */3 * * *" },
-  { label: "Every 4 hours", value: "0 */4 * * *" },
   { label: "Every 6 hours", value: "0 */6 * * *" },
-  { label: "Every 8 hours", value: "0 */8 * * *" },
   { label: "Every 12 hours", value: "0 */12 * * *" },
   { label: "Daily at midnight", value: "0 0 * * *" },
   { label: "Daily at 9:00 AM", value: "0 9 * * *" },

@@ -16,19 +16,18 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { nodesAtom, edgesAtom, selectedNodeAtom } from "@/lib/state/atoms";
-import { ConditionNode } from "@/components/nodes/ConditionNode";
-import { SolanaNode } from "@/components/nodes/SolanaNode";
-import { TelegramNode } from "@/components/nodes/TelegramNode";
+import { GenericNode } from "@/components/nodes/GenericNode";
 import { FloatingToolbar } from "@/components/dashboard/FloatingToolbar";
 import type { NodeTypes } from "reactflow";
 
 const nodeTypes: NodeTypes = {
-  condition: ConditionNode,
-  solana: SolanaNode,
-  telegram: TelegramNode,
+  condition: GenericNode,
+  solana: GenericNode,
+  telegram: GenericNode,
+  default: GenericNode,
 };
 
-function FlowCanvas() {
+function FlowCanvas({ workflowId }: { workflowId?: string }) {
   const [nodes, setNodes] = useAtom(nodesAtom);
   const [edges, setEdges] = useAtom(edgesAtom);
   const [selectedNode, setSelectedNode] = useAtom(selectedNodeAtom);
@@ -37,7 +36,8 @@ function FlowCanvas() {
 
   useEffect(() => {
     const handleAddNode = (event: CustomEvent) => {
-      const { type, label, category } = event.detail;
+      const { type, label, category, iconName, description } = event.detail;
+      
       
       if (!reactFlowInstance) return;
 
@@ -53,6 +53,10 @@ function FlowCanvas() {
             return "condition";
           case "Output":
             return "telegram";
+          case "protocol":
+            return "solana";
+          case "transform":
+            return "condition";
           default:
             return "condition";
         }
@@ -63,15 +67,35 @@ function FlowCanvas() {
         y: window.innerHeight / 2,
       });
 
+      // Generate unique memory key for memory nodes using workflow ID
+      const generateMemoryKey = (workflowId: string) => {
+        return workflowId || 'temp';
+      };
+
       const newNode: Node = {
         id: `${type}-${Date.now()}`,
         type: getNodeType(category),
         position,
         data: { 
           label,
-          category 
+          category,
+          iconName,
+          description,
+          // Auto-generate memory key for memory nodes using workflow ID
+          ...(category === 'memory' && {
+            parameters: {
+              key: generateMemoryKey(workflowId || 'temp')
+            }
+          }),
+          // Add default chatId for communication nodes
+          ...(category === 'communication' && {
+            parameters: {
+              chatId: '@default_chat'
+            }
+          })
         },
       };
+
 
       setNodes((nds) => [...nds, newNode]);
     };
@@ -82,7 +106,6 @@ function FlowCanvas() {
     };
   }, [reactFlowInstance, setNodes]);
 
-  // Update existing edges to use orange color
   useEffect(() => {
     setEdges((eds) => eds.map(edge => ({
       ...edge,
@@ -133,43 +156,44 @@ function FlowCanvas() {
       event.preventDefault();
 
       const reactFlowBounds = reactFlowWrapper.current?.getBoundingClientRect();
-      const type = event.dataTransfer.getData("application/reactflow");
 
-      if (!type || !reactFlowBounds || !reactFlowInstance) {
+      if (!reactFlowBounds || !reactFlowInstance) {
         return;
       }
 
       try {
-        const nodeData = JSON.parse(type);
+
+        const nodeData = (window as any).lastDroppedNodeData;
+        
+        if (!nodeData) {
+          console.error("No node data found");
+          return;
+        }
+
         const position = reactFlowInstance.screenToFlowPosition({
           x: event.clientX,
           y: event.clientY,
         });
 
         const getNodeType = (category: string) => {
-          switch (category) {
-            case "Logic":
-              return "condition";
-            case "Solana":
-              return "solana";
-            case "Output":
-              return "telegram";
-            default:
-              return "default";
-          }
+          return "default";
         };
 
         const newNode: Node = {
-          id: `${nodeData.id}-${Date.now()}`,
+          id: `${nodeData.type}-${Date.now()}`,
           type: getNodeType(nodeData.category),
           position,
           data: { 
             label: nodeData.label,
-            category: nodeData.category 
+            category: nodeData.category,
+            iconName: nodeData.iconName,
+            description: nodeData.description
           },
         };
-
+        
         setNodes((nds) => [...nds, newNode]);
+        
+        (window as any).lastDroppedNodeData = null;
       } catch (error) {
         console.error("Error adding node:", error);
       }
@@ -226,10 +250,14 @@ function FlowCanvas() {
   );
 }
 
-export function CanvasArea() {
+interface CanvasAreaProps {
+  workflowId?: string;
+}
+
+export function CanvasArea({ workflowId }: CanvasAreaProps) {
   return (
     <ReactFlowProvider>
-      <FlowCanvas />
+      <FlowCanvas workflowId={workflowId} />
     </ReactFlowProvider>
   );
 }

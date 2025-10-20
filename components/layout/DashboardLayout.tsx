@@ -1,24 +1,27 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
+import { PlanPopup } from "@/components/ui/plan-popup";
 import { 
   Workflow as WorkflowIcon,  
   Clock,  
   Store, 
   Search,
-  Grid3X3,
   Plus,
   Settings,
   LogOut,
   Sparkles,
+  Rocket,
 } from "lucide-react";
 
 const sidebarItems = [
   { id: 'workflows', label: 'Workflows', icon: WorkflowIcon },
   { id: 'schedules', label: 'Schedules', icon: Clock },
+  { id: 'deployments', label: 'Deployments', icon: Rocket },
   { id: 'marketplace', label: 'Marketplace', icon: Store },
 ];
 
@@ -66,12 +69,18 @@ export function DashboardLayout({
   title = "Dashboard",
   subtitle = "Manage your workflows and executions",
 }: DashboardLayoutProps) {
+  const [isPlanPopupOpen, setIsPlanPopupOpen] = useState(false);
   const router = useRouter();
   const { logout } = usePrivyAuth();
 
   const handleLogout = () => {
     logout();
     router.push('/');
+  };
+
+  const handleUpgradePlan = (tier: string) => {
+    // TODO: Implement actual upgrade logic
+    console.log(`Upgrading to ${tier} plan`);
   };
 
   return (
@@ -140,7 +149,10 @@ export function DashboardLayout({
                 </div>
               </div>
               
-              <Button className="w-full bg-gradient-to-r text-white from-blue-500 to-purple-600 hover:opacity-90 cursor-pointer">
+              <Button 
+                onClick={() => setIsPlanPopupOpen(true)}
+                className="w-full bg-gradient-to-r text-white from-blue-500 to-purple-600 hover:opacity-90 cursor-pointer"
+              >
                 <Sparkles className="w-4 h-4 mr-2" />
                 Upgrade Plan
               </Button>
@@ -189,9 +201,7 @@ export function DashboardLayout({
                         className="pl-10 w-80 bg-[#1A1B23] border-white/10"
                       />
                     </div>
-                    <Button variant="ghost" size="sm" className="cursor-pointer">
-                      <Grid3X3 className="w-4 h-4" />
-                    </Button>
+                    /
                   </>
                 )}
               </div>
@@ -213,6 +223,14 @@ export function DashboardLayout({
           </div>
         </div>
       </div>
+
+      {/* Plan Popup */}
+      <PlanPopup
+        isOpen={isPlanPopupOpen}
+        onClose={() => setIsPlanPopupOpen(false)}
+        currentTier={userProfile?.tier || 'free'}
+        onUpgrade={handleUpgradePlan}
+      />
     </div>
   );
 }

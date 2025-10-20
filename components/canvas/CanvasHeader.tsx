@@ -15,18 +15,19 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { nodesAtom, edgesAtom } from "@/lib/state/atoms";
 import { defaultApiClient } from "@/lib/api-utils";
 import { toast } from "sonner";
-import { Save, Download, Plus, ChevronLeft } from "lucide-react";
+import { Save, Download, ChevronLeft } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface CanvasHeaderProps {
   workflowId?: string | null;
   isEditMode?: boolean;
+  isTemplateMode?: boolean;
 }
 
-export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderProps) {
+export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = false }: CanvasHeaderProps) {
   const router = useRouter();
   const [nodes] = useAtom(nodesAtom);
   const [edges] = useAtom(edgesAtom);
@@ -36,9 +37,9 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
   const [isSaving, setIsSaving] = useState(false);
   const [workflowName, setWorkflowName] = useState("Untitled Workflow");
   const [isEditingName, setIsEditingName] = useState(false);
+  const [newWorkflowName, setNewWorkflowName] = useState("Untitled Workflow");
   const { authenticated } = usePrivyAuth();
 
-  // Load workflow details when in edit mode
   useEffect(() => {
     const loadWorkflowDetails = async () => {
       if (isEditMode && workflowId) {
@@ -51,11 +52,14 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
         } catch (error) {
           console.error('Error loading workflow details:', error);
         }
+      } else if (isTemplateMode) {
+        setWorkflowName("Template Workflow");
+        setWorkflowDescription("A workflow created from a marketplace template");
       }
     };
 
     loadWorkflowDetails();
-  }, [isEditMode, workflowId]);
+  }, [isEditMode, isTemplateMode, workflowId]);
 
   const handleSaveWorkflow = () => {
     const workflow = {
@@ -104,7 +108,7 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
   };
 
   const handleCreateWorkflow = async () => {
-    if (!workflowName.trim()) {
+    if (!newWorkflowName.trim()) {
       toast.error("Please enter a workflow name");
       return;
     }
@@ -117,24 +121,91 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
     setIsCreating(true);
 
     try {
-      // Transform nodes to match API format
       const transformedNodes = nodes.map(node => ({
         id: node.id,
-        type: (node.type === 'condition' ? 'input' : 
-               node.type === 'solana' ? 'protocol' : 
-               node.type === 'telegram' ? 'output' : 'input') as "input" | "logic" | "data" | "output" | "protocol",
-        category: (node.type === 'condition' ? 'trigger' :
-                  node.type === 'solana' ? 'protocol' :
-                  node.type === 'telegram' ? 'communication' : 'trigger') as "trigger" | "condition" | "transform" | "protocol" | "memory" | "communication",
+        type: (node.data?.category === 'trigger' ? 'input' : 
+               node.data?.category === 'protocol' ? 'protocol' : 
+               node.data?.category === 'communication' ? 'output' : 
+               node.data?.category === 'condition' ? 'logic' :
+               node.data?.category === 'transform' ? 'data' : 'input') as "input" | "logic" | "data" | "output" | "protocol",
+        category: node.data?.category || 'trigger' as "trigger" | "condition" | "transform" | "protocol" | "memory" | "communication",
         name: node.data?.label || node.type,
         description: node.data?.description || "",
-        inputs: node.data?.inputs || [],
-        outputs: node.data?.outputs || [],
-        config: node.data?.config || {},
+        inputs: node.data?.inputs || (() => {
+          switch (node.data?.category) {
+            case 'communication':
+              return [
+                { id: "chatId", name: "Chat ID", type: "string" as const, required: false, description: "Telegram chat ID (optional - will use bot's default chat)" },
+                { id: "message", name: "Message", type: "string" as const, required: true, description: "Message to send" },
+                { id: "parseMode", name: "Parse Mode", type: "string" as const, required: false, default: "Markdown", description: "Message parse mode" }
+              ];
+            case 'protocol':
+              return [
+                { id: "walletAddress", name: "Wallet Address", type: "string" as const, required: true, description: "Wallet address" }
+              ];
+            case 'memory':
+              // Value is only required for store/update operations
+              const operation = node.data?.parameters?.operation || 'store';
+              const valueSource = node.data?.parameters?.valueSource || 'connected';
+              
+              if (operation === 'store' || operation === 'update') {
+                if (valueSource === 'manual') {
+                  return [
+                    { id: "value", name: "Value", type: "any" as const, required: true, description: "Value to store" }
+                  ];
+                } else {
+
+                  return [];
+                }
+              } else {
+                return []; 
+              }
+            case 'trigger':
+              return [
+                { id: "botToken", name: "Bot Token", type: "string" as const, required: true, description: "Telegram bot token for listening to messages" }
+              ];
+            default:
+              return [];
+          }
+        })(),
+        outputs: node.data?.outputs || (() => {
+          switch (node.data?.category) {
+            case 'communication':
+              return [
+                { id: "messageId", name: "Message ID", type: "string" as const, description: "Sent message ID" },
+                { id: "success", name: "Success", type: "boolean" as const, description: "Whether message was sent" }
+              ];
+            case 'protocol':
+              return [
+                { id: "result", name: "Result", type: "object" as const, description: "Protocol result" }
+              ];
+            case 'memory':
+              return [
+                { id: "success", name: "Success", type: "boolean" as const, description: "Operation success" }
+              ];
+            default:
+              return [];
+          }
+        })(),
+        config: (() => {
+          const config = { ...node.data?.parameters };
+          // For memory nodes, use workflow ID as memory key
+          if (node.data?.category === 'memory') {
+            config.key = workflowId;
+          }
+
+          if (node.data?.category === 'protocol') {
+            config.protocol = config.protocol || 'jupiter';
+            config.method = config.method || config.action || 'executeSwap';
+          }
+          if (node.data?.category === 'communication') {
+            config.chatId = config.chatId || '@default_chat';
+          }
+          return config;
+        })(),
         position: node.position
       }));
 
-      // Transform edges to match API format
       const transformedConnections = edges.map(edge => ({
         id: edge.id,
         sourceNodeId: edge.source,
@@ -144,7 +215,7 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
       }));
 
       const workflowData = {
-        name: workflowName,
+        name: newWorkflowName,
         description: workflowDescription || `A workflow created on ${new Date().toLocaleDateString()}`,
         nodes: transformedNodes,
         connections: transformedConnections,
@@ -160,6 +231,7 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
       if (response.success) {
         toast.success("Workflow created successfully!");
         setIsCreateModalOpen(false);
+        setNewWorkflowName("Untitled Workflow");
         setWorkflowDescription("");
         router.push('/workflows');
       } else {
@@ -187,24 +259,88 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
     setIsSaving(true);
 
     try {
-      // Transform nodes to match API format
       const transformedNodes = nodes.map(node => ({
         id: node.id,
-        type: (node.type === 'condition' ? 'input' : 
-               node.type === 'solana' ? 'protocol' : 
-               node.type === 'telegram' ? 'output' : 'input') as "input" | "logic" | "data" | "output" | "protocol",
-        category: (node.type === 'condition' ? 'trigger' :
-                  node.type === 'solana' ? 'protocol' :
-                  node.type === 'telegram' ? 'communication' : 'trigger') as "trigger" | "condition" | "transform" | "protocol" | "memory" | "communication",
+        type: (node.data?.category === 'trigger' ? 'input' : 
+               node.data?.category === 'protocol' ? 'protocol' : 
+               node.data?.category === 'communication' ? 'output' : 
+               node.data?.category === 'condition' ? 'logic' :
+               node.data?.category === 'transform' ? 'data' : 'input') as "input" | "logic" | "data" | "output" | "protocol",
+        category: node.data?.category || 'trigger' as "trigger" | "condition" | "transform" | "protocol" | "memory" | "communication",
         name: node.data?.label || node.type,
         description: node.data?.description || "",
-        inputs: node.data?.inputs || [],
-        outputs: node.data?.outputs || [],
-        config: node.data?.config || {},
+        inputs: node.data?.inputs || (() => {
+          switch (node.data?.category) {
+            case 'communication':
+              return [
+                { id: "chatId", name: "Chat ID", type: "string" as const, required: false, description: "Telegram chat ID (optional - will use bot's default chat)" },
+                { id: "message", name: "Message", type: "string" as const, required: true, description: "Message to send" },
+                { id: "parseMode", name: "Parse Mode", type: "string" as const, required: false, default: "Markdown", description: "Message parse mode" }
+              ];
+            case 'protocol':
+              return [
+                { id: "walletAddress", name: "Wallet Address", type: "string" as const, required: true, description: "Wallet address" }
+              ];
+            case 'memory':
+              // Value is only required for store/update operations
+              const operation = node.data?.parameters?.operation || 'store';
+              const valueSource = node.data?.parameters?.valueSource || 'connected';
+              
+              if (operation === 'store' || operation === 'update') {
+                if (valueSource === 'manual') {
+                  return [
+                    { id: "value", name: "Value", type: "any" as const, required: true, description: "Value to store" }
+                  ];
+                } else {
+                  return [];
+                }
+              } else {
+                return []; 
+              }
+            case 'trigger':
+              return [
+                { id: "botToken", name: "Bot Token", type: "string" as const, required: true, description: "Telegram bot token for listening to messages" }
+              ];
+            default:
+              return [];
+          }
+        })(),
+        outputs: node.data?.outputs || (() => {
+          switch (node.data?.category) {
+            case 'communication':
+              return [
+                { id: "messageId", name: "Message ID", type: "string" as const, description: "Sent message ID" },
+                { id: "success", name: "Success", type: "boolean" as const, description: "Whether message was sent" }
+              ];
+            case 'protocol':
+              return [
+                { id: "result", name: "Result", type: "object" as const, description: "Protocol result" }
+              ];
+            case 'memory':
+              return [
+                { id: "success", name: "Success", type: "boolean" as const, description: "Operation success" }
+              ];
+            default:
+              return [];
+          }
+        })(),
+        config: (() => {
+          const config = { ...node.data?.parameters };
+          if (node.data?.category === 'memory') {
+            config.key = workflowId;
+          }
+          if (node.data?.category === 'protocol') {
+            config.protocol = config.protocol || 'jupiter';
+            config.method = config.method || config.action || 'executeSwap';
+          }
+          if (node.data?.category === 'communication') {
+            config.chatId = config.chatId || '@default_chat';
+          }
+          return config;
+        })(),
         position: node.position
       }));
 
-      // Transform edges to match API format
       const transformedConnections = edges.map(edge => ({
         id: edge.id,
         sourceNodeId: edge.source,
@@ -267,7 +403,7 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
             variant="ghost"
             size="sm"
             onClick={handleBackClick}
-            className="text-gray-400 hover:text-white hover:bg-white/10 px-3 py-2"
+            className="text-gray-400 hover:text-white hover:bg-white/10 px-3 py-2 cursor-pointer"
           >
             <ChevronLeft className="w-4 h-4" />
           </Button>
@@ -292,25 +428,41 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
         </div>
 
         <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSaveWorkflow}
-            className="border-gray-700 text-black cursor-pointer px-4 py-2"
-          >
-            <Save className="w-4 h-4 mr-2" />
-            Save
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSaveWorkflow}
+                  className="border-gray-700 text-black cursor-pointer px-4 py-2"
+                >
+                  <Save className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Save</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleLoadWorkflow}
-            className="border-gray-700 text-black cursor-pointer px-4 py-2"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Load
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLoadWorkflow}
+                  className="border-gray-700 text-black cursor-pointer px-4 py-2"
+                >
+                  <Download className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Load</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
           {isEditMode ? (
             <Button
@@ -325,12 +477,14 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
           ) : (
             <Button
               size="sm"
-              onClick={() => setIsCreateModalOpen(true)}
+              onClick={() => {
+                setNewWorkflowName(isTemplateMode ? "Template Workflow" : "Untitled Workflow");
+                setIsCreateModalOpen(true);
+              }}
               disabled={!authenticated}
               className="bg-gradient-to-r from-[#ff6b35] to-[#f7931e] text-white cursor-pointer hover:opacity-90"
             >
-              <Plus className="w-4 h-4 mr-2" />
-              Create Workflow
+              {isTemplateMode ? "Save Template as Workflow" : "Create Workflow"}
             </Button>
           )}
         </div>
@@ -339,23 +493,26 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
         <DialogContent className="bg-[#1A1B23] border-white/10 text-white">
           <DialogHeader>
-            <DialogTitle>Create Workflow</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Save your workflow to the cloud and make it available for execution.
+            <DialogTitle>{isTemplateMode ? "Save Template as Workflow" : "Create Workflow"}</DialogTitle>
+            <DialogDescription className="text-gray-400 pt-2">
+              {isTemplateMode 
+                ? "Save this template as your own workflow and make it available for execution."
+                : "Save your workflow to the cloud and make it available for execution."
+              }
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="workflowDescription" className="text-sm text-gray-300">
-                Description (Optional)
+              <Label htmlFor="workflow-name" className="text-sm text-gray-300">
+                Workflow Name
               </Label>
-              <Textarea
-                id="workflowDescription"
-                value={workflowDescription}
-                onChange={(e) => setWorkflowDescription(e.target.value)}
-                placeholder="Describe what this workflow does..."
-                className="bg-[#0B0C10] border-gray-700 text-white min-h-[80px]"
+              <Input
+                id="workflow-name"
+                value={newWorkflowName}
+                onChange={(e) => setNewWorkflowName(e.target.value)}
+                placeholder="Enter workflow name"
+                className="bg-[#0B0C10] border-gray-700 text-white"
               />
             </div>
 
@@ -382,10 +539,10 @@ export function CanvasHeader({ workflowId, isEditMode = false }: CanvasHeaderPro
             </Button>
             <Button
               onClick={handleCreateWorkflow}
-              disabled={isCreating || !workflowName.trim()}
+              disabled={isCreating || !newWorkflowName.trim()}
               className="bg-gradient-to-r from-[#ff6b35] to-[#f7931e] text-white hover:opacity-90 cursor-pointer"
             >
-              {isCreating ? "Creating..." : "Create Workflow"}
+              {isCreating ? "Creating..." : (isTemplateMode ? "Save as Workflow" : "Create Workflow")}
             </Button>
           </DialogFooter>
         </DialogContent>
