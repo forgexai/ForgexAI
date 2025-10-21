@@ -54,7 +54,7 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
         }
       } else if (isTemplateMode) {
         setWorkflowName("Template Workflow");
-        setWorkflowDescription("Workflow created from a marketplace template");
+        setWorkflowDescription("Workflow copied from marketplace");
       }
     };
 

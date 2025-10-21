@@ -26,7 +26,8 @@ import {
   Loader2,
   Clock,
   Calendar,
-  Rocket
+  Rocket,
+  MessageCircle
 } from "lucide-react";
 
 interface Workflow {
@@ -118,6 +119,10 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
   const handleDeployWorkflow = (workflowId: string, workflowName: string) => {
     setWorkflowToDeploy({ id: workflowId, name: workflowName });
     setDeployModalOpen(true);
+  };
+
+  const handleChatWorkflow = (workflowId: string) => {
+    router.push(`/chat?workflow=${workflowId}`);
   };
 
   const confirmDeleteWorkflow = async () => {
@@ -290,6 +295,21 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
                   <DropdownMenuItem
                     onClick={(e) => {
                       e.stopPropagation();
+                      handleRunWorkflow(workflow.id);
+                    }}
+                    disabled={executingWorkflow === workflow.id}
+                    className="text-white hover:bg-white/10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {executingWorkflow === workflow.id ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <PlayIcon className="w-4 h-4 mr-2" />
+                    )}
+                    Execute
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
                       handleScheduleWorkflow(workflow.id, workflow.name);
                     }}
                     className="text-white hover:bg-white/10 cursor-pointer"
@@ -349,22 +369,12 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
                 <Button
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleRunWorkflow(workflow.id);
+                    handleChatWorkflow(workflow.id);
                   }}
-                  disabled={executingWorkflow === workflow.id}
-                  className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-green-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 cursor-pointer bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-600 hover:to-orange-700 text-white py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/25"
                 >
-                  {executingWorkflow === workflow.id ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Executing...
-                    </>
-                  ) : (
-                    <>
-                      <PlayIcon className="w-4 h-4 mr-2" />
-                      Run Workflow
-                    </>
-                  )}
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Chat
                 </Button>
               </div>
             </div>
