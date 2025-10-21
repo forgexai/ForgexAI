@@ -54,7 +54,7 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
         }
       } else if (isTemplateMode) {
         setWorkflowName("Template Workflow");
-        setWorkflowDescription("A workflow created from a marketplace template");
+        setWorkflowDescription("Workflow created from a marketplace template");
       }
     };
 
@@ -144,7 +144,6 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
                 { id: "walletAddress", name: "Wallet Address", type: "string" as const, required: true, description: "Wallet address" }
               ];
             case 'memory':
-              // Value is only required for store/update operations
               const operation = node.data?.parameters?.operation || 'store';
               const valueSource = node.data?.parameters?.valueSource || 'connected';
               

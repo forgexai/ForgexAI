@@ -233,9 +233,9 @@ function CommunicationNodeForm({ parameters, onParameterChange }: ParameterFormP
         </Label>
         <Input
           id="chatId"
-          value={parameters.chatId || "@default_chat"}
+          value={parameters.chatId || ""}
           onChange={(e) => onParameterChange("chatId", e.target.value)}
-          placeholder="@default_chat"
+          placeholder="@channelname or -1001234567890"
           className="bg-[#1A1B23] border-gray-700 text-white"
         />
         <p className="text-xs text-gray-400">

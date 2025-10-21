@@ -541,7 +541,7 @@ class ForgexApiClient {
     commands?: any[];
     allowedUsers?: string[];
   }): Promise<ApiResponse<DeploymentConfig & { botInfo: any }>> {
-    return this.request("/api/deployments/telegram", {
+    return this.request("/deployments/telegram", {
       method: "POST",
       body: JSON.stringify(params),
     });

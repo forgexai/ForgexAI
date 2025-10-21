@@ -45,8 +45,9 @@ export function SchedulesSection({}: SchedulesSectionProps) {
     try {
       refreshApiClientAuth();
       const response = await defaultApiClient.getSchedules();
+      
       if (response.success && response.data) {
-        setSchedules(response.data.schedules);
+        setSchedules(response.data.data.schedules);
       } else {
         setSchedulesError(response.error || 'Failed to fetch schedules');
         toast.error(response.error || 'Failed to fetch schedules');
