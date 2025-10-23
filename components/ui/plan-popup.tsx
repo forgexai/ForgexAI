@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,6 @@ interface PlanPopupProps {
   isOpen: boolean;
   onClose: () => void;
   currentTier: string;
-  onUpgrade: (tier: string) => void;
 }
 
 const plans = [
@@ -72,15 +70,7 @@ const plans = [
   }
 ];
 
-export function PlanPopup({ isOpen, onClose, currentTier, onUpgrade }: PlanPopupProps) {
-  const [selectedTier, setSelectedTier] = useState<string | null>(null);
-
-  const handleUpgrade = () => {
-    if (selectedTier) {
-      onUpgrade(selectedTier);
-      onClose();
-    }
-  };
+export function PlanPopup({ isOpen, onClose, currentTier }: PlanPopupProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -96,7 +86,7 @@ export function PlanPopup({ isOpen, onClose, currentTier, onUpgrade }: PlanPopup
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="absolute right-0 top-0 text-gray-400 hover:text-white hover:bg-white/10"
+            className="absolute right-0 top-0 text-gray-400 hover:text-white hover:bg-white/10 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </Button>
@@ -106,16 +96,12 @@ export function PlanPopup({ isOpen, onClose, currentTier, onUpgrade }: PlanPopup
           {plans.map((plan) => {
             const Icon = plan.icon;
             const isCurrentPlan = plan.id === currentTier;
-            const isSelected = selectedTier === plan.id;
-            const canUpgrade = plan.id !== currentTier;
 
             return (
               <div
                 key={plan.id}
                 className={`relative rounded-xl border-2 p-6 transition-all duration-300 flex flex-col h-full group cursor-pointer transform hover:scale-105 hover:-translate-y-1 ${
-                  isSelected
-                    ? "border-blue-500 bg-blue-500/10 shadow-2xl shadow-blue-500/20 scale-105 -translate-y-1"
-                    : isCurrentPlan
+                  isCurrentPlan
                     ? "border-green-500 bg-green-500/10 shadow-2xl shadow-green-500/20"
                     : "border-white/20 bg-[#1A1B23] hover:border-white/40 hover:bg-white/5 hover:shadow-xl hover:shadow-white/10"
                 }`}
@@ -228,23 +214,12 @@ export function PlanPopup({ isOpen, onClose, currentTier, onUpgrade }: PlanPopup
                     >
                       Current Plan
                     </Button>
-                  ) : canUpgrade ? (
-                    <Button
-                      onClick={() => setSelectedTier(plan.id)}
-                      className={`w-full transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
-                        isSelected
-                          ? "bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25"
-                          : "bg-white/10 hover:bg-white/20 hover:shadow-lg hover:shadow-white/10"
-                      } text-white`}
-                    >
-                      {isSelected ? "Selected" : "Select Plan"}
-                    </Button>
                   ) : (
                     <Button
                       disabled
-                      className="w-full bg-gray-600 text-gray-300 cursor-not-allowed transition-all duration-300"
+                      className="w-full bg-white/10 text-gray-400 cursor-not-allowed transition-all duration-300"
                     >
-                      Downgrade Not Available
+                      Coming Soon
                     </Button>
                   )}
                 </div>
@@ -253,16 +228,6 @@ export function PlanPopup({ isOpen, onClose, currentTier, onUpgrade }: PlanPopup
           })}
         </div>
 
-        {selectedTier && selectedTier !== currentTier && (
-          <div className="flex justify-center mt-8">
-            <Button
-              onClick={handleUpgrade}
-              className="bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90 text-white px-8 py-2 transition-all duration-300 transform hover:scale-105 hover:shadow-xl hover:shadow-blue-500/25 animate-pulse"
-            >
-              Upgrade to {plans.find(p => p.id === selectedTier)?.name}
-            </Button>
-          </div>
-        )}
       </DialogContent>
     </Dialog>
   );

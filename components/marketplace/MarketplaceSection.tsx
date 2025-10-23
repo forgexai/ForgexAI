@@ -367,7 +367,7 @@ if (Array.isArray(templatesData)) {
           platform: "telegram",
           credits: 1,
           message: "Default message from template", // Fallback message
-          chatId: "@default_chat",
+          chatId: "",
           parseMode: "Markdown"
         };
       } else if (node.category === 'communication' && node.name.toLowerCase().includes('discord')) {
