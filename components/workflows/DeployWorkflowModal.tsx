@@ -24,7 +24,12 @@ import { defaultApiClient } from "@/lib/api-utils";
 import { refreshApiClientAuth } from "@/lib/auth-utils";
 import { toast } from "sonner";
 import { Loader2, Bot, MessageSquare, Webhook, Settings } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface DeployWorkflowModalProps {
   isOpen: boolean;
@@ -39,7 +44,9 @@ export function DeployWorkflowModal({
   workflowId,
   workflowName,
 }: DeployWorkflowModalProps) {
-  const [platform, setPlatform] = useState<"telegram" | "discord" | "mcp" | "webhook">("telegram");
+  const [platform, setPlatform] = useState<
+    "telegram" | "discord" | "mcp" | "webhook"
+  >("telegram");
   const [deploymentName, setDeploymentName] = useState("");
   const [botToken, setBotToken] = useState("");
   const [chatId, setChatId] = useState("");
@@ -60,7 +67,10 @@ export function DeployWorkflowModal({
     }
 
     // Validate platform-specific fields
-    if (platform === "telegram" && (!botToken.trim() || !chatId.trim() || !botName.trim())) {
+    if (
+      platform === "telegram" &&
+      (!botToken.trim() || !chatId.trim() || !botName.trim())
+    ) {
       toast.error("Please enter bot token, chat ID, and bot name for Telegram");
       return;
     }
@@ -82,7 +92,7 @@ export function DeployWorkflowModal({
           botName: botName.trim(),
           webhookUrl: `https://your-domain.com/webhook`,
           commands: [],
-          allowedUsers: []
+          allowedUsers: [],
         });
       } else {
         const config: any = {};
@@ -232,19 +242,25 @@ export function DeployWorkflowModal({
             <span>Deploy Workflow</span>
           </DialogTitle>
           <DialogDescription className="text-gray-400">
-            Deploy "{workflowName}" to your chosen platform
+            Deploy &quot;{workflowName}&quot; to your chosen platform
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="platform">Platform</Label>
-            <Select value={platform} onValueChange={(value: any) => setPlatform(value)}>
+            <Select
+              value={platform}
+              onValueChange={(value: any) => setPlatform(value)}
+            >
               <SelectTrigger className="bg-[#0B0C10] border-white/10">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-[#1A1B23] border-white/10">
-                <SelectItem value="telegram" className="text-white hover:bg-white/10">
+                <SelectItem
+                  value="telegram"
+                  className="text-white hover:bg-white/10"
+                >
                   <div className="flex items-center space-x-2">
                     <Bot className="w-4 h-4" />
                     <span>Telegram</span>
@@ -253,7 +269,11 @@ export function DeployWorkflowModal({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <SelectItem value="discord" className="text-white hover:bg-white/10 cursor-not-allowed opacity-50" disabled>
+                      <SelectItem
+                        value="discord"
+                        className="text-white hover:bg-white/10 cursor-not-allowed opacity-50"
+                        disabled
+                      >
                         <div className="flex items-center space-x-2">
                           <MessageSquare className="w-4 h-4" />
                           <span>Discord</span>
@@ -268,7 +288,11 @@ export function DeployWorkflowModal({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <SelectItem value="webhook" className="text-white hover:bg-white/10 cursor-not-allowed opacity-50" disabled>
+                      <SelectItem
+                        value="webhook"
+                        className="text-white hover:bg-white/10 cursor-not-allowed opacity-50"
+                        disabled
+                      >
                         <div className="flex items-center space-x-2">
                           <Webhook className="w-4 h-4" />
                           <span>Webhook</span>
@@ -283,7 +307,11 @@ export function DeployWorkflowModal({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <SelectItem value="mcp" className="text-white hover:bg-white/10 cursor-not-allowed opacity-50" disabled>
+                      <SelectItem
+                        value="mcp"
+                        className="text-white hover:bg-white/10 cursor-not-allowed opacity-50"
+                        disabled
+                      >
                         <div className="flex items-center space-x-2">
                           <Settings className="w-4 h-4" />
                           <span>MCP</span>
@@ -309,7 +337,6 @@ export function DeployWorkflowModal({
               className="bg-[#0B0C10] border-white/10"
             />
           </div>
-
 
           {renderPlatformFields()}
         </div>

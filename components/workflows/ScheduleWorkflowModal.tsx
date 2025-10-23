@@ -71,9 +71,9 @@ export function ScheduleWorkflowModal({
     setIsScheduling(true);
     try {
       refreshApiClientAuth();
-      
+
       const finalCronExpression = isCustomCron ? customCron : cronExpression;
-      
+
       const response = await defaultApiClient.scheduleWorkflow(workflowId, {
         workflowId,
         cronExpression: finalCronExpression,
@@ -124,7 +124,7 @@ export function ScheduleWorkflowModal({
             Schedule Workflow
           </DialogTitle>
           <DialogDescription className="text-gray-400">
-            Schedule "{workflowName}" to run automatically
+            Schedule &quot;{workflowName}&quot; to run automatically
           </DialogDescription>
         </DialogHeader>
 
@@ -174,7 +174,7 @@ export function ScheduleWorkflowModal({
                   Use preset
                 </Label>
               </div>
-              
+
               {!isCustomCron && (
                 <Select
                   value={cronExpression}
@@ -212,7 +212,7 @@ export function ScheduleWorkflowModal({
                   Custom cron expression
                 </Label>
               </div>
-              
+
               {isCustomCron && (
                 <Input
                   value={customCron}
@@ -237,7 +237,11 @@ export function ScheduleWorkflowModal({
           </Button>
           <Button
             onClick={handleSchedule}
-            disabled={isScheduling || (!scheduleName.trim() || (!cronExpression && !customCron))}
+            disabled={
+              isScheduling ||
+              !scheduleName.trim() ||
+              (!cronExpression && !customCron)
+            }
             className="bg-gradient-to-r from-orange-500 to-orange-600 hover:opacity-90 text-white cursor-pointer"
           >
             {isScheduling ? (

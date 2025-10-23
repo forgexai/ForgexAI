@@ -18,7 +18,7 @@ import { usePrivyAuth } from "@/hooks/usePrivyAuth";
 import { defaultApiClient } from "@/lib/api-utils";
 import { refreshApiClientAuth } from "@/lib/auth-utils";
 import { toast } from "sonner";
-import { 
+import {
   MoreVertical,
   Edit,
   Trash2,
@@ -27,7 +27,7 @@ import {
   Clock,
   Calendar,
   Rocket,
-  MessageCircle
+  MessageCircle,
 } from "lucide-react";
 
 interface Workflow {
@@ -50,7 +50,7 @@ interface Workflow {
   deployments: any[];
 }
 
-interface WorkflowsSectionProps {}
+type WorkflowsSectionProps = Record<string, never>;
 
 export function WorkflowsSection({}: WorkflowsSectionProps) {
   const router = useRouter();
@@ -58,26 +58,40 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
   const [workflowsLoading, setWorkflowsLoading] = useState(true);
   const [workflowsError, setWorkflowsError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [workflowToDelete, setWorkflowToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [workflowToDelete, setWorkflowToDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [executingWorkflow, setExecutingWorkflow] = useState<string | null>(null);
+  const [executingWorkflow, setExecutingWorkflow] = useState<string | null>(
+    null
+  );
   const [executionsModalOpen, setExecutionsModalOpen] = useState(false);
-  const [selectedWorkflow, setSelectedWorkflow] = useState<{ id: string; name: string } | null>(null);
+  const [selectedWorkflow, setSelectedWorkflow] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
-  const [workflowToSchedule, setWorkflowToSchedule] = useState<{ id: string; name: string } | null>(null);
+  const [workflowToSchedule, setWorkflowToSchedule] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [deployModalOpen, setDeployModalOpen] = useState(false);
-  const [workflowToDeploy, setWorkflowToDeploy] = useState<{ id: string; name: string } | null>(null);
+  const [workflowToDeploy, setWorkflowToDeploy] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const { forgexAuth } = usePrivyAuth();
 
   const handleAddWorkflow = () => {
-    router.push('/canvas');
+    router.push("/canvas");
   };
 
   const fetchWorkflows = async () => {
     try {
       setWorkflowsLoading(true);
       setWorkflowsError(null);
-      
+
       refreshApiClientAuth();
       const response = await defaultApiClient.getWorkflows({
         limit: 20,
@@ -87,11 +101,11 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
       if (response.success && response.data) {
         setWorkflows(response.data.workflows);
       } else {
-        setWorkflowsError(response.error || 'Failed to fetch workflows');
+        setWorkflowsError(response.error || "Failed to fetch workflows");
       }
     } catch (error) {
-      console.error('Error fetching workflows:', error);
-      setWorkflowsError('Failed to fetch workflows');
+      console.error("Error fetching workflows:", error);
+      setWorkflowsError("Failed to fetch workflows");
     } finally {
       setWorkflowsLoading(false);
     }
@@ -129,16 +143,18 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
     if (!workflowToDelete) return;
 
     if (!forgexAuth.isAuthenticated) {
-      toast.error('Please log in to delete workflows');
+      toast.error("Please log in to delete workflows");
       return;
     }
 
     setIsDeleting(true);
     try {
       refreshApiClientAuth();
-      const response = await defaultApiClient.deleteWorkflow(workflowToDelete.id);
+      const response = await defaultApiClient.deleteWorkflow(
+        workflowToDelete.id
+      );
       if (response.success) {
-        toast.success('Workflow deleted successfully');
+        toast.success("Workflow deleted successfully");
         const refreshResponse = await defaultApiClient.getWorkflows({
           limit: 20,
           offset: 0,
@@ -147,11 +163,11 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
           setWorkflows(refreshResponse.data.workflows);
         }
       } else {
-        toast.error(response.error || 'Failed to delete workflow');
+        toast.error(response.error || "Failed to delete workflow");
       }
     } catch (error) {
-      console.error('Error deleting workflow:', error);
-      toast.error('Failed to delete workflow');
+      console.error("Error deleting workflow:", error);
+      toast.error("Failed to delete workflow");
     } finally {
       setIsDeleting(false);
       setDeleteDialogOpen(false);
@@ -162,53 +178,68 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
   const handleRunWorkflow = async (workflowId: string) => {
     try {
       setExecutingWorkflow(workflowId);
-      
+
       refreshApiClientAuth();
-      
-      toast.loading('Starting workflow execution...', { id: 'workflow-execution' });
-      
+
+      toast.loading("Starting workflow execution...", {
+        id: "workflow-execution",
+      });
+
       const workflowResponse = await defaultApiClient.getWorkflow(workflowId);
-      
+
       if (!workflowResponse.success || !workflowResponse.data) {
-        toast.error('Failed to load workflow for execution', { id: 'workflow-execution' });
+        toast.error("Failed to load workflow for execution", {
+          id: "workflow-execution",
+        });
         return;
       }
-      
+
       const workflow = workflowResponse.data;
 
       const inputData: Record<string, any> = {};
-      
-      workflow.nodes?.forEach(node => {
-        
+
+      workflow.nodes?.forEach((node) => {
         if (node.config && Object.keys(node.config).length > 0) {
           inputData[node.id] = { ...node.config };
-          
-          if (node.category === 'memory' && node.config.key) {
+
+          if (node.category === "memory" && node.config.key) {
             inputData[node.id].key = node.config.key;
           }
         } else {
           inputData[node.id] = {};
         }
       });
-      
-      const response = await defaultApiClient.executeWorkflow(workflowId, inputData);
-      
+
+      const response = await defaultApiClient.executeWorkflow(
+        workflowId,
+        inputData
+      );
+
       if (response.success && response.data) {
-        toast.success('Workflow executed successfully!', { id: 'workflow-execution' });
-        
+        toast.success("Workflow executed successfully!", {
+          id: "workflow-execution",
+        });
+
         const { status, duration, results } = response.data;
-        const durationText = duration < 1000 ? `${duration}ms` : `${(duration / 1000).toFixed(1)}s`;
-        
+        const durationText =
+          duration < 1000
+            ? `${duration}ms`
+            : `${(duration / 1000).toFixed(1)}s`;
+
         toast.success(
-          `Execution completed in ${durationText}. ${results.length} result${results.length !== 1 ? 's' : ''} generated.`,
+          `Execution completed in ${durationText}. ${results.length} result${
+            results.length !== 1 ? "s" : ""
+          } generated.`,
           { duration: 5000 }
         );
       } else {
-        toast.error(response.error || 'Failed to execute workflow', { id: 'workflow-execution' });
+        toast.error(response.error || "Failed to execute workflow", {
+          id: "workflow-execution",
+        });
       }
     } catch (error) {
-      console.error('Error executing workflow:', error);
-      toast.error('Failed to execute workflow', { id: 'workflow-execution' });
+      console.error("Error executing workflow:", error);
+      toast.error("Failed to execute workflow", { id: "workflow-execution" });
     } finally {
       setExecutingWorkflow(null);
     }
@@ -239,8 +270,10 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
       <div className="flex flex-col items-center justify-center h-64 text-gray-400">
         <div className="text-6xl mb-4">🤖</div>
         <h3 className="text-xl font-semibold mb-2">No Workflows Yet</h3>
-        <p className="text-center mb-6">Create your first autonomous Solana agent workflow</p>
-        <Button 
+        <p className="text-center mb-6">
+          Create your first autonomous Solana agent workflow
+        </p>
+        <Button
           onClick={handleAddWorkflow}
           className="bg-gradient-to-r from-[#ff6b35] to-[#f7931e] hover:opacity-90"
         >
@@ -264,7 +297,7 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
                   {workflow.name}
                 </h3>
                 <p className="text-sm text-gray-400 line-clamp-2 mb-3">
-                  {workflow.description || 'No description provided'}
+                  {workflow.description || "No description provided"}
                 </p>
                 <div className="flex items-center space-x-4 text-xs text-gray-500">
                   <div className="flex items-center space-x-1">
@@ -279,7 +312,7 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
                   </div>
                 </div>
               </div>
-              
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -291,7 +324,10 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
                     <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-[#1A1B23] border-white/10">
+                <DropdownMenuContent
+                  align="end"
+                  className="bg-[#1A1B23] border-white/10"
+                >
                   <DropdownMenuItem
                     onClick={(e) => {
                       e.stopPropagation();
@@ -352,7 +388,7 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            
+
             <div className="mt-4 pt-4 border-t border-white/10">
               <div className="flex space-x-2">
                 <Button
@@ -390,29 +426,29 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
         onConfirm={confirmDeleteWorkflow}
       />
 
-          <ViewExecutionsModal
-            open={executionsModalOpen}
-            onOpenChange={setExecutionsModalOpen}
-            workflowId={selectedWorkflow?.id || ""}
-            workflowName={selectedWorkflow?.name || ""}
-          />
+      <ViewExecutionsModal
+        open={executionsModalOpen}
+        onOpenChange={setExecutionsModalOpen}
+        workflowId={selectedWorkflow?.id || ""}
+        workflowName={selectedWorkflow?.name || ""}
+      />
 
-          <ScheduleWorkflowModal
-            open={scheduleModalOpen}
-            onOpenChange={setScheduleModalOpen}
-            workflowId={workflowToSchedule?.id || ""}
-            workflowName={workflowToSchedule?.name || ""}
-            onScheduleSuccess={() => {
-              toast.success("Workflow scheduled successfully!");
-            }}
-          />
+      <ScheduleWorkflowModal
+        open={scheduleModalOpen}
+        onOpenChange={setScheduleModalOpen}
+        workflowId={workflowToSchedule?.id || ""}
+        workflowName={workflowToSchedule?.name || ""}
+        onScheduleSuccess={() => {
+          toast.success("Workflow scheduled successfully!");
+        }}
+      />
 
-          <DeployWorkflowModal
-            isOpen={deployModalOpen}
-            onClose={() => setDeployModalOpen(false)}
-            workflowId={workflowToDeploy?.id || ""}
-            workflowName={workflowToDeploy?.name || ""}
-          />
-        </>
-      );
-    }
+      <DeployWorkflowModal
+        isOpen={deployModalOpen}
+        onClose={() => setDeployModalOpen(false)}
+        workflowId={workflowToDeploy?.id || ""}
+        workflowName={workflowToDeploy?.name || ""}
+      />
+    </>
+  );
+}

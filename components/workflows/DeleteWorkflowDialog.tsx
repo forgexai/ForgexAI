@@ -32,12 +32,16 @@ export function DeleteWorkflowDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Workflow</AlertDialogTitle>
           <AlertDialogDescription className="text-gray-400">
-            Are you sure you want to delete <span className="font-semibold text-white">"{workflowName}"</span>? 
-            This action cannot be undone and will permanently remove the workflow and all its data.
+            Are you sure you want to delete{" "}
+            <span className="font-semibold text-white">
+              &quot;{workflowName}&quot;
+            </span>
+            ? This action cannot be undone and will permanently remove the
+            workflow and all its data.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel 
+          <AlertDialogCancel
             className="border-gray-700 text-black cursor-pointer"
             disabled={isDeleting}
           >

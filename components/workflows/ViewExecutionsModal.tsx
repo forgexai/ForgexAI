@@ -54,11 +54,14 @@ export function ViewExecutionsModal({
     try {
       // Refresh auth token before making the request
       refreshApiClientAuth();
-      
-      const response = await defaultApiClient.getWorkflowExecutions(workflowId, {
-        limit: 50,
-        offset: 0,
-      });
+
+      const response = await defaultApiClient.getWorkflowExecutions(
+        workflowId,
+        {
+          limit: 50,
+          offset: 0,
+        }
+      );
 
       if (response.success && response.data) {
         setExecutions(response.data.executions);
@@ -129,7 +132,7 @@ export function ViewExecutionsModal({
             <div>
               <DialogTitle>Workflow Executions</DialogTitle>
               <DialogDescription className="text-gray-400">
-                Execution history for "{workflowName}"
+                Execution history for &quot;{workflowName}&quot;
               </DialogDescription>
             </div>
             <Button
@@ -139,7 +142,9 @@ export function ViewExecutionsModal({
               disabled={refreshing}
               className="border-gray-700 text-black cursor-pointer mr-4"
             >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+              <RefreshCw
+                className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
+              />
             </Button>
           </div>
         </DialogHeader>
@@ -154,7 +159,9 @@ export function ViewExecutionsModal({
             <div className="flex flex-col items-center justify-center h-32 text-gray-400">
               <Clock className="w-8 h-8 mb-2" />
               <p>No executions found</p>
-              <p className="text-sm">This workflow hasn't been executed yet</p>
+              <p className="text-sm">
+                This workflow hasn&apos;t been executed yet
+              </p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -196,26 +203,34 @@ export function ViewExecutionsModal({
 
                   {execution.results && execution.results.length > 0 && (
                     <div className="bg-green-600/10 border border-green-600/20 rounded p-2">
-                      <p className="text-xs text-green-400 font-medium mb-1">Results:</p>
+                      <p className="text-xs text-green-400 font-medium mb-1">
+                        Results:
+                      </p>
                       <div className="text-xs text-green-300">
-                        {execution.results.length} result{execution.results.length !== 1 ? "s" : ""} generated
+                        {execution.results.length} result
+                        {execution.results.length !== 1 ? "s" : ""} generated
                       </div>
                     </div>
                   )}
 
-                  {execution.executionContext && Object.keys(execution.executionContext).length > 0 && (
-                    <div className="mt-2">
-                      <p className="text-xs text-gray-400 mb-1">Context:</p>
-                      <div className="text-xs text-gray-300 bg-white/5 rounded p-2">
-                        {Object.entries(execution.executionContext).map(([key, value]) => (
-                          <div key={key} className="flex justify-between">
-                            <span className="text-gray-400">{key}:</span>
-                            <span className="text-white">{String(value)}</span>
-                          </div>
-                        ))}
+                  {execution.executionContext &&
+                    Object.keys(execution.executionContext).length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-xs text-gray-400 mb-1">Context:</p>
+                        <div className="text-xs text-gray-300 bg-white/5 rounded p-2">
+                          {Object.entries(execution.executionContext).map(
+                            ([key, value]) => (
+                              <div key={key} className="flex justify-between">
+                                <span className="text-gray-400">{key}:</span>
+                                <span className="text-white">
+                                  {String(value)}
+                                </span>
+                              </div>
+                            )
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
                 </div>
               ))}
             </div>

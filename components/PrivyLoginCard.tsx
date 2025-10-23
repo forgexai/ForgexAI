@@ -40,22 +40,27 @@ export function PrivyLoginCard() {
       <CardContent className="space-y-4">
         <div>
           <p className="text-sm font-medium text-muted-foreground">Email</p>
-          <p className="text-sm">{user?.email || "N/A"}</p>
+          <p className="text-sm">{`${user?.email ?? "N/A"}`}</p>
         </div>
-        
+
         {wallets.length > 0 && (
           <div>
-            <p className="text-sm font-medium text-muted-foreground">Connected Wallets</p>
+            <p className="text-sm font-medium text-muted-foreground">
+              Connected Wallets
+            </p>
             <div className="space-y-2">
               {wallets.map((wallet, index) => (
-                <div key={wallet.address} className="text-xs font-mono bg-muted p-2 rounded">
+                <div
+                  key={wallet.address}
+                  className="text-xs font-mono bg-muted p-2 rounded"
+                >
                   {wallet.address}
                 </div>
               ))}
             </div>
           </div>
         )}
-        
+
         <Button onClick={logout} variant="outline" className="w-full">
           Logout
         </Button>

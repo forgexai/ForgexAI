@@ -16,7 +16,9 @@ const connection = new Connection(RPC_URL, "confirmed");
  * @param walletAddress - The public key of the wallet
  * @returns Promise<number> - Balance in SOL (not lamports)
  */
-export async function fetchWalletBalance(walletAddress: string): Promise<number> {
+export async function fetchWalletBalance(
+  walletAddress: string
+): Promise<number> {
   try {
     const publicKey = new PublicKey(walletAddress);
     const balance = await connection.getBalance(publicKey);
@@ -58,7 +60,9 @@ export async function sendSOL(
     transaction.feePayer = fromWallet.publicKey;
 
     // Send and confirm transaction
-    const signature = await sendAndConfirmTransaction(connection, transaction, [fromWallet]);
+    const signature = await sendAndConfirmTransaction(connection, transaction, [
+      fromWallet,
+    ]);
     return signature;
   } catch (error) {
     console.error("Error sending SOL:", error);
@@ -74,11 +78,11 @@ export async function getNetworkInfo() {
   try {
     const version = await connection.getVersion();
     const epochInfo = await connection.getEpochInfo();
-    
+
     return {
       version: version["solana-core"],
       epoch: epochInfo.epoch,
-      slot: epochInfo.slot,
+      slot: epochInfo.absoluteSlot,
       blockHeight: epochInfo.blockHeight,
     };
   } catch (error) {

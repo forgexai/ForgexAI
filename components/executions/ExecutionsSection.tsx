@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { ViewExecutionsModal } from "@/components/workflows/ViewExecutionsModal";
 
-interface ExecutionsSectionProps {}
-
+type ExecutionsSectionProps = Record<string, never>;
 export function ExecutionsSection({}: ExecutionsSectionProps) {
   const [executionsModalOpen, setExecutionsModalOpen] = useState(false);
-  const [selectedWorkflow, setSelectedWorkflow] = useState<{ id: string; name: string } | null>(null);
+  const [selectedWorkflow, setSelectedWorkflow] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const handleViewExecutions = (workflowId: string, workflowName: string) => {
     setSelectedWorkflow({ id: workflowId, name: workflowName });
@@ -99,10 +101,13 @@ export function ExecutionsSection({}: ExecutionsSectionProps) {
             />
           </svg>
         </div>
-        
-        <p className="text-center mb-6 text-gray-300">View and manage workflow execution history</p>
+
+        <p className="text-center mb-6 text-gray-300">
+          View and manage workflow execution history
+        </p>
         <p className="text-sm text-gray-500 text-center max-w-md">
-          Click on "View Executions" in any workflow card to see its execution history and monitor performance
+          Click on &quot;View Executions&quot; in any workflow card to see its
+          execution history and monitor performance
         </p>
       </div>
 

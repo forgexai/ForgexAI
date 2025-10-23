@@ -1,6 +1,8 @@
 // ForgexAI API Client Utilities
 // Comprehensive client for all backend endpoints
 
+import { WorkflowTemplate } from "@/components/marketplace/MarketplaceSection";
+
 export interface ApiConfig {
   baseUrl: string;
   authToken?: string;
@@ -17,7 +19,13 @@ export interface ApiResponse<T = any> {
 export interface WorkflowNode {
   id: string;
   type: "input" | "logic" | "data" | "output" | "protocol";
-  category: "trigger" | "condition" | "transform" | "protocol" | "memory" | "communication";
+  category:
+    | "trigger"
+    | "condition"
+    | "transform"
+    | "protocol"
+    | "memory"
+    | "communication";
   name: string;
   description: string;
   inputs: NodeInput[];
@@ -215,12 +223,15 @@ class ForgexApiClient {
     if (this.config.authToken) {
       headers.Authorization = `Bearer ${this.config.authToken}`;
     } else {
-      console.warn('No auth token found for API request to:', endpoint);
+      console.warn("No auth token found for API request to:", endpoint);
     }
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
+      const timeoutId = setTimeout(
+        () => controller.abort(),
+        this.config.timeout
+      );
 
       const response = await fetch(url, {
         ...options,
@@ -235,7 +246,9 @@ class ForgexApiClient {
       return {
         success: response.ok,
         data: response.ok ? data : undefined,
-        error: response.ok ? undefined : data.error || data.message || "Request failed",
+        error: response.ok
+          ? undefined
+          : data.error || data.message || "Request failed",
         status: response.status,
       };
     } catch (error: any) {
@@ -251,43 +264,51 @@ class ForgexApiClient {
   // HEALTH & SYSTEM ENDPOINTS
   // ============================================================================
 
-  async getHealth(): Promise<ApiResponse<{
-    status: string;
-    timestamp: string;
-    version: string;
-    uptime?: number;
-  }>> {
+  async getHealth(): Promise<
+    ApiResponse<{
+      status: string;
+      timestamp: string;
+      version: string;
+      uptime?: number;
+    }>
+  > {
     return this.request("/health");
   }
 
-  async getSystemHealth(): Promise<ApiResponse<{
-    status: string;
-    timestamp: string;
-    scheduler: any;
-  }>> {
-    return this.request("/api/system/health");
+  async getSystemHealth(): Promise<
+    ApiResponse<{
+      status: string;
+      timestamp: string;
+      scheduler: any;
+    }>
+  > {
+    return this.request("/system/health");
   }
 
-  async getMcpHealth(): Promise<ApiResponse<{
-    status: string;
-    service: string;
-    sdk_health: any;
-    available_protocols: number;
-    timestamp: string;
-  }>> {
-    return this.request("/api/mcp/health");
+  async getMcpHealth(): Promise<
+    ApiResponse<{
+      status: string;
+      service: string;
+      sdk_health: any;
+      available_protocols: number;
+      timestamp: string;
+    }>
+  > {
+    return this.request("/mcp/health");
   }
 
   // ============================================================================
   // AUTHENTICATION ENDPOINTS
   // ============================================================================
 
-  async generateAuthChallenge(walletAddress: string): Promise<ApiResponse<{
-    message: string;
-    timestamp: number;
-    walletAddress: string;
-  }>> {
-    return this.request("/api/users/auth/challenge", {
+  async generateAuthChallenge(walletAddress: string): Promise<
+    ApiResponse<{
+      message: string;
+      timestamp: number;
+      walletAddress: string;
+    }>
+  > {
+    return this.request("/users/auth/challenge", {
       method: "POST",
       body: JSON.stringify({ walletAddress }),
     });
@@ -298,23 +319,27 @@ class ForgexApiClient {
     signature: string;
     message: string;
     timestamp: number;
-  }): Promise<ApiResponse<{
-    sessionToken: string;
-    expiresAt: string;
-    user: UserProfile;
-    stats: any;
-  }>> {
-    return this.request("/api/users/auth/login", {
+  }): Promise<
+    ApiResponse<{
+      sessionToken: string;
+      expiresAt: string;
+      user: UserProfile;
+      stats: any;
+    }>
+  > {
+    return this.request("/users/auth/login", {
       method: "POST",
       body: JSON.stringify(authRequest),
     });
   }
 
-  async logout(): Promise<ApiResponse<{
-    success: boolean;
-    message: string;
-  }>> {
-    return this.request("/api/users/auth/logout", {
+  async logout(): Promise<
+    ApiResponse<{
+      success: boolean;
+      message: string;
+    }>
+  > {
+    return this.request("/users/auth/logout", {
       method: "POST",
       body: JSON.stringify({}),
     });
@@ -324,37 +349,43 @@ class ForgexApiClient {
   // USER MANAGEMENT ENDPOINTS
   // ============================================================================
 
-  async getUserProfile(): Promise<ApiResponse<{
-    user: UserProfile;
-    stats: any;
-  }>> {
-    return this.request("/api/users/profile");
+  async getUserProfile(): Promise<
+    ApiResponse<{
+      user: UserProfile;
+      stats: any;
+    }>
+  > {
+    return this.request("/users/profile");
   }
 
-  async getUserCredits(): Promise<ApiResponse<{
-    credits: number;
-    userId: string;
-    walletAddress: string;
-  }>> {
-    return this.request("/api/users/credits");
+  async getUserCredits(): Promise<
+    ApiResponse<{
+      credits: number;
+      userId: string;
+      walletAddress: string;
+    }>
+  > {
+    return this.request("/users/credits");
   }
 
   async getCreditsHistory(params?: {
     limit?: number;
     offset?: number;
-  }): Promise<ApiResponse<{
-    transactions: CreditsTransaction[];
-    pagination: {
-      limit: number;
-      offset: number;
-      count: number;
-    };
-  }>> {
+  }): Promise<
+    ApiResponse<{
+      transactions: CreditsTransaction[];
+      pagination: {
+        limit: number;
+        offset: number;
+        count: number;
+      };
+    }>
+  > {
     const queryParams = new URLSearchParams();
     if (params?.limit) queryParams.set("limit", params.limit.toString());
     if (params?.offset) queryParams.set("offset", params.offset.toString());
 
-    return this.request(`/api/users/credits/history?${queryParams}`);
+    return this.request(`/users/credits/history?${queryParams}`);
   }
 
   async addCredits(params: {
@@ -362,13 +393,15 @@ class ForgexApiClient {
     amount: number;
     reason: string;
     metadata?: Record<string, any>;
-  }): Promise<ApiResponse<{
-    success: boolean;
-    message: string;
-    newBalance: number;
-    targetUserId: string;
-  }>> {
-    return this.request("/api/users/credits/add", {
+  }): Promise<
+    ApiResponse<{
+      success: boolean;
+      message: string;
+      newBalance: number;
+      targetUserId: string;
+    }>
+  > {
+    return this.request("/users/credits/add", {
       method: "POST",
       body: JSON.stringify(params),
     });
@@ -377,16 +410,18 @@ class ForgexApiClient {
   async purchaseCredits(params: {
     package: "starter" | "pro" | "enterprise";
     paymentMethod: "sol" | "usdc" | "card";
-  }): Promise<ApiResponse<{
-    package: string;
-    credits: number;
-    price: number;
-    paymentMethod: string;
-    status: string;
-    message: string;
-    instructions: string;
-  }>> {
-    return this.request("/api/users/credits/purchase", {
+  }): Promise<
+    ApiResponse<{
+      package: string;
+      credits: number;
+      price: number;
+      paymentMethod: string;
+      status: string;
+      message: string;
+      instructions: string;
+    }>
+  > {
+    return this.request("/users/credits/purchase", {
       method: "POST",
       body: JSON.stringify(params),
     });
@@ -395,14 +430,16 @@ class ForgexApiClient {
   async updateUserTier(params: {
     targetUserId: string;
     tier: "free" | "pro" | "enterprise";
-  }): Promise<ApiResponse<{
-    success: boolean;
-    message: string;
-    targetUserId: string;
-    newTier: string;
-    updatedBy: string;
-  }>> {
-    return this.request("/api/users/tier", {
+  }): Promise<
+    ApiResponse<{
+      success: boolean;
+      message: string;
+      targetUserId: string;
+      newTier: string;
+      updatedBy: string;
+    }>
+  > {
+    return this.request("/users/tier", {
       method: "PUT",
       body: JSON.stringify(params),
     });
@@ -412,11 +449,13 @@ class ForgexApiClient {
   // WORKFLOW MANAGEMENT ENDPOINTS
   // ============================================================================
 
-  async getNodeTemplates(): Promise<ApiResponse<{
-    templates: any[];
-    categories: string[];
-    protocols: string[];
-  }>> {
+  async getNodeTemplates(): Promise<
+    ApiResponse<{
+      templates: any[];
+      categories: string[];
+      protocols: string[];
+    }>
+  > {
     return this.request("/agents/nodes/templates");
   }
 
@@ -424,10 +463,12 @@ class ForgexApiClient {
     limit?: number;
     offset?: number;
     status?: string;
-  }): Promise<ApiResponse<{
-    workflows: Workflow[];
-    total: number;
-  }>> {
+  }): Promise<
+    ApiResponse<{
+      workflows: Workflow[];
+      total: number;
+    }>
+  > {
     const queryParams = new URLSearchParams();
     if (params?.limit) queryParams.set("limit", params.limit.toString());
     if (params?.offset) queryParams.set("offset", params.offset.toString());
@@ -453,26 +494,31 @@ class ForgexApiClient {
     });
   }
 
-  async updateWorkflow(workflowId: string, workflow: {
-    name?: string;
-    description?: string;
-    nodes?: WorkflowNode[];
-    connections?: WorkflowConnection[];
-    config?: {
-      isActive?: boolean;
-      scheduleType?: "manual" | "cron" | "event";
-      cronExpression?: string;
-      triggerEvents?: string[];
-    };
-    status?: "draft" | "published" | "paused" | "error";
-  }): Promise<ApiResponse<Workflow>> {
+  async updateWorkflow(
+    workflowId: string,
+    workflow: {
+      name?: string;
+      description?: string;
+      nodes?: WorkflowNode[];
+      connections?: WorkflowConnection[];
+      config?: {
+        isActive?: boolean;
+        scheduleType?: "manual" | "cron" | "event";
+        cronExpression?: string;
+        triggerEvents?: string[];
+      };
+      status?: "draft" | "published" | "paused" | "error";
+    }
+  ): Promise<ApiResponse<Workflow>> {
     return this.request(`/agents/workflows/${workflowId}`, {
       method: "PUT",
       body: JSON.stringify(workflow),
     });
   }
 
-  async deleteWorkflow(workflowId: string): Promise<ApiResponse<{ success: boolean }>> {
+  async deleteWorkflow(
+    workflowId: string
+  ): Promise<ApiResponse<{ success: boolean }>> {
     return this.request(`/agents/workflows/${workflowId}`, {
       method: "DELETE",
     });
@@ -494,10 +540,12 @@ class ForgexApiClient {
       limit?: number;
       offset?: number;
     }
-  ): Promise<ApiResponse<{
-    executions: any[];
-    total: number;
-  }>> {
+  ): Promise<
+    ApiResponse<{
+      executions: any[];
+      total: number;
+    }>
+  > {
     const queryParams = new URLSearchParams();
     if (params?.limit) queryParams.set("limit", params.limit.toString());
     if (params?.offset) queryParams.set("offset", params.offset.toString());
@@ -507,11 +555,13 @@ class ForgexApiClient {
     );
   }
 
-  async getWorkflowTemplates(): Promise<ApiResponse<{
-    templates: any[];
-    categories: string[];
-  }>> {
-    return this.request("/api/agents/templates");
+  async getWorkflowTemplates(): Promise<
+    ApiResponse<{
+      templates: any[];
+      categories: string[];
+    }>
+  > {
+    return this.request("/agents/templates");
   }
 
   async getMarketplaceTemplates(params?: {
@@ -519,7 +569,11 @@ class ForgexApiClient {
     sort?: "popular" | "rating" | "recent" | "difficulty";
     limit?: number;
     offset?: number;
-  }): Promise<ApiResponse<any[]>> {
+  }): Promise<
+    ApiResponse<{
+      marketplaceWorkflows: WorkflowTemplate[];
+    }>
+  > {
     const queryParams = new URLSearchParams();
     if (params?.category) queryParams.set("category", params.category);
     if (params?.sort) queryParams.set("sort", params.sort);
@@ -552,10 +606,12 @@ class ForgexApiClient {
     status?: string;
     limit?: number;
     offset?: number;
-  }): Promise<ApiResponse<{
-    deployments: DeploymentConfig[];
-    total: number;
-  }>> {
+  }): Promise<
+    ApiResponse<{
+      deployments: DeploymentConfig[];
+      total: number;
+    }>
+  > {
     const queryParams = new URLSearchParams();
     if (params?.platform) queryParams.set("platform", params.platform);
     if (params?.status) queryParams.set("status", params.status);
@@ -568,12 +624,14 @@ class ForgexApiClient {
   async controlDeployment(
     deploymentId: string,
     action: "start" | "stop" | "restart"
-  ): Promise<ApiResponse<{
-    success: boolean;
-    status: string;
-    action: string;
-  }>> {
-    return this.request(`/api/deployments/${deploymentId}/${action}`, {
+  ): Promise<
+    ApiResponse<{
+      success: boolean;
+      status: string;
+      action: string;
+    }>
+  > {
+    return this.request(`/deployments/${deploymentId}/${action}`, {
       method: "POST",
     });
   }
@@ -604,29 +662,35 @@ class ForgexApiClient {
     name: string;
     value: string;
     type: "telegram_bot_token" | "api_key" | "webhook_url" | "custom";
-  }): Promise<ApiResponse<{
-    id: string;
-    name: string;
-    type: string;
-    created: boolean;
-  }>> {
-    return this.request("/api/system/secrets", {
+  }): Promise<
+    ApiResponse<{
+      id: string;
+      name: string;
+      type: string;
+      created: boolean;
+    }>
+  > {
+    return this.request("/system/secrets", {
       method: "POST",
       body: JSON.stringify(params),
     });
   }
 
-  async getSecrets(): Promise<ApiResponse<{
-    secrets: Secret[];
-  }>> {
-    return this.request("/api/system/secrets");
+  async getSecrets(): Promise<
+    ApiResponse<{
+      secrets: Secret[];
+    }>
+  > {
+    return this.request("/system/secrets");
   }
 
-  async deleteSecret(secretId: string): Promise<ApiResponse<{
-    success: boolean;
-    deleted: string;
-  }>> {
-    return this.request(`/api/system/secrets/${secretId}`, {
+  async deleteSecret(secretId: string): Promise<
+    ApiResponse<{
+      success: boolean;
+      deleted: string;
+    }>
+  > {
+    return this.request(`/system/secrets/${secretId}`, {
       method: "DELETE",
     });
   }
@@ -644,28 +708,34 @@ class ForgexApiClient {
       name: string;
       description?: string;
     }
-  ): Promise<ApiResponse<{
-    scheduleId: string;
-    workflowId: string;
-    cronExpression: string;
-    scheduled: boolean;
-  }>> {
+  ): Promise<
+    ApiResponse<{
+      scheduleId: string;
+      workflowId: string;
+      cronExpression: string;
+      scheduled: boolean;
+    }>
+  > {
     return this.request(`/system/schedules`, {
       method: "POST",
       body: JSON.stringify(params),
     });
   }
 
-  async getSchedules(): Promise<ApiResponse<{
-    schedules: Schedule[];
-  }>> {
+  async getSchedules(): Promise<
+    ApiResponse<{
+      schedules: Schedule[];
+    }>
+  > {
     return this.request("/system/schedules");
   }
 
-  async cancelSchedule(scheduleId: string): Promise<ApiResponse<{
-    success: boolean;
-    cancelled: string;
-  }>> {
+  async cancelSchedule(scheduleId: string): Promise<
+    ApiResponse<{
+      success: boolean;
+      cancelled: string;
+    }>
+  > {
     return this.request(`/system/schedules/${scheduleId}`, {
       method: "DELETE",
     });
@@ -679,18 +749,20 @@ class ForgexApiClient {
     tool_name: string;
     arguments: any;
   }): Promise<ApiResponse<McpExecutionResult>> {
-    return this.request("/api/mcp/execute", {
+    return this.request("/mcp/execute", {
       method: "POST",
       body: JSON.stringify(params),
     });
   }
 
-  async getMcpTools(): Promise<ApiResponse<{
-    tools: McpTool[];
-    available_protocols: string[];
-    user_tier: string;
-  }>> {
-    return this.request("/api/mcp/tools");
+  async getMcpTools(): Promise<
+    ApiResponse<{
+      tools: McpTool[];
+      available_protocols: string[];
+      user_tier: string;
+    }>
+  > {
+    return this.request("/mcp/tools");
   }
 
   async getUserContext(params?: {
@@ -701,7 +773,7 @@ class ForgexApiClient {
     if (params?.type) queryParams.set("type", params.type);
     if (params?.limit) queryParams.set("limit", params.limit.toString());
 
-    return this.request(`/api/mcp/context?${queryParams}`);
+    return this.request(`/mcp/context?${queryParams}`);
   }
 
   // ============================================================================
@@ -717,16 +789,21 @@ class ForgexApiClient {
     sort?: "popular" | "rating" | "recent" | "price-low" | "price-high";
     limit?: number;
     offset?: number;
-  }): Promise<ApiResponse<{
-    listings: MarketplaceListing[];
-    total: number;
-  }>> {
+  }): Promise<
+    ApiResponse<{
+      listings: MarketplaceListing[];
+      total: number;
+    }>
+  > {
     const queryParams = new URLSearchParams();
     if (params?.category) queryParams.set("category", params.category);
     if (params?.tag) queryParams.set("tag", params.tag);
-    if (params?.featured !== undefined) queryParams.set("featured", params.featured.toString());
-    if (params?.minPrice !== undefined) queryParams.set("minPrice", params.minPrice.toString());
-    if (params?.maxPrice !== undefined) queryParams.set("maxPrice", params.maxPrice.toString());
+    if (params?.featured !== undefined)
+      queryParams.set("featured", params.featured.toString());
+    if (params?.minPrice !== undefined)
+      queryParams.set("minPrice", params.minPrice.toString());
+    if (params?.maxPrice !== undefined)
+      queryParams.set("maxPrice", params.maxPrice.toString());
     if (params?.sort) queryParams.set("sort", params.sort);
     if (params?.limit) queryParams.set("limit", params.limit.toString());
     if (params?.offset) queryParams.set("offset", params.offset.toString());
@@ -734,41 +811,26 @@ class ForgexApiClient {
     return this.request(`/workflows/marketplace?${queryParams}`);
   }
 
-  async getMarketplaceListing(listingId: string): Promise<ApiResponse<MarketplaceListing>> {
-    return this.request(`/api/marketplace/listings/${listingId}`);
+  async getMarketplaceListing(
+    listingId: string
+  ): Promise<ApiResponse<MarketplaceListing>> {
+    return this.request(`/marketplace/listings/${listingId}`);
   }
 
-  async getMarketplaceCategories(): Promise<ApiResponse<{
-    categories: Array<{
-      id: string;
-      name: string;
-      icon: string;
-    }>;
-  }>> {
-    return this.request("/api/marketplace/categories");
+  async getMarketplaceCategories(): Promise<
+    ApiResponse<{
+      categories: Array<{
+        id: string;
+        name: string;
+        icon: string;
+      }>;
+    }>
+  > {
+    return this.request("/marketplace/categories");
   }
 
-  async purchaseWorkflow(listingId: string): Promise<ApiResponse<{
-    id: string;
-    listingId: string;
-    workflowId: string;
-    buyerId: string;
-    sellerId: string;
-    price: number;
-    pricingType: string;
-    status: string;
-    purchasedAt: string;
-  }>> {
-    return this.request(`/api/marketplace/listings/${listingId}/purchase`, {
-      method: "POST",
-    });
-  }
-
-  async getMyPurchases(params?: {
-    limit?: number;
-    offset?: number;
-  }): Promise<ApiResponse<{
-    purchases: Array<{
+  async purchaseWorkflow(listingId: string): Promise<
+    ApiResponse<{
       id: string;
       listingId: string;
       workflowId: string;
@@ -778,31 +840,53 @@ class ForgexApiClient {
       pricingType: string;
       status: string;
       purchasedAt: string;
-      listing?: MarketplaceListing;
-    }>;
-    total: number;
-  }>> {
+    }>
+  > {
+    return this.request(`/marketplace/listings/${listingId}/purchase`, {
+      method: "POST",
+    });
+  }
+
+  async getMyPurchases(params?: { limit?: number; offset?: number }): Promise<
+    ApiResponse<{
+      purchases: Array<{
+        id: string;
+        listingId: string;
+        workflowId: string;
+        buyerId: string;
+        sellerId: string;
+        price: number;
+        pricingType: string;
+        status: string;
+        purchasedAt: string;
+        listing?: MarketplaceListing;
+      }>;
+      total: number;
+    }>
+  > {
     const queryParams = new URLSearchParams();
     if (params?.limit) queryParams.set("limit", params.limit.toString());
     if (params?.offset) queryParams.set("offset", params.offset.toString());
 
-    return this.request(`/api/marketplace/purchases?${queryParams}`);
+    return this.request(`/marketplace/purchases?${queryParams}`);
   }
 
   async getMyListings(params?: {
     status?: string;
     limit?: number;
     offset?: number;
-  }): Promise<ApiResponse<{
-    listings: MarketplaceListing[];
-    total: number;
-  }>> {
+  }): Promise<
+    ApiResponse<{
+      listings: MarketplaceListing[];
+      total: number;
+    }>
+  > {
     const queryParams = new URLSearchParams();
     if (params?.status) queryParams.set("status", params.status);
     if (params?.limit) queryParams.set("limit", params.limit.toString());
     if (params?.offset) queryParams.set("offset", params.offset.toString());
 
-    return this.request(`/api/marketplace/my-listings?${queryParams}`);
+    return this.request(`/marketplace/my-listings?${queryParams}`);
   }
 
   async publishWorkflowToMarketplace(params: {
@@ -818,7 +902,7 @@ class ForgexApiClient {
     thumbnail?: string;
     screenshots?: string[];
   }): Promise<ApiResponse<MarketplaceListing>> {
-    return this.request("/api/marketplace/listings", {
+    return this.request("/marketplace/listings", {
       method: "POST",
       body: JSON.stringify(params),
     });
@@ -836,7 +920,7 @@ class ForgexApiClient {
       tags?: string[];
     }
   ): Promise<ApiResponse<MarketplaceListing>> {
-    return this.request(`/api/marketplace/listings/${listingId}`, {
+    return this.request(`/marketplace/listings/${listingId}`, {
       method: "PUT",
       body: JSON.stringify(updates),
     });
@@ -845,22 +929,26 @@ class ForgexApiClient {
   async updateListingStatus(
     listingId: string,
     status: "active" | "paused"
-  ): Promise<ApiResponse<{
-    id: string;
-    status: string;
-    message: string;
-  }>> {
-    return this.request(`/api/marketplace/listings/${listingId}/status`, {
+  ): Promise<
+    ApiResponse<{
+      id: string;
+      status: string;
+      message: string;
+    }>
+  > {
+    return this.request(`/marketplace/listings/${listingId}/status`, {
       method: "PATCH",
       body: JSON.stringify({ status }),
     });
   }
 
-  async deleteMarketplaceListing(listingId: string): Promise<ApiResponse<{
-    success: boolean;
-    message: string;
-  }>> {
-    return this.request(`/api/marketplace/listings/${listingId}`, {
+  async deleteMarketplaceListing(listingId: string): Promise<
+    ApiResponse<{
+      success: boolean;
+      message: string;
+    }>
+  > {
+    return this.request(`/marketplace/listings/${listingId}`, {
       method: "DELETE",
     });
   }
@@ -871,17 +959,19 @@ class ForgexApiClient {
       rating: number;
       comment: string;
     }
-  ): Promise<ApiResponse<{
-    id: string;
-    listingId: string;
-    userId: string;
-    userName: string;
-    rating: number;
-    comment: string;
-    createdAt: string;
-    helpful: number;
-  }>> {
-    return this.request(`/api/marketplace/listings/${listingId}/reviews`, {
+  ): Promise<
+    ApiResponse<{
+      id: string;
+      listingId: string;
+      userId: string;
+      userName: string;
+      rating: number;
+      comment: string;
+      createdAt: string;
+      helpful: number;
+    }>
+  > {
+    return this.request(`/marketplace/listings/${listingId}/reviews`, {
       method: "POST",
       body: JSON.stringify(review),
     });
@@ -894,25 +984,29 @@ class ForgexApiClient {
       offset?: number;
       sort?: "recent" | "helpful" | "rating-high" | "rating-low";
     }
-  ): Promise<ApiResponse<{
-    reviews: Array<{
-      id: string;
-      listingId: string;
-      userId: string;
-      userName: string;
-      rating: number;
-      comment: string;
-      createdAt: string;
-      helpful: number;
-    }>;
-    total: number;
-  }>> {
+  ): Promise<
+    ApiResponse<{
+      reviews: Array<{
+        id: string;
+        listingId: string;
+        userId: string;
+        userName: string;
+        rating: number;
+        comment: string;
+        createdAt: string;
+        helpful: number;
+      }>;
+      total: number;
+    }>
+  > {
     const queryParams = new URLSearchParams();
     if (params?.limit) queryParams.set("limit", params.limit.toString());
     if (params?.offset) queryParams.set("offset", params.offset.toString());
     if (params?.sort) queryParams.set("sort", params.sort);
 
-    return this.request(`/api/marketplace/listings/${listingId}/reviews?${queryParams}`);
+    return this.request(
+      `/marketplace/listings/${listingId}/reviews?${queryParams}`
+    );
   }
 
   // ============================================================================
@@ -1089,7 +1183,8 @@ class ForgexApiClient {
   }): Partial<Workflow> {
     return {
       name: "DeFi Liquidation Guardian",
-      description: "Monitor loan health and alert when liquidation risk is high",
+      description:
+        "Monitor loan health and alert when liquidation risk is high",
       nodes: [
         {
           id: "timer_1",
@@ -1217,10 +1312,11 @@ class ForgexApiClient {
 // EXPORT DEFAULT INSTANCE AND CLASS
 // ============================================================================
 
-export const createApiClient = (config: ApiConfig) => new ForgexApiClient(config);
+export const createApiClient = (config: ApiConfig) =>
+  new ForgexApiClient(config);
 
 export const defaultApiClient = new ForgexApiClient({
-  baseUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
+  baseUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api",
 });
 
 export default ForgexApiClient;

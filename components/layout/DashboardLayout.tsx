@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
 import { PlanPopup } from "@/components/ui/plan-popup";
-import { 
-  Workflow as WorkflowIcon,  
-  Clock,  
-  Store, 
+import {
+  Workflow as WorkflowIcon,
+  Clock,
+  Store,
   Search,
   Plus,
   Settings,
@@ -19,12 +19,11 @@ import {
 } from "lucide-react";
 
 const sidebarItems = [
-  { id: 'workflows', label: 'Workflows', icon: WorkflowIcon },
-  { id: 'schedules', label: 'Schedules', icon: Clock },
-  { id: 'deployments', label: 'Deployments', icon: Rocket },
-  { id: 'marketplace', label: 'Marketplace', icon: Store },
+  { id: "workflows", label: "Workflows", icon: WorkflowIcon },
+  { id: "schedules", label: "Schedules", icon: Clock },
+  { id: "deployments", label: "Deployments", icon: Rocket },
+  { id: "marketplace", label: "Marketplace", icon: Store },
 ];
-
 
 interface UserProfile {
   id: string;
@@ -75,7 +74,7 @@ export function DashboardLayout({
 
   const handleLogout = () => {
     logout();
-    router.push('/');
+    router.push("/");
   };
 
   const handleUpgradePlan = (tier: string) => {
@@ -91,9 +90,15 @@ export function DashboardLayout({
         <div className="p-6 border-b border-white/10">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8">
-              <img src="/logo.jpg" alt="ForgeX" className="w-full h-full object-contain" />
+              <img
+                src="/logo.jpg"
+                alt="ForgeX"
+                className="w-full h-full object-contain"
+              />
             </div>
-            <span className="text-xl font-bold text-white whitespace-nowrap">ForgeXAI Studio</span>
+            <span className="text-xl font-bold text-white whitespace-nowrap">
+              ForgeXAI Studio
+            </span>
           </div>
         </div>
 
@@ -103,7 +108,7 @@ export function DashboardLayout({
             {sidebarItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeSection === item.id;
-              
+
               return (
                 <Button
                   key={item.id}
@@ -111,9 +116,9 @@ export function DashboardLayout({
                   size="sm"
                   onClick={() => onSectionChange(item.id)}
                   className={`w-full justify-start cursor-pointer text-base gap-2 mb-2 ${
-                    isActive 
-                      ? 'bg-gradient-to-r from-[#ff6b35] to-[#f7931e] text-white hover:opacity-90' 
-                      : 'text-gray-300 hover:text-white hover:bg-white/10'
+                    isActive
+                      ? "bg-gradient-to-r from-[#ff6b35] to-[#f7931e] text-white hover:opacity-90"
+                      : "text-gray-300 hover:text-white hover:bg-white/10"
                   }`}
                 >
                   <Icon className="w-5 h-5 mr-3" />
@@ -122,7 +127,6 @@ export function DashboardLayout({
               );
             })}
           </div>
-
         </div>
 
         {/* User Profile Section */}
@@ -132,15 +136,19 @@ export function DashboardLayout({
               <div className="flex justify-around items-center">
                 <div className="text-center space-y-2">
                   <div className="text-sm text-gray-400">Current Plan</div>
-                  <div className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
-                    userProfile.tier === 'free' ? 'bg-gray-600 text-gray-200' :
-                    userProfile.tier === 'pro' ? 'bg-blue-600 text-blue-100' :
-                    'bg-purple-600 text-purple-100'
-                  }`}>
+                  <div
+                    className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
+                      userProfile.tier === "free"
+                        ? "bg-gray-600 text-gray-200"
+                        : userProfile.tier === "pro"
+                        ? "bg-blue-600 text-blue-100"
+                        : "bg-purple-600 text-purple-100"
+                    }`}
+                  >
                     {userProfile.tier.toUpperCase()}
                   </div>
                 </div>
-                
+
                 <div className="text-center space-y-1">
                   <div className="text-sm text-gray-400">Credits</div>
                   <div className="text-xl font-bold text-white">
@@ -148,8 +156,8 @@ export function DashboardLayout({
                   </div>
                 </div>
               </div>
-              
-              <Button 
+
+              <Button
                 onClick={() => setIsPlanPopupOpen(true)}
                 className="w-full bg-gradient-to-r text-white from-blue-500 to-purple-600 hover:opacity-90 cursor-pointer"
               >
@@ -162,13 +170,17 @@ export function DashboardLayout({
 
         {/* Settings Section */}
         <div className="p-4 border-t border-white/10 space-y-2">
-          <Button variant="ghost" size="sm" className="w-full justify-start cursor-pointer text-white">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start cursor-pointer text-white"
+          >
             <Settings className="w-4 h-4 mr-3" />
             Settings
           </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             className="w-full justify-start cursor-pointer text-white"
             onClick={handleLogout}
           >
@@ -206,7 +218,7 @@ export function DashboardLayout({
                 )}
               </div>
               {onAddNew && (
-                <Button 
+                <Button
                   onClick={onAddNew}
                   className="bg-gradient-to-r text-white from-[#ff6b35] to-[#f7931e] hover:opacity-90 cursor-pointer"
                 >
@@ -217,9 +229,7 @@ export function DashboardLayout({
             </div>
 
             {/* Content */}
-            <div className="flex-1 px-8 overflow-y-auto">
-              {children}
-            </div>
+            <div className="flex-1 px-8 overflow-y-auto">{children}</div>
           </div>
         </div>
       </div>
@@ -228,8 +238,7 @@ export function DashboardLayout({
       <PlanPopup
         isOpen={isPlanPopupOpen}
         onClose={() => setIsPlanPopupOpen(false)}
-        currentTier={userProfile?.tier || 'free'}
-        onUpgrade={handleUpgradePlan}
+        currentTier={userProfile?.tier || "free"}
       />
     </div>
   );

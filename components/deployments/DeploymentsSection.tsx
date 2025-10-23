@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -15,7 +15,7 @@ import { usePrivyAuth } from "@/hooks/usePrivyAuth";
 import { defaultApiClient, DeploymentConfig } from "@/lib/api-utils";
 import { refreshApiClientAuth } from "@/lib/auth-utils";
 import { toast } from "sonner";
-import { 
+import {
   MoreVertical,
   Play,
   Pause,
@@ -26,23 +26,24 @@ import {
   Bot,
   Webhook,
   MessageSquare,
-  Settings
+  Settings,
 } from "lucide-react";
 
-interface DeploymentsSectionProps {}
-
+type DeploymentsSectionProps = Record<string, never>;
 export function DeploymentsSection({}: DeploymentsSectionProps) {
   const [deployments, setDeployments] = useState<DeploymentConfig[]>([]);
   const [deploymentsLoading, setDeploymentsLoading] = useState(true);
   const [deploymentsError, setDeploymentsError] = useState<string | null>(null);
-  const [controllingDeployment, setControllingDeployment] = useState<string | null>(null);
+  const [controllingDeployment, setControllingDeployment] = useState<
+    string | null
+  >(null);
   const { forgexAuth } = usePrivyAuth();
 
   const fetchDeployments = async () => {
     try {
       setDeploymentsLoading(true);
       setDeploymentsError(null);
-      
+
       refreshApiClientAuth();
       const response = await defaultApiClient.getDeployments({
         limit: 20,
@@ -52,23 +53,29 @@ export function DeploymentsSection({}: DeploymentsSectionProps) {
       if (response.success && response.data) {
         setDeployments(response.data.deployments);
       } else {
-        setDeploymentsError(response.error || 'Failed to fetch deployments');
+        setDeploymentsError(response.error || "Failed to fetch deployments");
       }
     } catch (error) {
-      console.error('Error fetching deployments:', error);
-      setDeploymentsError('Failed to fetch deployments');
+      console.error("Error fetching deployments:", error);
+      setDeploymentsError("Failed to fetch deployments");
     } finally {
       setDeploymentsLoading(false);
     }
   };
 
-  const handleControlDeployment = async (deploymentId: string, action: "start" | "stop" | "restart") => {
+  const handleControlDeployment = async (
+    deploymentId: string,
+    action: "start" | "stop" | "restart"
+  ) => {
     try {
       setControllingDeployment(deploymentId);
       refreshApiClientAuth();
-      
-      const response = await defaultApiClient.controlDeployment(deploymentId, action);
-      
+
+      const response = await defaultApiClient.controlDeployment(
+        deploymentId,
+        action
+      );
+
       if (response.success) {
         toast.success(`Deployment ${action}ed successfully`);
         await fetchDeployments(); // Refresh the list
@@ -85,13 +92,13 @@ export function DeploymentsSection({}: DeploymentsSectionProps) {
 
   const getPlatformIcon = (platform: string) => {
     switch (platform) {
-      case 'telegram':
+      case "telegram":
         return <Bot className="w-4 h-4" />;
-      case 'discord':
+      case "discord":
         return <MessageSquare className="w-4 h-4" />;
-      case 'webhook':
+      case "webhook":
         return <Webhook className="w-4 h-4" />;
-      case 'mcp':
+      case "mcp":
         return <Settings className="w-4 h-4" />;
       default:
         return <ExternalLink className="w-4 h-4" />;
@@ -100,28 +107,28 @@ export function DeploymentsSection({}: DeploymentsSectionProps) {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active':
-        return 'bg-green-500/20 text-green-400 border-green-500/30';
-      case 'paused':
-        return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
-      case 'error':
-        return 'bg-red-500/20 text-red-400 border-red-500/30';
-      case 'deploying':
-        return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-      case 'stopped':
-        return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+      case "active":
+        return "bg-green-500/20 text-green-400 border-green-500/30";
+      case "paused":
+        return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
+      case "error":
+        return "bg-red-500/20 text-red-400 border-red-500/30";
+      case "deploying":
+        return "bg-blue-500/20 text-blue-400 border-blue-500/30";
+      case "stopped":
+        return "bg-gray-500/20 text-gray-400 border-gray-500/30";
       default:
-        return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+        return "bg-gray-500/20 text-gray-400 border-gray-500/30";
     }
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -172,11 +179,7 @@ export function DeploymentsSection({}: DeploymentsSectionProps) {
           </svg>
         </div>
         <p className="text-center mb-4 text-red-400">{deploymentsError}</p>
-        <Button 
-          onClick={fetchDeployments}
-          variant="outline"
-          size="sm"
-        >
+        <Button onClick={fetchDeployments} variant="outline" size="sm">
           Try Again
         </Button>
       </div>
@@ -207,7 +210,7 @@ export function DeploymentsSection({}: DeploymentsSectionProps) {
               strokeWidth="1"
               strokeOpacity="0.2"
             />
-            
+
             {/* Rocket body */}
             <rect
               x="35"
@@ -221,7 +224,7 @@ export function DeploymentsSection({}: DeploymentsSectionProps) {
               strokeWidth="2"
               strokeOpacity="0.3"
             />
-            
+
             {/* Rocket nose cone */}
             <path
               d="M35 25L50 10L65 25L50 35L35 25Z"
@@ -231,7 +234,7 @@ export function DeploymentsSection({}: DeploymentsSectionProps) {
               strokeWidth="2"
               strokeOpacity="0.3"
             />
-            
+
             {/* Rocket fins */}
             <path
               d="M35 75L30 85L40 85L35 75Z"
@@ -249,7 +252,7 @@ export function DeploymentsSection({}: DeploymentsSectionProps) {
               strokeWidth="1.5"
               strokeOpacity="0.3"
             />
-            
+
             {/* Rocket window */}
             <circle
               cx="50"
@@ -261,7 +264,7 @@ export function DeploymentsSection({}: DeploymentsSectionProps) {
               strokeWidth="1"
               strokeOpacity="0.4"
             />
-            
+
             {/* Rocket details */}
             <rect
               x="42"
@@ -281,7 +284,7 @@ export function DeploymentsSection({}: DeploymentsSectionProps) {
               fill="currentColor"
               fillOpacity="0.3"
             />
-            
+
             {/* Exhaust flames */}
             <path
               d="M40 75L45 85L50 80L55 85L60 75"
@@ -291,7 +294,7 @@ export function DeploymentsSection({}: DeploymentsSectionProps) {
               strokeWidth="1"
               strokeOpacity="0.3"
             />
-            
+
             {/* Stars around the rocket */}
             <circle
               cx="20"
@@ -321,7 +324,7 @@ export function DeploymentsSection({}: DeploymentsSectionProps) {
               fill="currentColor"
               fillOpacity="0.25"
             />
-            
+
             {/* Small sparkles */}
             <path
               d="M25 15L27 17L25 19L23 17L25 15Z"
@@ -335,11 +338,14 @@ export function DeploymentsSection({}: DeploymentsSectionProps) {
             />
           </svg>
         </div>
-        
+
         <div className="text-center space-y-3">
-          <h3 className="text-lg font-medium text-gray-300">No deployments yet</h3>
+          <h3 className="text-lg font-medium text-gray-300">
+            No deployments yet
+          </h3>
           <p className="text-sm text-gray-500 max-w-md">
-            Deploy your workflows to Telegram, Discord, webhooks, or MCP to see them here
+            Deploy your workflows to Telegram, Discord, webhooks, or MCP to see
+            them here
           </p>
         </div>
       </div>
@@ -359,22 +365,23 @@ export function DeploymentsSection({}: DeploymentsSectionProps) {
                     {deployment.name}
                   </CardTitle>
                   <p className="text-sm text-gray-400">
-                    {deployment.platform.charAt(0).toUpperCase() + deployment.platform.slice(1)} • 
-                    Created {formatDate(deployment.createdAt)}
+                    {deployment.platform.charAt(0).toUpperCase() +
+                      deployment.platform.slice(1)}{" "}
+                    • Created {formatDate(deployment.createdAt)}
                   </p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <Badge 
-                  variant="outline" 
+                <Badge
+                  variant="outline"
                   className={getStatusColor(deployment.status)}
                 >
                   {deployment.status}
                 </Badge>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       size="sm"
                       disabled={controllingDeployment === deployment.id}
                     >
@@ -385,45 +392,58 @@ export function DeploymentsSection({}: DeploymentsSectionProps) {
                       )}
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-[#1A1B23] border-white/10">
-                    {deployment.status === 'active' && (
-                      <DropdownMenuItem 
-                        onClick={() => handleControlDeployment(deployment.id, 'stop')}
+                  <DropdownMenuContent
+                    align="end"
+                    className="bg-[#1A1B23] border-white/10"
+                  >
+                    {deployment.status === "active" && (
+                      <DropdownMenuItem
+                        onClick={() =>
+                          handleControlDeployment(deployment.id, "stop")
+                        }
                         className="text-yellow-400 hover:bg-yellow-500/10"
                       >
                         <Pause className="w-4 h-4 mr-2" />
                         Pause
                       </DropdownMenuItem>
                     )}
-                    {deployment.status === 'paused' && (
-                      <DropdownMenuItem 
-                        onClick={() => handleControlDeployment(deployment.id, 'start')}
+                    {deployment.status === "paused" && (
+                      <DropdownMenuItem
+                        onClick={() =>
+                          handleControlDeployment(deployment.id, "start")
+                        }
                         className="text-green-400 hover:bg-green-500/10"
                       >
                         <Play className="w-4 h-4 mr-2" />
                         Start
                       </DropdownMenuItem>
                     )}
-                    {deployment.status === 'stopped' && (
-                      <DropdownMenuItem 
-                        onClick={() => handleControlDeployment(deployment.id, 'start')}
+                    {deployment.status === "stopped" && (
+                      <DropdownMenuItem
+                        onClick={() =>
+                          handleControlDeployment(deployment.id, "start")
+                        }
                         className="text-green-400 hover:bg-green-500/10"
                       >
                         <Play className="w-4 h-4 mr-2" />
                         Start
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem 
-                      onClick={() => handleControlDeployment(deployment.id, 'restart')}
+                    <DropdownMenuItem
+                      onClick={() =>
+                        handleControlDeployment(deployment.id, "restart")
+                      }
                       className="text-blue-400 hover:bg-blue-500/10"
                     >
                       <RotateCcw className="w-4 h-4 mr-2" />
                       Restart
                     </DropdownMenuItem>
                     <DropdownMenuSeparator className="bg-white/10" />
-                    {deployment.status === 'active' && (
-                      <DropdownMenuItem 
-                        onClick={() => handleControlDeployment(deployment.id, 'stop')}
+                    {deployment.status === "active" && (
+                      <DropdownMenuItem
+                        onClick={() =>
+                          handleControlDeployment(deployment.id, "stop")
+                        }
                         className="text-red-400 hover:bg-red-500/10"
                       >
                         <Square className="w-4 h-4 mr-2" />
@@ -444,7 +464,9 @@ export function DeploymentsSection({}: DeploymentsSectionProps) {
             <div className="flex items-center justify-between text-xs text-gray-500">
               <span>Workflow ID: {deployment.workflowId}</span>
               {deployment.lastActivity && (
-                <span>Last activity: {formatDate(deployment.lastActivity)}</span>
+                <span>
+                  Last activity: {formatDate(deployment.lastActivity)}
+                </span>
               )}
             </div>
           </CardContent>

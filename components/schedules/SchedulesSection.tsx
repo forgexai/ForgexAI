@@ -3,18 +3,20 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { defaultApiClient } from "@/lib/api-utils";
 import { refreshApiClientAuth } from "@/lib/auth-utils";
 import { toast } from "sonner";
-import { 
-  Clock, 
-  Trash2, 
-  Play, 
-  Pause, 
-  Loader2,
-  AlertCircle
-} from "lucide-react";
+import { Clock, Trash2, Play, Pause, Loader2, AlertCircle } from "lucide-react";
 
 interface Schedule {
   id: string;
@@ -28,15 +30,17 @@ interface Schedule {
   createdAt: string;
   nextExecution?: string;
 }
-
-interface SchedulesSectionProps {}
+type SchedulesSectionProps = Record<string, never>;
 
 export function SchedulesSection({}: SchedulesSectionProps) {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [schedulesLoading, setSchedulesLoading] = useState(true);
   const [schedulesError, setSchedulesError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [scheduleToDelete, setScheduleToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [scheduleToDelete, setScheduleToDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchSchedules = async () => {
@@ -45,17 +49,17 @@ export function SchedulesSection({}: SchedulesSectionProps) {
     try {
       refreshApiClientAuth();
       const response = await defaultApiClient.getSchedules();
-      
+
       if (response.success && response.data) {
-        setSchedules(response.data.data.schedules);
+        setSchedules(response.data.schedules);
       } else {
-        setSchedulesError(response.error || 'Failed to fetch schedules');
-        toast.error(response.error || 'Failed to fetch schedules');
+        setSchedulesError(response.error || "Failed to fetch schedules");
+        toast.error(response.error || "Failed to fetch schedules");
       }
     } catch (error: any) {
-      console.error('Error fetching schedules:', error);
-      setSchedulesError(error.message || 'Failed to fetch schedules');
-      toast.error(error.message || 'Failed to fetch schedules');
+      console.error("Error fetching schedules:", error);
+      setSchedulesError(error.message || "Failed to fetch schedules");
+      toast.error(error.message || "Failed to fetch schedules");
     } finally {
       setSchedulesLoading(false);
     }
@@ -76,16 +80,18 @@ export function SchedulesSection({}: SchedulesSectionProps) {
     setIsDeleting(true);
     try {
       refreshApiClientAuth();
-      const response = await defaultApiClient.cancelSchedule(scheduleToDelete.id);
+      const response = await defaultApiClient.cancelSchedule(
+        scheduleToDelete.id
+      );
       if (response.success) {
-        toast.success('Schedule cancelled successfully');
+        toast.success("Schedule cancelled successfully");
         fetchSchedules(); // Refresh schedules list
       } else {
-        toast.error(response.error || 'Failed to cancel schedule');
+        toast.error(response.error || "Failed to cancel schedule");
       }
     } catch (error) {
-      console.error('Error cancelling schedule:', error);
-      toast.error('Failed to cancel schedule');
+      console.error("Error cancelling schedule:", error);
+      toast.error("Failed to cancel schedule");
     } finally {
       setIsDeleting(false);
       setDeleteDialogOpen(false);
@@ -119,55 +125,119 @@ export function SchedulesSection({}: SchedulesSectionProps) {
     }
 
     // Fallback: parse the cron expression
-    const parts = cron.split(' ');
+    const parts = cron.split(" ");
     if (parts.length === 5) {
       const [minute, hour, day, month, weekday] = parts;
-      
+
       // Every X minutes
-      if (minute.startsWith('*/') && hour === '*' && day === '*' && month === '*' && weekday === '*') {
+      if (
+        minute.startsWith("*/") &&
+        hour === "*" &&
+        day === "*" &&
+        month === "*" &&
+        weekday === "*"
+      ) {
         const interval = minute.substring(2);
         return `Every ${interval} minutes`;
       }
-      
+
       // Every X hours
-      if (minute === '0' && hour.startsWith('*/') && day === '*' && month === '*' && weekday === '*') {
+      if (
+        minute === "0" &&
+        hour.startsWith("*/") &&
+        day === "*" &&
+        month === "*" &&
+        weekday === "*"
+      ) {
         const interval = hour.substring(2);
         return `Every ${interval} hours`;
       }
-      
+
       // Daily at specific time
-      if (minute !== '*' && hour !== '*' && day === '*' && month === '*' && weekday === '*') {
+      if (
+        minute !== "*" &&
+        hour !== "*" &&
+        day === "*" &&
+        month === "*" &&
+        weekday === "*"
+      ) {
         const hourNum = parseInt(hour);
         const minuteNum = parseInt(minute);
-        const timeStr = hourNum === 0 ? '12' : hourNum > 12 ? (hourNum - 12).toString() : hourNum.toString();
-        const ampm = hourNum < 12 ? 'AM' : 'PM';
-        const minuteStr = minuteNum === 0 ? '' : `:${minuteNum.toString().padStart(2, '0')}`;
+        const timeStr =
+          hourNum === 0
+            ? "12"
+            : hourNum > 12
+            ? (hourNum - 12).toString()
+            : hourNum.toString();
+        const ampm = hourNum < 12 ? "AM" : "PM";
+        const minuteStr =
+          minuteNum === 0 ? "" : `:${minuteNum.toString().padStart(2, "0")}`;
         return `Daily at ${timeStr}${minuteStr} ${ampm}`;
       }
-      
+
       // Weekly on specific day
-      if (minute !== '*' && hour !== '*' && day === '*' && month === '*' && weekday !== '*') {
-        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      if (
+        minute !== "*" &&
+        hour !== "*" &&
+        day === "*" &&
+        month === "*" &&
+        weekday !== "*"
+      ) {
+        const days = [
+          "Sunday",
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+        ];
         const dayName = days[parseInt(weekday)] || weekday;
         const hourNum = parseInt(hour);
         const minuteNum = parseInt(minute);
-        const timeStr = hourNum === 0 ? '12' : hourNum > 12 ? (hourNum - 12).toString() : hourNum.toString();
-        const ampm = hourNum < 12 ? 'AM' : 'PM';
-        const minuteStr = minuteNum === 0 ? '' : `:${minuteNum.toString().padStart(2, '0')}`;
+        const timeStr =
+          hourNum === 0
+            ? "12"
+            : hourNum > 12
+            ? (hourNum - 12).toString()
+            : hourNum.toString();
+        const ampm = hourNum < 12 ? "AM" : "PM";
+        const minuteStr =
+          minuteNum === 0 ? "" : `:${minuteNum.toString().padStart(2, "0")}`;
         return `Weekly on ${dayName} at ${timeStr}${minuteStr} ${ampm}`;
       }
-      
+
       // Monthly on specific day
-      if (minute !== '*' && hour !== '*' && day !== '*' && month === '*' && weekday === '*') {
+      if (
+        minute !== "*" &&
+        hour !== "*" &&
+        day !== "*" &&
+        month === "*" &&
+        weekday === "*"
+      ) {
         const hourNum = parseInt(hour);
         const minuteNum = parseInt(minute);
-        const timeStr = hourNum === 0 ? '12' : hourNum > 12 ? (hourNum - 12).toString() : hourNum.toString();
-        const ampm = hourNum < 12 ? 'AM' : 'PM';
-        const minuteStr = minuteNum === 0 ? '' : `:${minuteNum.toString().padStart(2, '0')}`;
-        return `Monthly on the ${day}${day.endsWith('1') && day !== '11' ? 'st' : day.endsWith('2') && day !== '12' ? 'nd' : day.endsWith('3') && day !== '13' ? 'rd' : 'th'} at ${timeStr}${minuteStr} ${ampm}`;
+        const timeStr =
+          hourNum === 0
+            ? "12"
+            : hourNum > 12
+            ? (hourNum - 12).toString()
+            : hourNum.toString();
+        const ampm = hourNum < 12 ? "AM" : "PM";
+        const minuteStr =
+          minuteNum === 0 ? "" : `:${minuteNum.toString().padStart(2, "0")}`;
+        return `Monthly on the ${day}${
+          day.endsWith("1") && day !== "11"
+            ? "st"
+            : day.endsWith("2") && day !== "12"
+            ? "nd"
+            : day.endsWith("3") && day !== "13"
+            ? "rd"
+            : "th"
+        } at ${timeStr}${minuteStr} ${ampm}`;
       }
     }
-    
+
     // If we can't parse it, return the original cron expression
     return cron;
   };
@@ -230,10 +300,10 @@ export function SchedulesSection({}: SchedulesSectionProps) {
               strokeWidth="1"
               strokeOpacity="0.3"
             />
-            
+
             {/* Hour Markers */}
             {Array.from({ length: 12 }, (_, i) => {
-              const angle = (i * 30) * (Math.PI / 180);
+              const angle = i * 30 * (Math.PI / 180);
               const x1 = 50 + 32 * Math.cos(angle - Math.PI / 2);
               const y1 = 50 + 32 * Math.sin(angle - Math.PI / 2);
               const x2 = 50 + 36 * Math.cos(angle - Math.PI / 2);
@@ -251,7 +321,7 @@ export function SchedulesSection({}: SchedulesSectionProps) {
                 />
               );
             })}
-            
+
             {/* Center Dot */}
             <circle
               cx="50"
@@ -260,7 +330,7 @@ export function SchedulesSection({}: SchedulesSectionProps) {
               fill="currentColor"
               fillOpacity="0.8"
             />
-            
+
             {/* Hour Hand */}
             <path
               d="M50 50L50 30"
@@ -268,7 +338,7 @@ export function SchedulesSection({}: SchedulesSectionProps) {
               strokeWidth="3"
               strokeLinecap="round"
             />
-            
+
             {/* Minute Hand */}
             <path
               d="M50 50L65 50"
@@ -276,7 +346,7 @@ export function SchedulesSection({}: SchedulesSectionProps) {
               strokeWidth="2"
               strokeLinecap="round"
             />
-            
+
             {/* Schedule Indicators */}
             <circle
               cx="25"
@@ -306,7 +376,7 @@ export function SchedulesSection({}: SchedulesSectionProps) {
               fill="currentColor"
               fillOpacity="0.3"
             />
-            
+
             {/* Calendar/Schedule Elements */}
             <rect
               x="15"
@@ -367,10 +437,11 @@ export function SchedulesSection({}: SchedulesSectionProps) {
             />
           </svg>
         </div>
-        
+
         <p className="text-center mb-6 text-gray-300">No schedules yet</p>
         <p className="text-sm text-gray-500 text-center max-w-md">
-          Schedule workflows to run automatically at specific times or intervals. Create your first schedule from the Workflows section.
+          Schedule workflows to run automatically at specific times or
+          intervals. Create your first schedule from the Workflows section.
         </p>
       </div>
     );
@@ -386,29 +457,33 @@ export function SchedulesSection({}: SchedulesSectionProps) {
           >
             <div>
               <div className="flex justify-between items-start mb-4">
-                <h3 className="text-xl font-semibold text-white">{schedule.name || "Untitled"}</h3>
+                <h3 className="text-xl font-semibold text-white">
+                  {schedule.name || "Untitled"}
+                </h3>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleDeleteSchedule(schedule.id, schedule.name)}
+                  onClick={() =>
+                    handleDeleteSchedule(schedule.id, schedule.name)
+                  }
                   className="border-red-600/30 text-white bg-red-600 hover:bg-red-700 hover:border-red-500/50 cursor-pointer"
                 >
                   <Trash2 className="w-4 h-4" />
-                  
                 </Button>
               </div>
-              
+
               <p className="text-gray-400 text-sm mb-4 line-clamp-2">
                 {schedule.description || "No description provided."}
               </p>
-              
+
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500 text-sm">Status</span>
-                  <Badge 
-                    className={schedule.isActive 
-                      ? "bg-green-600/20 text-green-400 border border-green-600/30" 
-                      : "bg-gray-600/20 text-gray-400 border border-gray-600/30"
+                  <Badge
+                    className={
+                      schedule.isActive
+                        ? "bg-green-600/20 text-green-400 border border-green-600/30"
+                        : "bg-gray-600/20 text-gray-400 border border-gray-600/30"
                     }
                   >
                     {schedule.isActive ? (
@@ -424,14 +499,14 @@ export function SchedulesSection({}: SchedulesSectionProps) {
                     )}
                   </Badge>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500 text-sm">Frequency</span>
                   <span className="text-white text-sm">
                     {formatCronExpression(schedule.cronExpression)}
                   </span>
                 </div>
-                
+
                 {schedule.nextExecution && (
                   <div className="flex items-center justify-between">
                     <span className="text-gray-500 text-sm">Next Run</span>
@@ -440,7 +515,7 @@ export function SchedulesSection({}: SchedulesSectionProps) {
                     </span>
                   </div>
                 )}
-                
+
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500 text-sm">Created</span>
                   <span className="text-white text-sm">
@@ -458,8 +533,12 @@ export function SchedulesSection({}: SchedulesSectionProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Cancel Schedule</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
-              Are you sure you want to cancel the schedule <span className="font-semibold text-white">"{scheduleToDelete?.name}"</span>?
-              This action cannot be undone and will permanently stop the scheduled execution.
+              Are you sure you want to cancel the schedule{" "}
+              <span className="font-semibold text-white">
+                &quot;{scheduleToDelete?.name}&quot;
+              </span>
+              ? This action cannot be undone and will permanently stop the
+              scheduled execution.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

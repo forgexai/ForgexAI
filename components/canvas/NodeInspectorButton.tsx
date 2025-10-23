@@ -14,7 +14,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { selectedNodeAtom, nodesAtom, edgesAtom } from "@/lib/state/atoms";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
@@ -24,7 +30,10 @@ interface ParameterFormProps {
   onParameterChange: (key: string, value: any) => void;
 }
 
-function ProtocolNodeForm({ parameters, onParameterChange }: ParameterFormProps) {
+function ProtocolNodeForm({
+  parameters,
+  onParameterChange,
+}: ParameterFormProps) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -60,8 +69,8 @@ function ProtocolNodeForm({ parameters, onParameterChange }: ParameterFormProps)
         <Label htmlFor="action" className="text-sm text-gray-300">
           Action
         </Label>
-        <Select 
-          value={parameters.action || ""} 
+        <Select
+          value={parameters.action || ""}
           onValueChange={(value) => onParameterChange("action", value)}
         >
           <SelectTrigger className="bg-[#1A1B23] border-gray-700 text-white">
@@ -131,8 +140,8 @@ function MemoryNodeForm({ parameters, onParameterChange }: ParameterFormProps) {
         <Label htmlFor="operation" className="text-sm text-gray-300">
           Operation
         </Label>
-        <Select 
-          value={parameters.operation || "store"} 
+        <Select
+          value={parameters.operation || "store"}
           onValueChange={(value) => onParameterChange("operation", value)}
         >
           <SelectTrigger className="bg-[#1A1B23] border-gray-700 text-white">
@@ -147,20 +156,23 @@ function MemoryNodeForm({ parameters, onParameterChange }: ParameterFormProps) {
         </Select>
       </div>
 
-      {(parameters.operation === "store" || parameters.operation === "update") && (
+      {(parameters.operation === "store" ||
+        parameters.operation === "update") && (
         <div className="space-y-2">
           <Label htmlFor="value" className="text-sm text-gray-300">
             Value Source
           </Label>
-          <Select 
-            value={parameters.valueSource || "connected"} 
+          <Select
+            value={parameters.valueSource || "connected"}
             onValueChange={(value) => onParameterChange("valueSource", value)}
           >
             <SelectTrigger className="bg-[#1A1B23] border-gray-700 text-white">
               <SelectValue placeholder="Select value source" />
             </SelectTrigger>
             <SelectContent className="bg-[#1A1B23] border-gray-700 text-white">
-              <SelectItem value="connected">From Connected Node (Auto)</SelectItem>
+              <SelectItem value="connected">
+                From Connected Node (Auto)
+              </SelectItem>
               <SelectItem value="manual">Manual Input</SelectItem>
             </SelectContent>
           </Select>
@@ -170,25 +182,26 @@ function MemoryNodeForm({ parameters, onParameterChange }: ParameterFormProps) {
         </div>
       )}
 
-      {(parameters.operation === "store" || parameters.operation === "update") && parameters.valueSource === "manual" && (
-        <div className="space-y-2">
-          <Label htmlFor="value" className="text-sm text-gray-300">
-            Manual Value
-          </Label>
-          <Textarea
-            id="value"
-            value={parameters.value || ""}
-            onChange={(e) => onParameterChange("value", e.target.value)}
-            placeholder="Enter value to store in memory"
-            className="bg-[#1A1B23] border-gray-700 text-white"
-            rows={3}
-          />
-          <p className="text-xs text-gray-400">
-            This value will be stored in the workflow's memory
-          </p>
-        </div>
-      )}
-
+      {(parameters.operation === "store" ||
+        parameters.operation === "update") &&
+        parameters.valueSource === "manual" && (
+          <div className="space-y-2">
+            <Label htmlFor="value" className="text-sm text-gray-300">
+              Manual Value
+            </Label>
+            <Textarea
+              id="value"
+              value={parameters.value || ""}
+              onChange={(e) => onParameterChange("value", e.target.value)}
+              placeholder="Enter value to store in memory"
+              className="bg-[#1A1B23] border-gray-700 text-white"
+              rows={3}
+            />
+            <p className="text-xs text-gray-400">
+              This value will be stored in the workflow&apos;s memory
+            </p>
+          </div>
+        )}
 
       <div className="space-y-2">
         <Label htmlFor="ttl" className="text-sm text-gray-300">
@@ -207,7 +220,10 @@ function MemoryNodeForm({ parameters, onParameterChange }: ParameterFormProps) {
   );
 }
 
-function CommunicationNodeForm({ parameters, onParameterChange }: ParameterFormProps) {
+function CommunicationNodeForm({
+  parameters,
+  onParameterChange,
+}: ParameterFormProps) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -239,7 +255,8 @@ function CommunicationNodeForm({ parameters, onParameterChange }: ParameterFormP
           className="bg-[#1A1B23] border-gray-700 text-white"
         />
         <p className="text-xs text-gray-400">
-          Use @channelname for public channels or -1001234567890 for private chats
+          Use @channelname for public channels or -1001234567890 for private
+          chats
         </p>
       </div>
 
@@ -261,8 +278,8 @@ function CommunicationNodeForm({ parameters, onParameterChange }: ParameterFormP
         <Label htmlFor="parseMode" className="text-sm text-gray-300">
           Parse Mode
         </Label>
-        <Select 
-          value={parameters.parseMode || "markdown"} 
+        <Select
+          value={parameters.parseMode || "markdown"}
           onValueChange={(value) => onParameterChange("parseMode", value)}
         >
           <SelectTrigger className="bg-[#1A1B23] border-gray-700 text-white">
@@ -279,15 +296,18 @@ function CommunicationNodeForm({ parameters, onParameterChange }: ParameterFormP
   );
 }
 
-function ConditionNodeForm({ parameters, onParameterChange }: ParameterFormProps) {
+function ConditionNodeForm({
+  parameters,
+  onParameterChange,
+}: ParameterFormProps) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="operator" className="text-sm text-gray-300">
           Operator
         </Label>
-        <Select 
-          value={parameters.operator || "equals"} 
+        <Select
+          value={parameters.operator || "equals"}
           onValueChange={(value) => onParameterChange("operator", value)}
         >
           <SelectTrigger className="bg-[#1A1B23] border-gray-700 text-white">
@@ -334,7 +354,10 @@ function ConditionNodeForm({ parameters, onParameterChange }: ParameterFormProps
   );
 }
 
-function TriggerNodeForm({ parameters, onParameterChange }: ParameterFormProps) {
+function TriggerNodeForm({
+  parameters,
+  onParameterChange,
+}: ParameterFormProps) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -358,8 +381,8 @@ function TriggerNodeForm({ parameters, onParameterChange }: ParameterFormProps) 
         <Label htmlFor="triggerType" className="text-sm text-gray-300">
           Trigger Type
         </Label>
-        <Select 
-          value={parameters.triggerType || "webhook"} 
+        <Select
+          value={parameters.triggerType || "webhook"}
           onValueChange={(value) => onParameterChange("triggerType", value)}
         >
           <SelectTrigger className="bg-[#1A1B23] border-gray-700 text-white">
@@ -382,7 +405,9 @@ function TriggerNodeForm({ parameters, onParameterChange }: ParameterFormProps) 
           <Input
             id="cronExpression"
             value={parameters.cronExpression || ""}
-            onChange={(e) => onParameterChange("cronExpression", e.target.value)}
+            onChange={(e) =>
+              onParameterChange("cronExpression", e.target.value)
+            }
             placeholder="*/5 * * * *"
             className="bg-[#1A1B23] border-gray-700 text-white font-mono"
           />
@@ -422,15 +447,18 @@ function TriggerNodeForm({ parameters, onParameterChange }: ParameterFormProps) 
   );
 }
 
-function TransformNodeForm({ parameters, onParameterChange }: ParameterFormProps) {
+function TransformNodeForm({
+  parameters,
+  onParameterChange,
+}: ParameterFormProps) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="transformType" className="text-sm text-gray-300">
           Transform Type
         </Label>
-        <Select 
-          value={parameters.transformType || "map"} 
+        <Select
+          value={parameters.transformType || "map"}
           onValueChange={(value) => onParameterChange("transformType", value)}
         >
           <SelectTrigger className="bg-[#1A1B23] border-gray-700 text-white">
@@ -494,7 +522,7 @@ export function NodeInspectorButton() {
   const [selectedNode, setSelectedNode] = useAtom(selectedNodeAtom);
   const [nodes, setNodes] = useAtom(nodesAtom);
   const [edges, setEdges] = useAtom(edgesAtom);
-  
+
   const [label, setLabel] = useState("");
   const [description, setDescription] = useState("");
   const [parameters, setParameters] = useState<Record<string, any>>({});
@@ -515,19 +543,19 @@ export function NodeInspectorButton() {
   };
 
   const handleParameterChange = (key: string, value: any) => {
-    setParameters(prev => ({
+    setParameters((prev) => ({
       ...prev,
-      [key]: value
+      [key]: value,
     }));
   };
 
   const handleSaveChanges = () => {
     if (!selectedNode) return;
 
-    console.log('Saving node parameters:', {
+    console.log("Saving node parameters:", {
       nodeId: selectedNode.id,
       parameters,
-      category: selectedNode.data?.category
+      category: selectedNode.data?.category,
     });
 
     setNodes((currentNodes) =>
@@ -553,14 +581,17 @@ export function NodeInspectorButton() {
   const handleDeleteNode = () => {
     if (!selectedNode) return;
 
-    setNodes((currentNodes) => currentNodes.filter((node) => node.id !== selectedNode.id));
-    
-    setEdges((currentEdges) => 
+    setNodes((currentNodes) =>
+      currentNodes.filter((node) => node.id !== selectedNode.id)
+    );
+
+    setEdges((currentEdges) =>
       currentEdges.filter(
-        (edge) => edge.source !== selectedNode.id && edge.target !== selectedNode.id
+        (edge) =>
+          edge.source !== selectedNode.id && edge.target !== selectedNode.id
       )
     );
-    
+
     setSelectedNode(null);
     toast.success("Node deleted successfully");
     setIsModalOpen(false);
@@ -568,21 +599,24 @@ export function NodeInspectorButton() {
 
   return (
     <>
-
-      <Dialog open={isModalOpen} onOpenChange={(open) => {
-        if (!open) {
-          setIsModalOpen(false);
-          setSelectedNode(null);
-        }
-      }}>
-        <DialogContent 
+      <Dialog
+        open={isModalOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsModalOpen(false);
+            setSelectedNode(null);
+          }
+        }}
+      >
+        <DialogContent
           className="bg-[#1A1B23] border-white/10 text-white max-w-2xl max-h-[80vh] overflow-hidden"
           aria-describedby="node-inspector-description"
         >
           <DialogHeader className="flex flex-row items-center justify-between pr-8">
             <DialogTitle>Node Inspector</DialogTitle>
             <div id="node-inspector-description" className="sr-only">
-              Inspect and edit node properties including label, description, and parameters
+              Inspect and edit node properties including label, description, and
+              parameters
             </div>
             <div className="flex gap-2">
               <Button
@@ -592,7 +626,7 @@ export function NodeInspectorButton() {
               >
                 Save Changes
               </Button>
-              
+
               <Button
                 onClick={handleDeleteNode}
                 variant="destructive"
@@ -601,11 +635,10 @@ export function NodeInspectorButton() {
                 title="Delete Node"
               >
                 <Trash2 className="w-4 h-4 " />
-                
               </Button>
             </div>
           </DialogHeader>
-          
+
           <div className="overflow-y-auto max-h-[60vh]">
             {selectedNode ? (
               <div className="space-y-4">
@@ -624,9 +657,9 @@ export function NodeInspectorButton() {
                         {selectedNode.id}
                       </p>
                     </div>
-                    
+
                     <Separator className="bg-white/10" />
-                    
+
                     <div>
                       <Label className="text-xs text-gray-500 uppercase tracking-wide">
                         Category
@@ -635,9 +668,9 @@ export function NodeInspectorButton() {
                         {selectedNode.data?.category || "N/A"}
                       </p>
                     </div>
-                    
+
                     <Separator className="bg-white/10" />
-                    
+
                     <div>
                       <Label className="text-xs text-gray-500 uppercase tracking-wide">
                         Position
@@ -649,7 +682,7 @@ export function NodeInspectorButton() {
                     </div>
                   </CardContent>
                 </Card>
-                
+
                 <Card className="bg-[#0B0C10] border-white/10">
                   <CardHeader>
                     <CardTitle className="text-sm font-medium text-gray-300">
@@ -669,9 +702,12 @@ export function NodeInspectorButton() {
                         className="bg-[#1A1B23] border-gray-700 text-white"
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
-                      <Label htmlFor="description" className="text-sm text-gray-300">
+                      <Label
+                        htmlFor="description"
+                        className="text-sm text-gray-300"
+                      >
                         Description
                       </Label>
                       <Textarea
@@ -683,9 +719,9 @@ export function NodeInspectorButton() {
                         className="bg-[#1A1B23] border-gray-700 text-white resize-none"
                       />
                     </div>
-                    
+
                     <Separator className="bg-white/10" />
-                    
+
                     <div>
                       <Label className="text-sm text-gray-300 mb-3 block">
                         Parameters
@@ -746,7 +782,6 @@ export function NodeInspectorButton() {
                         }
                       })()}
                     </div>
-                    
                   </CardContent>
                 </Card>
               </div>

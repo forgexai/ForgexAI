@@ -13,6 +13,7 @@ import ReactFlow, {
   ReactFlowInstance,
   applyNodeChanges,
   applyEdgeChanges,
+  BackgroundVariant,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { nodesAtom, edgesAtom, selectedNodeAtom } from "@/lib/state/atoms";
@@ -32,13 +33,13 @@ function FlowCanvas({ workflowId }: { workflowId?: string }) {
   const [edges, setEdges] = useAtom(edgesAtom);
   const [selectedNode, setSelectedNode] = useAtom(selectedNodeAtom);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+  const [reactFlowInstance, setReactFlowInstance] =
+    useState<ReactFlowInstance | null>(null);
 
   useEffect(() => {
     const handleAddNode = (event: CustomEvent) => {
       const { type, label, category, iconName, description } = event.detail;
-      
-      
+
       if (!reactFlowInstance) return;
 
       const getNodeType = (category: string) => {
@@ -69,55 +70,56 @@ function FlowCanvas({ workflowId }: { workflowId?: string }) {
 
       // Generate unique memory key for memory nodes using workflow ID
       const generateMemoryKey = (workflowId: string) => {
-        return workflowId || 'temp';
+        return workflowId || "temp";
       };
 
       const newNode: Node = {
         id: `${type}-${Date.now()}`,
         type: getNodeType(category),
         position,
-        data: { 
+        data: {
           label,
           category,
           iconName,
           description,
           // Auto-generate memory key for memory nodes using workflow ID
-          ...(category === 'memory' && {
+          ...(category === "memory" && {
             parameters: {
-              key: generateMemoryKey(workflowId || 'temp')
-            }
+              key: generateMemoryKey(workflowId || "temp"),
+            },
           }),
           // Add default chatId for communication nodes
-          ...(category === 'communication' && {
+          ...(category === "communication" && {
             parameters: {
-              chatId: '@default_chat'
-            }
-          })
+              chatId: "@default_chat",
+            },
+          }),
         },
       };
-
 
       setNodes((nds) => [...nds, newNode]);
     };
 
-    window.addEventListener('addNode', handleAddNode as EventListener);
+    window.addEventListener("addNode", handleAddNode as EventListener);
     return () => {
-      window.removeEventListener('addNode', handleAddNode as EventListener);
+      window.removeEventListener("addNode", handleAddNode as EventListener);
     };
   }, [reactFlowInstance, setNodes]);
 
   useEffect(() => {
-    setEdges((eds) => eds.map(edge => ({
-      ...edge,
-      style: { stroke: "#f97316", strokeWidth: 2 },
-      animated: true
-    })));
+    setEdges((eds) =>
+      eds.map((edge) => ({
+        ...edge,
+        style: { stroke: "#f97316", strokeWidth: 2 },
+        animated: true,
+      }))
+    );
   }, [setEdges]);
 
   const onNodesChange = useCallback(
     (changes: any) => {
       setNodes((nds) => applyNodeChanges(changes, nds));
-      
+
       changes.forEach((change: any) => {
         if (change.type === "select" && change.selected) {
           const node = nodes.find((n) => n.id === change.id);
@@ -137,11 +139,16 @@ function FlowCanvas({ workflowId }: { workflowId?: string }) {
 
   const onConnect = useCallback(
     (connection: Connection) => {
-      setEdges((eds) => addEdge({
-        ...connection,
-        style: { stroke: "#f97316", strokeWidth: 2 },
-        animated: true
-      }, eds));
+      setEdges((eds) =>
+        addEdge(
+          {
+            ...connection,
+            style: { stroke: "#f97316", strokeWidth: 2 },
+            animated: true,
+          },
+          eds
+        )
+      );
     },
     [setEdges]
   );
@@ -162,9 +169,8 @@ function FlowCanvas({ workflowId }: { workflowId?: string }) {
       }
 
       try {
-
         const nodeData = (window as any).lastDroppedNodeData;
-        
+
         if (!nodeData) {
           console.error("No node data found");
           return;
@@ -183,16 +189,16 @@ function FlowCanvas({ workflowId }: { workflowId?: string }) {
           id: `${nodeData.type}-${Date.now()}`,
           type: getNodeType(nodeData.category),
           position,
-          data: { 
+          data: {
             label: nodeData.label,
             category: nodeData.category,
             iconName: nodeData.iconName,
-            description: nodeData.description
+            description: nodeData.description,
           },
         };
-        
+
         setNodes((nds) => [...nds, newNode]);
-        
+
         (window as any).lastDroppedNodeData = null;
       } catch (error) {
         console.error("Error adding node:", error);
@@ -202,7 +208,11 @@ function FlowCanvas({ workflowId }: { workflowId?: string }) {
   );
 
   return (
-    <div ref={reactFlowWrapper} className="flex-1 bg-[#111827] relative" style={{ height: '100%', width: '100%' }}>
+    <div
+      ref={reactFlowWrapper}
+      className="flex-1 bg-[#111827] relative"
+      style={{ height: "100%", width: "100%" }}
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -214,11 +224,11 @@ function FlowCanvas({ workflowId }: { workflowId?: string }) {
         onDragOver={onDragOver}
         onInit={setReactFlowInstance}
         fitView
-        style={{ width: '100%', height: '100%' }}
+        style={{ width: "100%", height: "100%" }}
         className="bg-[#111827]"
-        deleteKeyCode={['Backspace', 'Delete']}
-        multiSelectionKeyCode={['Meta', 'Ctrl']}
-        selectionKeyCode={['Meta', 'Ctrl']}
+        deleteKeyCode={["Backspace", "Delete"]}
+        multiSelectionKeyCode={["Meta", "Ctrl"]}
+        selectionKeyCode={["Meta", "Ctrl"]}
         defaultEdgeOptions={{
           animated: true,
           style: { stroke: "#f97316", strokeWidth: 2 },
@@ -232,13 +242,13 @@ function FlowCanvas({ workflowId }: { workflowId?: string }) {
         zoomOnDoubleClick={false}
         selectNodesOnDrag={false}
       >
-        <Background 
-          variant="dots" 
-          gap={20} 
-          size={1.5} 
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={20}
+          size={1.5}
           color="#6B7280"
         />
-        <MiniMap 
+        <MiniMap
           nodeColor="#f97316"
           maskColor="rgba(0, 0, 0, 0.6)"
           className="bg-[#1A1B23] border border-white/10 rounded-lg"
