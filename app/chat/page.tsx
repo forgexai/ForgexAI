@@ -2,14 +2,25 @@
 
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import { useState, useEffect, useRef, Suspense, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { defaultApiClient } from "@/lib/api-utils";
 import { refreshApiClientAuth } from "@/lib/auth-utils";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Bot, User, Loader2 } from "lucide-react";
+import {
+  Send,
+  Bot,
+  User,
+  Loader2,
+  Menu,
+  X,
+  MessageSquare,
+  Plus,
+  ChevronRight,
+} from "lucide-react";
 import { MarkdownRenderer } from "@/components/ui/Chat/markdown-renderer";
+import { cn } from "@/lib/utils";
 
 interface Message {
   id: string;
@@ -31,6 +42,7 @@ function ChatPageContent() {
   const searchParams = useSearchParams();
   const workflowId = searchParams.get("workflow");
 
+  const router = useRouter();
   const [workflow, setWorkflow] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -38,6 +50,10 @@ function ChatPageContent() {
   const [sending, setSending] = useState(false);
   const [sessionId, setSessionId] = useState<string>("");
   const [remainingCredits, setRemainingCredits] = useState<number | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
+  const [typingIndicator, setTypingIndicator] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -144,6 +160,80 @@ function ChatPageContent() {
     }
   }, [messages, sessionId, saveSessionToBackend]);
 
+  // Fetch all chat sessions for the current workflow
+  const fetchChatSessions = useCallback(async () => {
+    if (!workflowId) return;
+
+    setLoadingSessions(true);
+    try {
+      refreshApiClientAuth();
+      const response = await defaultApiClient.getAllChatSessions(workflowId);
+
+      if (response.success && response.data?.sessions) {
+        setChatSessions(
+          response.data.sessions.map((session: any) => ({
+            ...session,
+            createdAt: new Date(session.createdAt),
+            updatedAt: new Date(session.updatedAt || session.createdAt),
+            messages: session.messages.map((m: any) => ({
+              ...m,
+              timestamp: new Date(m.timestamp),
+            })),
+          }))
+        );
+      }
+    } catch (error) {
+      console.warn("Failed to fetch chat sessions:", error);
+    } finally {
+      setLoadingSessions(false);
+    }
+  }, [workflowId]);
+
+  // Load chat sessions when workflow changes
+  useEffect(() => {
+    if (workflow) {
+      fetchChatSessions();
+    }
+  }, [workflow, fetchChatSessions]);
+
+  // Create a new chat session
+  const createNewChatSession = useCallback(() => {
+    if (!workflow) return;
+
+    const newSessionId = `session_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+    setSessionId(newSessionId);
+
+    // Add welcome message
+    const welcomeMessage: Message = {
+      id: `msg_${Date.now()}`,
+      role: "assistant",
+      content: `Hi! I'm your agent for "${workflow.name}". How can I help you today?`,
+      timestamp: new Date(),
+    };
+    setMessages([welcomeMessage]);
+
+    // Save initial session
+    saveSessionToBackend(newSessionId, [welcomeMessage]);
+
+    // Refresh sessions list
+    setTimeout(() => {
+      fetchChatSessions();
+    }, 500);
+  }, [workflow, saveSessionToBackend, fetchChatSessions]);
+
+  // Switch to an existing chat session
+  const switchChatSession = useCallback((selectedSession: ChatSession) => {
+    setSessionId(selectedSession.id);
+    setMessages(selectedSession.messages);
+
+    // Close sidebar on mobile after selection
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+  }, []);
+
   const handleSendMessage = async () => {
     if (!input.trim() || sending) return;
 
@@ -160,8 +250,9 @@ function ChatPageContent() {
     setSending(true);
 
     try {
-      // Add a typing placeholder message so UI shows assistant typing
+      // Show typing indicator
       const typingId = `typing_${Date.now()}`;
+      setTypingIndicator(true);
       setMessages((prev) => [
         ...prev,
         {
@@ -225,20 +316,33 @@ function ChatPageContent() {
         });
 
         // After animation completes, replace placeholder id with a stable id
+        const stableId = `msg_${Date.now()}`;
         setTimeout(() => {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === typingId ? { ...m, id: `msg_${Date.now()}` } : m
-            )
-          );
+          setTypingIndicator(false);
+          setMessages((prev) => {
+            const updatedMessages = prev.map((m) =>
+              m.id === typingId ? { ...m, id: stableId } : m
+            );
+
+            // Save updated session to the backend
+            saveSessionToBackend(sessionId, updatedMessages);
+
+            // Refresh sessions list after saving
+            fetchChatSessions();
+
+            return updatedMessages;
+          });
         }, 15 * chars.length + 100);
       } else {
         // Remove typing placeholder and report error
+        setTypingIndicator(false);
         setMessages((prev) => prev.filter((m) => !m.id.startsWith("typing_")));
         toast.error(response.error || "Failed to get response");
       }
     } catch (error) {
       console.error("Error sending message:", error);
+      setTypingIndicator(false);
+      setMessages((prev) => prev.filter((m) => !m.id.startsWith("typing_")));
       toast.error("Failed to send message");
     } finally {
       setSending(false);
@@ -279,99 +383,183 @@ function ChatPageContent() {
 
   return (
     <AuthGuard>
-      <div className="flex flex-col h-screen bg-[#0A0B0F] text-white">
-        {/* Header */}
-        <div className="border-b border-white/10 bg-[#1A1B23] px-6 py-4">
-          <div className="flex items-center justify-between max-w-6xl mx-auto">
-            <div>
-              <h1 className="text-xl font-semibold">{workflow.name}</h1>
-              <div className="flex items-center space-x-4">
-                <p className="text-sm text-gray-400">
-                  {workflow.description || "Chat with your workflow agent"}
-                </p>
-                {remainingCredits !== null && (
-                  <div className="text-sm text-yellow-300 bg-gray-800 px-2 py-1 rounded">
-                    Credits: {remainingCredits}
-                  </div>
-                )}
-              </div>
-            </div>
+      <div className="flex h-screen bg-[#0A0B0F] text-white">
+        {/* Sidebar */}
+        <div
+          className={`fixed md:relative inset-y-0 left-0 z-50 w-80 border-r border-white/10 bg-[#0f1014] transform transition-transform duration-300 ease-in-out ${
+            sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+          }`}
+        >
+          <div className="flex items-center justify-between p-4 border-b border-white/10">
+            <h2 className="text-lg font-semibold">Chat History</h2>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSidebarOpen(false)}
+              className="md:hidden"
+            >
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
+
+          <div className="p-4">
             <Button
               variant="outline"
-              onClick={() => (window.location.href = "/workflows")}
-              className="border-gray-700 text-black cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 mb-4 border-white/20 hover:border-white/40"
+              onClick={createNewChatSession}
             >
-              Back to Workflows
+              <Plus className="w-4 h-4" />
+              New Chat
             </Button>
-          </div>
-        </div>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          <div className="max-w-4xl mx-auto space-y-4">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex items-start space-x-3 ${
-                  message.role === "user" ? "justify-end" : ""
-                }`}
-              >
-                {message.role === "assistant" && (
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-r from-orange-400 to-orange-500 flex items-center justify-center">
-                    <Bot className="w-5 h-5 text-white" />
-                  </div>
-                )}
-
-                <div
-                  className={`max-w-[70%] rounded-lg px-4 py-3 ${
-                    message.role === "user"
-                      ? "bg-gradient-to-r from-orange-400 to-orange-500 text-white"
-                      : "bg-[#1A1B23] border border-white/10 text-gray-100"
-                  }`}
-                >
-                  {message.role === "assistant" ? (
-                    <MarkdownRenderer content={message.content} />
-                  ) : (
-                    <p className="whitespace-pre-wrap">{message.content}</p>
-                  )}
-                  <p className="text-xs mt-2 opacity-70">
-                    {message.timestamp.toLocaleTimeString()}
+            {loadingSessions ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="w-6 h-6 animate-spin text-orange-400" />
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[calc(100vh-200px)] overflow-y-auto">
+                {chatSessions.length === 0 ? (
+                  <p className="text-center text-gray-500 py-4">
+                    No chat history found
                   </p>
-                </div>
-
-                {message.role === "user" && (
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center">
-                    <User className="w-5 h-5 text-white" />
-                  </div>
+                ) : (
+                  chatSessions.map((session) => (
+                    <div
+                      key={session.id}
+                      className={`p-3 rounded-md cursor-pointer flex items-center justify-between ${
+                        sessionId === session.id
+                          ? "bg-orange-500/20 border border-orange-500/40"
+                          : "hover:bg-white/5 border border-transparent"
+                      }`}
+                      onClick={() => switchChatSession(session)}
+                    >
+                      <div className="flex items-center space-x-3 overflow-hidden">
+                        <MessageSquare className="w-5 h-5 flex-shrink-0 text-gray-400" />
+                        <div className="overflow-hidden">
+                          <p className="font-medium truncate">
+                            {session.messages[0]?.content.slice(0, 30) ||
+                              "New chat"}
+                          </p>
+                          <p className="text-xs text-gray-400 truncate">
+                            {new Date(session.updatedAt).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                      {sessionId === session.id && (
+                        <ChevronRight className="w-5 h-5 text-orange-500" />
+                      )}
+                    </div>
+                  ))
                 )}
               </div>
-            ))}
-            <div ref={messagesEndRef} />
+            )}
           </div>
         </div>
 
-        {/* Input */}
-        <div className="border-t border-white/10 bg-[#1A1B23] px-6 py-4">
-          <div className="max-w-4xl mx-auto flex items-center space-x-3">
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Type your message..."
-              disabled={sending}
-              className="flex-1 bg-[#0A0B0F] border-white/10 text-white placeholder:text-gray-500 focus:border-orange-500"
-            />
-            <Button
-              onClick={handleSendMessage}
-              disabled={sending || !input.trim()}
-              className="bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-600 hover:to-orange-700 disabled:opacity-50"
-            >
-              {sending ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Send className="w-5 h-5" />
-              )}
-            </Button>
+        <div className="flex flex-col flex-1 h-full">
+          {/* Header */}
+          <div className="border-b border-white/10 bg-[#1A1B23] px-6 py-4">
+            <div className="flex items-center justify-between max-w-6xl mx-auto">
+              <div className="flex items-center">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="mr-2 md:hidden"
+                >
+                  <Menu className="w-5 h-5" />
+                </Button>
+                <div>
+                  <h1 className="text-xl font-semibold">{workflow.name}</h1>
+                  <div className="flex items-center space-x-4">
+                    <p className="text-sm text-gray-400">
+                      {workflow.description || "Chat with your workflow agent"}
+                    </p>
+                    {remainingCredits !== null && (
+                      <div className="text-sm text-yellow-300 bg-gray-800 px-2 py-1 rounded">
+                        Credits: {remainingCredits}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => (window.location.href = "/workflows")}
+                className="border-gray-700 text-black cursor-pointer"
+              >
+                Back to Workflows
+              </Button>
+            </div>
+          </div>
+
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            <div className="max-w-4xl mx-auto space-y-4">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex items-start space-x-3 ${
+                    message.role === "user" ? "justify-end" : ""
+                  }`}
+                >
+                  {message.role === "assistant" && (
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-r from-orange-400 to-orange-500 flex items-center justify-center">
+                      <Bot className="w-5 h-5 text-white" />
+                    </div>
+                  )}
+
+                  <div
+                    className={`max-w-[70%] rounded-lg px-4 py-3 ${
+                      message.role === "user"
+                        ? "bg-gradient-to-r from-orange-400 to-orange-500 text-white"
+                        : "bg-[#1A1B23] border border-white/10 text-gray-100"
+                    }`}
+                  >
+                    {message.role === "assistant" ? (
+                      <MarkdownRenderer content={message.content} />
+                    ) : (
+                      <p className="whitespace-pre-wrap">{message.content}</p>
+                    )}
+                    <p className="text-xs mt-2 opacity-70">
+                      {message.timestamp.toLocaleTimeString()}
+                    </p>
+                  </div>
+
+                  {message.role === "user" && (
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center">
+                      <User className="w-5 h-5 text-white" />
+                    </div>
+                  )}
+                </div>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+          </div>
+
+          {/* Input */}
+          <div className="border-t border-white/10 bg-[#1A1B23] px-6 py-4">
+            <div className="max-w-4xl mx-auto flex items-center space-x-3">
+              <Input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Type your message..."
+                disabled={sending}
+                className="flex-1 bg-[#0A0B0F] border-white/10 text-white placeholder:text-gray-500 focus:border-orange-500"
+              />
+              <Button
+                onClick={handleSendMessage}
+                disabled={sending || !input.trim()}
+                className="bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-600 hover:to-orange-700 disabled:opacity-50"
+              >
+                {sending ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Send className="w-5 h-5" />
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </div>

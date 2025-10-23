@@ -206,6 +206,8 @@ class ForgexApiClient {
     };
   }
 
+  // Chat methods implemented below
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
@@ -830,6 +832,26 @@ class ForgexApiClient {
       method: "POST",
       body: JSON.stringify(params),
     });
+  }
+
+  async getAllChatSessions(workflowId: string): Promise<
+    ApiResponse<{
+      sessions: Array<{
+        id: string;
+        workflowId: string;
+        workflowName: string;
+        messages: Array<{
+          id: string;
+          role: string;
+          content: string;
+          timestamp: string;
+        }>;
+        createdAt: string;
+        updatedAt: string;
+      }>;
+    }>
+  > {
+    return this.request(`/chat/sessions/all/${workflowId}`);
   }
 
   // ============================================================================
