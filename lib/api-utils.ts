@@ -1316,7 +1316,9 @@ export const createApiClient = (config: ApiConfig) =>
   new ForgexApiClient(config);
 
 export const defaultApiClient = new ForgexApiClient({
-  baseUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api",
+  baseUrl:
+    process.env.NEXT_PUBLIC_API_URL ||
+    "https://forgex-ai-backend.vercel.app/api",
 });
 
 export default ForgexApiClient;
