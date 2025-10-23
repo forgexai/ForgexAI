@@ -1,7 +1,7 @@
 "use client";
 
 import { AuthGuard } from "@/components/auth/AuthGuard";
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { defaultApiClient } from "@/lib/api-utils";
 import { refreshApiClientAuth } from "@/lib/auth-utils";
@@ -48,6 +48,25 @@ function ChatPageContent() {
     scrollToBottom();
   }, [messages]);
 
+  // Save session to backend database
+  const saveSessionToBackend = useCallback(
+    async (currentSessionId: string, currentMessages: Message[]) => {
+      if (!workflowId || !currentSessionId) return;
+
+      try {
+        await defaultApiClient.saveChatSession({
+          workflowId,
+          sessionId: currentSessionId,
+          messages: currentMessages,
+          remainingCredits: remainingCredits || 0,
+        });
+      } catch (error) {
+        console.warn("Failed to save session to backend:", error);
+      }
+    },
+    [workflowId, remainingCredits]
+  );
+
   useEffect(() => {
     const loadWorkflow = async () => {
       if (!workflowId) {
@@ -63,20 +82,28 @@ function ChatPageContent() {
         if (response.success && response.data) {
           setWorkflow(response.data);
 
-          // Create or load chat session
-          const newSessionId = `session_${Date.now()}_${Math.random()
-            .toString(36)
-            .substr(2, 9)}`;
-          setSessionId(newSessionId);
+          // Try to restore existing session from backend
+          try {
+            const sessionResponse = await defaultApiClient.getChatSession(
+              workflowId
+            );
 
-          // Add welcome message
-          const welcomeMessage: Message = {
-            id: `msg_${Date.now()}`,
-            role: "assistant",
-            content: `Hi! I'm your agent for "${response.data.name}". How can I help you today?`,
-            timestamp: new Date(),
-          };
-          setMessages([welcomeMessage]);
+            if (sessionResponse.success && sessionResponse.data?.sessionId) {
+              setSessionId(sessionResponse.data.sessionId);
+              setMessages(
+                sessionResponse.data.messages.map((m: any) => ({
+                  ...m,
+                  timestamp: new Date(m.timestamp),
+                }))
+              );
+              setRemainingCredits(sessionResponse.data.remainingCredits || 0);
+            } else {
+              createNewSession(response.data);
+            }
+          } catch (e) {
+            console.warn("Failed to restore session, creating new one");
+            createNewSession(response.data);
+          }
         } else {
           toast.error("Failed to load workflow");
         }
@@ -88,8 +115,34 @@ function ChatPageContent() {
       }
     };
 
+    const createNewSession = (workflowData: any) => {
+      const newSessionId = `session_${Date.now()}_${Math.random()
+        .toString(36)
+        .substr(2, 9)}`;
+      setSessionId(newSessionId);
+
+      // Add welcome message
+      const welcomeMessage: Message = {
+        id: `msg_${Date.now()}`,
+        role: "assistant",
+        content: `Hi! I'm your agent for "${workflowData.name}". How can I help you today?`,
+        timestamp: new Date(),
+      };
+      setMessages([welcomeMessage]);
+
+      // Save initial session
+      saveSessionToBackend(newSessionId, [welcomeMessage]);
+    };
+
     loadWorkflow();
-  }, [workflowId]);
+  }, [workflowId, saveSessionToBackend]);
+
+  // Auto-save session when messages change
+  useEffect(() => {
+    if (sessionId && messages.length > 0) {
+      saveSessionToBackend(sessionId, messages);
+    }
+  }, [messages, sessionId, saveSessionToBackend]);
 
   const handleSendMessage = async () => {
     if (!input.trim() || sending) return;

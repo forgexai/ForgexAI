@@ -800,6 +800,38 @@ class ForgexApiClient {
     });
   }
 
+  async getChatSession(workflowId: string): Promise<
+    ApiResponse<{
+      sessionId: string;
+      messages: Array<{
+        id: string;
+        role: string;
+        content: string;
+        timestamp: string;
+      }>;
+      remainingCredits?: number;
+    }>
+  > {
+    return this.request(`/chat/sessions/${workflowId}`);
+  }
+
+  async saveChatSession(params: {
+    sessionId: string;
+    workflowId: string;
+    messages: Array<{
+      id: string;
+      role: string;
+      content: string;
+      timestamp: Date;
+    }>;
+    remainingCredits?: number;
+  }): Promise<ApiResponse<{ success: boolean }>> {
+    return this.request("/chat/sessions", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+  }
+
   // ============================================================================
   // MARKETPLACE ENDPOINTS
   // ============================================================================
