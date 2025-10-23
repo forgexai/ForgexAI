@@ -94,7 +94,7 @@ function ChatPageContent() {
         );
         if (sessionResponse.success && sessionResponse.data) {
           return {
-            messages: sessionResponse.data.messages.map((m: any) => ({
+            messages: (sessionResponse.data.messages || []).map((m: any) => ({
               ...m,
               timestamp: new Date(m.timestamp),
             })),
@@ -322,57 +322,135 @@ function ChatPageContent() {
           setWorkflow(response.data);
 
           if (sessionParam) {
-            console.debug("Loading session from URL parameter:", sessionParam);
+            console.log("Loading session from URL parameter:", sessionParam);
             try {
               const specificSessionResp =
                 await defaultApiClient.getChatSessionById(
                   workflowId,
                   sessionParam
                 );
-              console.debug("Specific session response:", specificSessionResp);
+              console.log("Specific session response:", specificSessionResp);
+
               if (specificSessionResp.success && specificSessionResp.data) {
+                // Handle nested response structure - actual data might be at .data.data
+                const sessionData =
+                  (specificSessionResp.data as any).data ||
+                  specificSessionResp.data;
+
+                console.log("Session data structure:", {
+                  hasData: !!sessionData,
+                  hasMessages: !!sessionData.messages,
+                  messagesType: typeof sessionData.messages,
+                  messagesIsArray: Array.isArray(sessionData.messages),
+                  messageCount: sessionData.messages?.length,
+                  fullData: sessionData,
+                });
+
+                // Ensure we have a valid messages array (defensive check)
+                if (!Array.isArray(sessionData.messages)) {
+                  console.warn(
+                    "Messages is not an array, received:",
+                    typeof sessionData.messages,
+                    sessionData.messages
+                  );
+                  sessionData.messages = [];
+                }
+
                 console.debug("Loading specific session:", {
                   sessionId: sessionParam,
-                  messageCount: specificSessionResp.data.messages?.length,
-                  messages: specificSessionResp.data.messages,
+                  messageCount: sessionData.messages.length,
+                  messages: sessionData.messages,
                 });
 
                 setSessionId(sessionParam);
-                const mappedMessages = specificSessionResp.data.messages.map(
-                  (m: any) => ({
-                    ...m,
-                    timestamp: new Date(m.timestamp),
-                  })
-                );
 
-                console.debug("Mapped messages:", mappedMessages);
-                setMessages(mappedMessages);
-                console.debug(
-                  "Messages state should now be:",
-                  mappedMessages.length,
-                  "messages"
-                );
-                setRemainingCredits(
-                  specificSessionResp.data.remainingCredits || 0
-                );
                 try {
+                  const messagesArray = sessionData.messages;
+                  console.debug("About to map messages:", {
+                    arrayLength: messagesArray.length,
+                    firstMessage: messagesArray[0],
+                  });
+
+                  const mappedMessages = messagesArray.map(
+                    (m: any, index: number) => {
+                      console.debug(`Mapping message ${index}:`, m);
+                      return {
+                        ...m,
+                        timestamp: new Date(m.timestamp),
+                      };
+                    }
+                  );
+
+                  console.debug("Successfully mapped messages:", {
+                    count: mappedMessages.length,
+                    messages: mappedMessages,
+                  });
+
+                  setMessages(mappedMessages);
                   console.debug(
-                    "Loading message feedback for session:",
-                    sessionParam
+                    "setMessages called with",
+                    mappedMessages.length,
+                    "messages"
                   );
-                  const fb = await defaultApiClient.getMessageFeedback(
-                    sessionParam
+                } catch (mappingError) {
+                  console.error("Error mapping messages:", mappingError);
+                  console.error(
+                    "Messages data that failed:",
+                    sessionData.messages
                   );
-                  console.debug("Message feedback response:", fb);
-                  if (fb.success && fb.data) {
+                  setMessages([]);
+                }
+
+                // Set credits - log for debugging
+                const credits = sessionData.remainingCredits;
+                console.debug("Credits from session response:", credits);
+                setRemainingCredits(credits !== undefined ? credits : null);
+
+                // The session API now returns feedback directly in the response
+                if (sessionData.feedback) {
+                  console.debug(
+                    "Setting message feedback from session response:",
+                    sessionData.feedback
+                  );
+                  console.debug(
+                    "Current message IDs:",
+                    sessionData.messages.map((m: any) => m.id)
+                  );
+                  console.debug(
+                    "Feedback message IDs:",
+                    Object.keys(sessionData.feedback)
+                  );
+
+                  // Check if any feedback matches current messages
+                  const matchingFeedback = Object.keys(
+                    sessionData.feedback
+                  ).filter((msgId) =>
+                    sessionData.messages.some((m: any) => m.id === msgId)
+                  );
+                  console.debug("Matching feedback entries:", matchingFeedback);
+
+                  setMessageFeedback(sessionData.feedback);
+                } else {
+                  // Fallback to separate feedback API call if not included
+                  try {
                     console.debug(
-                      "Setting message feedback:",
-                      fb.data.feedback
+                      "Loading message feedback for session:",
+                      sessionParam
                     );
-                    setMessageFeedback(fb.data.feedback);
+                    const fb = await defaultApiClient.getMessageFeedback(
+                      sessionParam
+                    );
+                    console.debug("Message feedback response:", fb);
+                    if (fb.success && fb.data) {
+                      console.debug(
+                        "Setting message feedback:",
+                        fb.data.feedback
+                      );
+                      setMessageFeedback(fb.data.feedback);
+                    }
+                  } catch (e) {
+                    console.warn("Failed to load message feedback:", e);
                   }
-                } catch (e) {
-                  console.warn("Failed to load message feedback:", e);
                 }
                 try {
                   await fetchChatSessions();
@@ -436,7 +514,7 @@ function ChatPageContent() {
                 const loadedSessionId = sessionResponse.data.sessionId;
                 setSessionId(loadedSessionId);
                 setMessages(
-                  sessionResponse.data.messages.map((m: any) => ({
+                  (sessionResponse.data.messages || []).map((m: any) => ({
                     ...m,
                     timestamp: new Date(m.timestamp),
                   }))

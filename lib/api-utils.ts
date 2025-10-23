@@ -855,7 +855,10 @@ class ForgexApiClient {
     return this.request(`/chat/sessions/all/${workflowId}`);
   }
 
-  async getChatSessionById(workflowId: string, sessionId: string): Promise<
+  async getChatSessionById(
+    workflowId: string,
+    sessionId: string
+  ): Promise<
     ApiResponse<{
       sessionId: string;
       messages: Array<{
@@ -865,23 +868,29 @@ class ForgexApiClient {
         timestamp: string;
       }>;
       remainingCredits?: number;
+      feedback?: Record<string, string>;
     }>
   > {
     return this.request(`/chat/sessions/${workflowId}/${sessionId}`);
   }
 
-  async addMessageFeedback(sessionId: string, messageId: string, feedback: 'like' | 'unlike'): Promise<
-    ApiResponse<{ messageId: string; feedback: string }>
-  > {
-    return this.request(`/chat/sessions/${sessionId}/messages/${messageId}/feedback`, {
-      method: "POST",
-      body: JSON.stringify({ feedback }),
-    });
+  async addMessageFeedback(
+    sessionId: string,
+    messageId: string,
+    feedback: "like" | "unlike"
+  ): Promise<ApiResponse<{ messageId: string; feedback: string }>> {
+    return this.request(
+      `/chat/sessions/${sessionId}/messages/${messageId}/feedback`,
+      {
+        method: "POST",
+        body: JSON.stringify({ feedback }),
+      }
+    );
   }
 
-  async getMessageFeedback(sessionId: string): Promise<
-    ApiResponse<{ feedback: Record<string, string> }>
-  > {
+  async getMessageFeedback(
+    sessionId: string
+  ): Promise<ApiResponse<{ feedback: Record<string, string> }>> {
     return this.request(`/chat/sessions/${sessionId}/feedback`);
   }
 
