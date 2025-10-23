@@ -6,13 +6,13 @@ import { CanvasArea } from "@/components/dashboard/CanvasArea";
 import { NodePaletteButton } from "@/components/canvas/NodePaletteButton";
 import { NodeInspectorButton } from "@/components/canvas/NodeInspectorButton";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { defaultApiClient } from "@/lib/api-utils";
 import { useAtom } from "jotai";
 import { nodesAtom, edgesAtom } from "@/lib/state/atoms";
 import { toast } from "sonner";
 
-export default function CanvasPage() {
+function CanvasPageContent() {
   const searchParams = useSearchParams();
   const workflowId = searchParams.get('workflow');
   const mode = searchParams.get('mode');
@@ -119,5 +119,21 @@ export default function CanvasPage() {
         </div>
       </div>
     </AuthGuard>
+  );
+}
+
+export default function CanvasPage() {
+  return (
+    <Suspense fallback={
+      <AuthGuard>
+        <div className="flex flex-col h-screen w-full bg-[#111827] text-white">
+          <div className="flex items-center justify-center h-full">
+            <div className="text-gray-400">Loading canvas...</div>
+          </div>
+        </div>
+      </AuthGuard>
+    }>
+      <CanvasPageContent />
+    </Suspense>
   );
 }
