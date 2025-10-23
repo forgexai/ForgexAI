@@ -14,11 +14,11 @@ import { toast } from "sonner";
 
 function CanvasPageContent() {
   const searchParams = useSearchParams();
-  const workflowId = searchParams.get('workflow');
-  const mode = searchParams.get('mode');
-  const isEditMode = mode === 'edit';
-  const isTemplateMode = mode === 'template';
-  
+  const workflowId = searchParams.get("workflow");
+  const mode = searchParams.get("mode");
+  const isEditMode = mode === "edit";
+  const isTemplateMode = mode === "template";
+
   const [nodes, setNodes] = useAtom(nodesAtom);
   const [edges, setEdges] = useAtom(edgesAtom);
   const [isLoading, setIsLoading] = useState(false);
@@ -27,27 +27,27 @@ function CanvasPageContent() {
     const loadWorkflow = async () => {
       if (isTemplateMode) {
         // Template mode - nodes and edges are already set by the marketplace
-        toast.success('Template loaded successfully');
+        toast.success("Template loaded successfully");
         return;
       }
-      
+
       if (isEditMode && workflowId) {
         setIsLoading(true);
         try {
           const response = await defaultApiClient.getWorkflow(workflowId);
           if (response.success && response.data) {
             const workflow = response.data;
-            
-            const transformedNodes = workflow.nodes.map(node => {
-              let reactFlowType = 'condition'; // default
-              if (node.type === 'protocol') {
-                reactFlowType = 'solana';
-              } else if (node.type === 'output') {
-                reactFlowType = 'telegram';
-              } else if (node.type === 'input') {
-                reactFlowType = 'condition';
+
+            const transformedNodes = workflow.nodes.map((node) => {
+              let reactFlowType = "condition"; // default
+              if (node.type === "protocol") {
+                reactFlowType = "solana";
+              } else if (node.type === "output") {
+                reactFlowType = "telegram";
+              } else if (node.type === "input") {
+                reactFlowType = "condition";
               }
-              
+
               return {
                 id: node.id,
                 type: reactFlowType,
@@ -58,32 +58,32 @@ function CanvasPageContent() {
                   description: "",
                   inputs: node.inputs,
                   outputs: node.outputs,
-                  config: node.config
-                }
+                  config: node.config,
+                },
               };
             });
 
             // Transform API connections to React Flow format
-            const transformedEdges = workflow.connections.map(connection => ({
+            const transformedEdges = workflow.connections.map((connection) => ({
               id: connection.id,
               source: connection.sourceNodeId,
               target: connection.targetNodeId,
               sourceHandle: connection.sourceOutputId,
               targetHandle: connection.targetInputId,
               style: { stroke: "#f97316", strokeWidth: 2 },
-              animated: true
+              animated: true,
             }));
 
             setNodes(transformedNodes);
             setEdges(transformedEdges);
-            
-            toast.success('Workflow loaded successfully');
+
+            toast.success("Workflow loaded successfully");
           } else {
-            toast.error('Failed to load workflow');
+            toast.error("Failed to load workflow");
           }
         } catch (error) {
-          console.error('Error loading workflow:', error);
-          toast.error('Failed to load workflow');
+          console.error("Error loading workflow:", error);
+          toast.error("Failed to load workflow");
         } finally {
           setIsLoading(false);
         }
@@ -111,8 +111,15 @@ function CanvasPageContent() {
   return (
     <AuthGuard>
       <div className="flex flex-col h-screen w-full bg-[#111827] text-white">
-        <CanvasHeader workflowId={workflowId} isEditMode={isEditMode} isTemplateMode={isTemplateMode} />
-        <div className="flex-1 relative" style={{ height: 'calc(100vh - 4rem)' }}>
+        <CanvasHeader
+          workflowId={workflowId}
+          isEditMode={isEditMode}
+          isTemplateMode={isTemplateMode}
+        />
+        <div
+          className="flex-1 relative"
+          style={{ height: "calc(100vh - 4rem)" }}
+        >
           <CanvasArea workflowId={workflowId || undefined} />
           <NodePaletteButton />
           <NodeInspectorButton />
@@ -124,15 +131,17 @@ function CanvasPageContent() {
 
 export default function CanvasPage() {
   return (
-    <Suspense fallback={
-      <AuthGuard>
-        <div className="flex flex-col h-screen w-full bg-[#111827] text-white">
-          <div className="flex items-center justify-center h-full">
-            <div className="text-gray-400">Loading canvas...</div>
+    <Suspense
+      fallback={
+        <AuthGuard>
+          <div className="flex flex-col h-screen w-full bg-[#111827] text-white">
+            <div className="flex items-center justify-center h-full">
+              <div className="text-gray-400">Loading canvas...</div>
+            </div>
           </div>
-        </div>
-      </AuthGuard>
-    }>
+        </AuthGuard>
+      }
+    >
       <CanvasPageContent />
     </Suspense>
   );
