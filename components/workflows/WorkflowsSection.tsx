@@ -14,6 +14,7 @@ import { DeleteWorkflowDialog } from "@/components/workflows/DeleteWorkflowDialo
 import { ViewExecutionsModal } from "@/components/workflows/ViewExecutionsModal";
 import { ScheduleWorkflowModal } from "@/components/workflows/ScheduleWorkflowModal";
 import { DeployWorkflowModal } from "@/components/workflows/DeployWorkflowModal";
+import { ExecuteWorkflowModal } from "@/components/workflows/ExecuteWorkflowModal";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
 import { defaultApiClient } from "@/lib/api-utils";
 import { refreshApiClientAuth } from "@/lib/auth-utils";
@@ -81,6 +82,10 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
     id: string;
     name: string;
   } | null>(null);
+  const [executeModalOpen, setExecuteModalOpen] = useState(false);
+  const [workflowToExecute, setWorkflowToExecute] = useState<Workflow | null>(
+    null
+  );
   const { forgexAuth } = usePrivyAuth();
 
   const handleAddWorkflow = () => {
@@ -177,41 +182,37 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
 
   const handleRunWorkflow = async (workflowId: string) => {
     try {
-      setExecutingWorkflow(workflowId);
-
       refreshApiClientAuth();
+
+      // Fetch workflow details first
+      const workflowResponse = await defaultApiClient.getWorkflow(workflowId);
+
+      if (!workflowResponse.success || !workflowResponse.data) {
+        toast.error("Failed to load workflow for execution");
+        return;
+      }
+
+      // Open modal with workflow details
+      setWorkflowToExecute(workflowResponse.data);
+      setExecuteModalOpen(true);
+    } catch (error) {
+      console.error("Error loading workflow:", error);
+      toast.error("Failed to load workflow");
+    }
+  };
+
+  const executeWorkflowWithInputs = async (inputData: Record<string, any>) => {
+    if (!workflowToExecute) return;
+
+    try {
+      setExecutingWorkflow(workflowToExecute.id);
 
       toast.loading("Starting workflow execution...", {
         id: "workflow-execution",
       });
 
-      const workflowResponse = await defaultApiClient.getWorkflow(workflowId);
-
-      if (!workflowResponse.success || !workflowResponse.data) {
-        toast.error("Failed to load workflow for execution", {
-          id: "workflow-execution",
-        });
-        return;
-      }
-
-      const workflow = workflowResponse.data;
-
-      const inputData: Record<string, any> = {};
-
-      workflow.nodes?.forEach((node) => {
-        if (node.config && Object.keys(node.config).length > 0) {
-          inputData[node.id] = { ...node.config };
-
-          if (node.category === "memory" && node.config.key) {
-            inputData[node.id].key = node.config.key;
-          }
-        } else {
-          inputData[node.id] = {};
-        }
-      });
-
       const response = await defaultApiClient.executeWorkflow(
-        workflowId,
+        workflowToExecute.id,
         inputData
       );
 
@@ -448,6 +449,14 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
         onClose={() => setDeployModalOpen(false)}
         workflowId={workflowToDeploy?.id || ""}
         workflowName={workflowToDeploy?.name || ""}
+      />
+
+      <ExecuteWorkflowModal
+        open={executeModalOpen}
+        onOpenChange={setExecuteModalOpen}
+        workflowName={workflowToExecute?.name || ""}
+        nodes={workflowToExecute?.nodes || []}
+        onExecute={executeWorkflowWithInputs}
       />
     </>
   );

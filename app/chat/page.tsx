@@ -1,14 +1,296 @@
-import React from 'react'
+"use client";
+
+import { AuthGuard } from "@/components/auth/AuthGuard";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import { defaultApiClient } from "@/lib/api-utils";
+import { refreshApiClientAuth } from "@/lib/auth-utils";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Send, Bot, User, Loader2 } from "lucide-react";
+
+interface Message {
+  id: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  timestamp: Date;
+}
+
+interface ChatSession {
+  id: string;
+  workflowId: string;
+  workflowName: string;
+  messages: Message[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+function ChatPageContent() {
+  const searchParams = useSearchParams();
+  const workflowId = searchParams.get("workflow");
+
+  const [workflow, setWorkflow] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sessionId, setSessionId] = useState<string>("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  useEffect(() => {
+    const loadWorkflow = async () => {
+      if (!workflowId) {
+        toast.error("No workflow selected");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        refreshApiClientAuth();
+        const response = await defaultApiClient.getWorkflow(workflowId);
+
+        if (response.success && response.data) {
+          setWorkflow(response.data);
+
+          // Create or load chat session
+          const newSessionId = `session_${Date.now()}_${Math.random()
+            .toString(36)
+            .substr(2, 9)}`;
+          setSessionId(newSessionId);
+
+          // Add welcome message
+          const welcomeMessage: Message = {
+            id: `msg_${Date.now()}`,
+            role: "assistant",
+            content: `Hi! I'm your agent for "${response.data.name}". How can I help you today?`,
+            timestamp: new Date(),
+          };
+          setMessages([welcomeMessage]);
+        } else {
+          toast.error("Failed to load workflow");
+        }
+      } catch (error) {
+        console.error("Error loading workflow:", error);
+        toast.error("Failed to load workflow");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadWorkflow();
+  }, [workflowId]);
+
+  const handleSendMessage = async () => {
+    if (!input.trim() || sending) return;
+
+    const userMessage: Message = {
+      id: `msg_${Date.now()}`,
+      role: "user",
+      content: input.trim(),
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setSending(true);
+
+    try {
+      refreshApiClientAuth();
+
+      // Send message to chat completion endpoint
+      const response = await fetch(
+        `${
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+        }/chat/completion`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem(
+              "forgexai_session_token"
+            )}`,
+          },
+          body: JSON.stringify({
+            messages: messages
+              .map((m) => ({
+                role: m.role,
+                content: m.content,
+              }))
+              .concat([{ role: "user", content: userMessage.content }]),
+            agentId: workflowId,
+            sessionId,
+            workflowContext: {
+              workflowId,
+              workflowName: workflow?.name,
+              nodes: workflow?.nodes || [],
+            },
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.message) {
+        const assistantMessage: Message = {
+          id: `msg_${Date.now()}`,
+          role: "assistant",
+          content: data.message,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+      } else {
+        toast.error("Failed to get response");
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast.error("Failed to send message");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  if (loading) {
+    return (
+      <AuthGuard>
+        <div className="flex items-center justify-center h-screen bg-[#0A0B0F]">
+          <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+        </div>
+      </AuthGuard>
+    );
+  }
+
+  if (!workflow) {
+    return (
+      <AuthGuard>
+        <div className="flex items-center justify-center h-screen bg-[#0A0B0F]">
+          <div className="text-center">
+            <p className="text-red-400 mb-4">Workflow not found</p>
+            <Button onClick={() => (window.location.href = "/workflows")}>
+              Go to Workflows
+            </Button>
+          </div>
+        </div>
+      </AuthGuard>
+    );
+  }
+
+  return (
+    <AuthGuard>
+      <div className="flex flex-col h-screen bg-[#0A0B0F] text-white">
+        {/* Header */}
+        <div className="border-b border-white/10 bg-[#1A1B23] px-6 py-4">
+          <div className="flex items-center justify-between max-w-6xl mx-auto">
+            <div>
+              <h1 className="text-xl font-semibold">{workflow.name}</h1>
+              <p className="text-sm text-gray-400">
+                {workflow.description || "Chat with your workflow agent"}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => (window.location.href = "/workflows")}
+              className="border-gray-700 text-black hover:bg-white/10"
+            >
+              Back to Workflows
+            </Button>
+          </div>
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          <div className="max-w-4xl mx-auto space-y-4">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex items-start space-x-3 ${
+                  message.role === "user" ? "justify-end" : ""
+                }`}
+              >
+                {message.role === "assistant" && (
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-r from-orange-400 to-orange-500 flex items-center justify-center">
+                    <Bot className="w-5 h-5 text-white" />
+                  </div>
+                )}
+
+                <div
+                  className={`max-w-[70%] rounded-lg px-4 py-3 ${
+                    message.role === "user"
+                      ? "bg-gradient-to-r from-orange-400 to-orange-500 text-white"
+                      : "bg-[#1A1B23] border border-white/10 text-gray-100"
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap">{message.content}</p>
+                  <p className="text-xs mt-2 opacity-70">
+                    {message.timestamp.toLocaleTimeString()}
+                  </p>
+                </div>
+
+                {message.role === "user" && (
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center">
+                    <User className="w-5 h-5 text-white" />
+                  </div>
+                )}
+              </div>
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
+        </div>
+
+        {/* Input */}
+        <div className="border-t border-white/10 bg-[#1A1B23] px-6 py-4">
+          <div className="max-w-4xl mx-auto flex items-center space-x-3">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Type your message..."
+              disabled={sending}
+              className="flex-1 bg-[#0A0B0F] border-white/10 text-white placeholder:text-gray-500 focus:border-orange-500"
+            />
+            <Button
+              onClick={handleSendMessage}
+              disabled={sending || !input.trim()}
+              className="bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-600 hover:to-orange-700 disabled:opacity-50"
+            >
+              {sending ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Send className="w-5 h-5" />
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </AuthGuard>
+  );
+}
 
 export default function ChatPage() {
   return (
-    <div className="min-h-screen bg-[#0A0B0F] text-white p-8">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">Chat with Your Agent</h1>
-        <div className="bg-[#1A1B23] border border-white/10 rounded-lg p-6">
-          <p className="text-gray-400">Chat functionality will be implemented here.</p>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-screen bg-[#0A0B0F]">
+          <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
         </div>
-      </div>
-    </div>
-  )
+      }
+    >
+      <ChatPageContent />
+    </Suspense>
+  );
 }
