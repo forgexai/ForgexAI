@@ -777,6 +777,23 @@ class ForgexApiClient {
   }
 
   // ============================================================================
+  // CHAT ENDPOINTS
+  // ============================================================================
+
+  async chatCompletion(params: {
+    messages: Array<{ role: string; content: string }>;
+    agentId?: string;
+    sessionId?: string;
+    workflowContext?: any;
+    model?: string;
+  }): Promise<ApiResponse<{ message: string }>> {
+    return this.request("/chat/completion", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+  }
+
+  // ============================================================================
   // MARKETPLACE ENDPOINTS
   // ============================================================================
 

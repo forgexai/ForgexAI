@@ -104,51 +104,33 @@ function ChatPageContent() {
     setSending(true);
 
     try {
-      refreshApiClientAuth();
+      // Use the API client for proper auth handling
+      const response = await defaultApiClient.chatCompletion({
+        messages: messages
+          .map((m) => ({
+            role: m.role,
+            content: m.content,
+          }))
+          .concat([{ role: "user", content: userMessage.content }]),
+        agentId: workflowId ?? undefined,
+        sessionId,
+        workflowContext: {
+          workflowId,
+          workflowName: workflow?.name,
+          nodes: workflow?.nodes || [],
+        },
+      });
 
-      // Send message to chat completion endpoint
-      const response = await fetch(
-        `${
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-        }/chat/completion`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem(
-              "forgexai_session_token"
-            )}`,
-          },
-          body: JSON.stringify({
-            messages: messages
-              .map((m) => ({
-                role: m.role,
-                content: m.content,
-              }))
-              .concat([{ role: "user", content: userMessage.content }]),
-            agentId: workflowId,
-            sessionId,
-            workflowContext: {
-              workflowId,
-              workflowName: workflow?.name,
-              nodes: workflow?.nodes || [],
-            },
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.message) {
+      if (response.success && response.data?.message) {
         const assistantMessage: Message = {
           id: `msg_${Date.now()}`,
           role: "assistant",
-          content: data.message,
+          content: response.data.message,
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, assistantMessage]);
       } else {
-        toast.error("Failed to get response");
+        toast.error(response.error || "Failed to get response");
       }
     } catch (error) {
       console.error("Error sending message:", error);
@@ -205,7 +187,7 @@ function ChatPageContent() {
             <Button
               variant="outline"
               onClick={() => (window.location.href = "/workflows")}
-              className="border-gray-700 text-black hover:bg-white/10"
+              className="border-gray-700 text-black cursor-pointer"
             >
               Back to Workflows
             </Button>
