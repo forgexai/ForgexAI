@@ -794,6 +794,7 @@ class ForgexApiClient {
       conversationId?: string;
       remainingCredits?: number;
       choices?: any;
+      choicesText?: string;
     }>
   > {
     return this.request("/chat/completion", {
@@ -851,31 +852,37 @@ class ForgexApiClient {
       }>;
     }>
   > {
-    // For now, let's get a single session and create a sessions array from it
-    const singleSession = await this.getChatSession(workflowId);
-    if (singleSession.success && singleSession.data) {
-      return {
-        success: true,
-        data: {
-          sessions: [
-            {
-              id: singleSession.data.sessionId,
-              workflowId: workflowId,
-              workflowName: "Current Session",
-              messages: singleSession.data.messages,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            },
-          ],
-        },
-        status: 200,
-      };
-    }
-    return {
-      success: false,
-      data: { sessions: [] },
-      status: 404,
-    };
+    return this.request(`/chat/sessions/all/${workflowId}`);
+  }
+
+  async getChatSessionById(workflowId: string, sessionId: string): Promise<
+    ApiResponse<{
+      sessionId: string;
+      messages: Array<{
+        id: string;
+        role: string;
+        content: string;
+        timestamp: string;
+      }>;
+      remainingCredits?: number;
+    }>
+  > {
+    return this.request(`/chat/sessions/${workflowId}/${sessionId}`);
+  }
+
+  async addMessageFeedback(sessionId: string, messageId: string, feedback: 'like' | 'unlike'): Promise<
+    ApiResponse<{ messageId: string; feedback: string }>
+  > {
+    return this.request(`/chat/sessions/${sessionId}/messages/${messageId}/feedback`, {
+      method: "POST",
+      body: JSON.stringify({ feedback }),
+    });
+  }
+
+  async getMessageFeedback(sessionId: string): Promise<
+    ApiResponse<{ feedback: Record<string, string> }>
+  > {
+    return this.request(`/chat/sessions/${sessionId}/feedback`);
   }
 
   // ============================================================================

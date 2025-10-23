@@ -18,6 +18,8 @@ import {
   MessageSquare,
   Plus,
   ChevronRight,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
 import { MarkdownRenderer } from "@/components/ui/Chat/markdown-renderer";
 import { cn } from "@/lib/utils";
@@ -41,6 +43,7 @@ interface ChatSession {
 function ChatPageContent() {
   const searchParams = useSearchParams();
   const workflowId = searchParams.get("workflow");
+  const sessionParam = searchParams.get("session");
 
   const router = useRouter();
   const [workflow, setWorkflow] = useState<any>(null);
@@ -48,26 +51,101 @@ function ChatPageContent() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
-  const [sessionId, setSessionId] = useState<string>("");
+  const [sessionId, setSessionId] = useState<string>(sessionParam || "");
   const [remainingCredits, setRemainingCredits] = useState<number | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [typingIndicator, setTypingIndicator] = useState(false);
+  const [messageFeedback, setMessageFeedback] = useState<
+    Record<string, string>
+  >({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fetchSessionsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isFetchingSessionsRef = useRef(false);
+  const isLoadingWorkflowRef = useRef(false);
+  const isSavingSessionRef = useRef(false);
+  const currentRequestsRef = useRef<Set<string>>(new Set());
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Update URL when session changes
+  const updateSessionInUrl = useCallback(
+    (newSessionId: string) => {
+      if (workflowId && newSessionId) {
+        const newUrl = `/chat?workflow=${workflowId}&session=${newSessionId}`;
+        router.replace(newUrl);
+      }
+    },
+    [workflowId, router]
+  );
+
+  // Load a specific session by ID
+  const loadSessionById = useCallback(
+    async (sessionId: string) => {
+      try {
+        const sessionResponse = await defaultApiClient.getChatSessionById(
+          workflowId!,
+          sessionId
+        );
+        if (sessionResponse.success && sessionResponse.data) {
+          return {
+            messages: sessionResponse.data.messages.map((m: any) => ({
+              ...m,
+              timestamp: new Date(m.timestamp),
+            })),
+            remainingCredits: sessionResponse.data.remainingCredits || 0,
+          };
+        }
+      } catch (error) {
+        console.warn("Failed to load session by ID:", error);
+      }
+      return null;
+    },
+    [workflowId]
+  );
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    const timeoutRef = fetchSessionsTimeoutRef.current;
+    const requestsRef = currentRequestsRef.current;
+
+    return () => {
+      // Clear any pending timeouts
+      if (timeoutRef) {
+        clearTimeout(timeoutRef);
+      }
+      // Clear request tracking
+      requestsRef.clear();
+      // Reset refs
+      isFetchingSessionsRef.current = false;
+      isLoadingWorkflowRef.current = false;
+      isSavingSessionRef.current = false;
+    };
+  }, []);
 
   // Save session to backend database
   const saveSessionToBackend = useCallback(
     async (currentSessionId: string, currentMessages: Message[]) => {
       if (!workflowId || !currentSessionId) return;
+
+      // Prevent duplicate saves
+      const requestKey = `save-${currentSessionId}`;
+      if (
+        isSavingSessionRef.current ||
+        currentRequestsRef.current.has(requestKey)
+      ) {
+        return;
+      }
+
+      isSavingSessionRef.current = true;
+      currentRequestsRef.current.add(requestKey);
 
       try {
         await defaultApiClient.saveChatSession({
@@ -78,9 +156,50 @@ function ChatPageContent() {
         });
       } catch (error) {
         console.warn("Failed to save session to backend:", error);
+      } finally {
+        isSavingSessionRef.current = false;
+        currentRequestsRef.current.delete(requestKey);
       }
     },
     [workflowId, remainingCredits]
+  );
+
+  // Load message feedback
+  const loadMessageFeedback = useCallback(async (sessionId: string) => {
+    try {
+      const response = await defaultApiClient.getMessageFeedback(sessionId);
+      if (response.success && response.data) {
+        setMessageFeedback(response.data.feedback);
+      }
+    } catch (error) {
+      console.warn("Failed to load message feedback:", error);
+    }
+  }, []);
+
+  // Handle message feedback
+  const handleMessageFeedback = useCallback(
+    async (messageId: string, feedback: "like" | "unlike") => {
+      if (!sessionId) return;
+
+      try {
+        const response = await defaultApiClient.addMessageFeedback(
+          sessionId,
+          messageId,
+          feedback
+        );
+        if (response.success) {
+          setMessageFeedback((prev) => ({
+            ...prev,
+            [messageId]: feedback,
+          }));
+          toast.success(`Message ${feedback}d`);
+        }
+      } catch (error) {
+        console.error("Failed to save feedback:", error);
+        toast.error("Failed to save feedback");
+      }
+    },
+    [sessionId]
   );
 
   useEffect(() => {
@@ -91,6 +210,18 @@ function ChatPageContent() {
         return;
       }
 
+      // Prevent duplicate workflow loads
+      const requestKey = `workflow-${workflowId}`;
+      if (
+        isLoadingWorkflowRef.current ||
+        currentRequestsRef.current.has(requestKey)
+      ) {
+        return;
+      }
+
+      isLoadingWorkflowRef.current = true;
+      currentRequestsRef.current.add(requestKey);
+
       try {
         refreshApiClientAuth();
         const response = await defaultApiClient.getWorkflow(workflowId);
@@ -98,14 +229,51 @@ function ChatPageContent() {
         if (response.success && response.data) {
           setWorkflow(response.data);
 
-          // Try to restore existing session from backend
+          // If session ID is in URL, try to load that specific session first
+          if (sessionParam) {
+            try {
+              // call API directly to avoid extra deps
+              const specificSessionResp =
+                await defaultApiClient.getChatSessionById(
+                  workflowId,
+                  sessionParam
+                );
+              if (specificSessionResp.success && specificSessionResp.data) {
+                setSessionId(sessionParam);
+                setMessages(
+                  specificSessionResp.data.messages.map((m: any) => ({
+                    ...m,
+                    timestamp: new Date(m.timestamp),
+                  }))
+                );
+                setRemainingCredits(
+                  specificSessionResp.data.remainingCredits || 0
+                );
+                try {
+                  const fb = await defaultApiClient.getMessageFeedback(
+                    sessionParam
+                  );
+                  if (fb.success && fb.data)
+                    setMessageFeedback(fb.data.feedback);
+                } catch (e) {
+                  /* ignore feedback load errors */
+                }
+                return;
+              }
+            } catch (e) {
+              console.warn("Failed to load session from URL parameter:", e);
+            }
+          }
+
+          // Try to restore the most recent session from backend
           try {
             const sessionResponse = await defaultApiClient.getChatSession(
               workflowId
             );
 
             if (sessionResponse.success && sessionResponse.data?.sessionId) {
-              setSessionId(sessionResponse.data.sessionId);
+              const loadedSessionId = sessionResponse.data.sessionId;
+              setSessionId(loadedSessionId);
               setMessages(
                 sessionResponse.data.messages.map((m: any) => ({
                   ...m,
@@ -113,12 +281,65 @@ function ChatPageContent() {
                 }))
               );
               setRemainingCredits(sessionResponse.data.remainingCredits || 0);
+
+              // Update URL with the loaded session
+              router.replace(
+                `/chat?workflow=${workflowId}&session=${loadedSessionId}`
+              );
+              try {
+                const fb = await defaultApiClient.getMessageFeedback(
+                  loadedSessionId
+                );
+                if (fb.success && fb.data) setMessageFeedback(fb.data.feedback);
+              } catch (e) {
+                /* ignore feedback load errors */
+              }
             } else {
-              createNewSession(response.data);
+              // create new session inline
+              const newSessionId = `session_${Date.now()}_${Math.random()
+                .toString(36)
+                .substr(2, 9)}`;
+              setSessionId(newSessionId);
+
+              const welcomeMessage: Message = {
+                id: `msg_${Date.now()}`,
+                role: "assistant",
+                content: `Hi! I'm your agent for "${response.data.name}". How can I help you today?`,
+                timestamp: new Date(),
+              };
+              setMessages([welcomeMessage]);
+
+              // Update URL and save session
+              router.replace(
+                `/chat?workflow=${workflowId}&session=${newSessionId}`
+              );
+              try {
+                await defaultApiClient.saveChatSession({
+                  workflowId,
+                  sessionId: newSessionId,
+                  messages: [welcomeMessage],
+                });
+              } catch (e) {
+                console.warn("Failed to save new session:", e);
+              }
             }
           } catch (e) {
             console.warn("Failed to restore session, creating new one");
-            createNewSession(response.data);
+            // fallback: create new session (minimal)
+            const newSessionId = `session_${Date.now()}_${Math.random()
+              .toString(36)
+              .substr(2, 9)}`;
+            setSessionId(newSessionId);
+            const welcomeMessage: Message = {
+              id: `msg_${Date.now()}`,
+              role: "assistant",
+              content: `Hi! I'm your agent for "${response.data.name}". How can I help you today?`,
+              timestamp: new Date(),
+            };
+            setMessages([welcomeMessage]);
+            router.replace(
+              `/chat?workflow=${workflowId}&session=${newSessionId}`
+            );
           }
         } else {
           toast.error("Failed to load workflow");
@@ -127,50 +348,39 @@ function ChatPageContent() {
         console.error("Error loading workflow:", error);
         toast.error("Failed to load workflow");
       } finally {
+        isLoadingWorkflowRef.current = false;
+        currentRequestsRef.current.delete(`workflow-${workflowId}`);
         setLoading(false);
       }
     };
-
-    const createNewSession = (workflowData: any) => {
-      const newSessionId = `session_${Date.now()}_${Math.random()
-        .toString(36)
-        .substr(2, 9)}`;
-      setSessionId(newSessionId);
-
-      // Add welcome message
-      const welcomeMessage: Message = {
-        id: `msg_${Date.now()}`,
-        role: "assistant",
-        content: `Hi! I'm your agent for "${workflowData.name}". How can I help you today?`,
-        timestamp: new Date(),
-      };
-      setMessages([welcomeMessage]);
-
-      // Save initial session
-      saveSessionToBackend(newSessionId, [welcomeMessage]);
-    };
-
     loadWorkflow();
-  }, [workflowId, saveSessionToBackend]);
+  }, [workflowId, sessionParam, router]);
 
-  // Auto-save session when messages change (but not during typing animation)
-  useEffect(() => {
-    if (sessionId && messages.length > 0 && !typingIndicator) {
-      // Only save if we have actual content messages (not typing placeholders)
-      const realMessages = messages.filter(
-        (m) => !m.id.startsWith("typing_") || m.content
-      );
-      if (realMessages.length > 0) {
-        saveSessionToBackend(sessionId, realMessages);
-      }
-    }
-  }, [messages, sessionId, saveSessionToBackend, typingIndicator]);
+  // Note: Session saving is now handled by the backend after chat completion
+  // This prevents multiple saves and ensures both user and assistant messages are saved together
 
   // Fetch all chat sessions for the current workflow
   const fetchChatSessions = useCallback(async () => {
     if (!workflowId) return;
 
+    // Prevent duplicate simultaneous requests
+    const requestKey = `fetch-sessions-${workflowId}`;
+    if (
+      isFetchingSessionsRef.current ||
+      currentRequestsRef.current.has(requestKey)
+    ) {
+      return;
+    }
+
+    // Clear any pending timeout
+    if (fetchSessionsTimeoutRef.current) {
+      clearTimeout(fetchSessionsTimeoutRef.current);
+    }
+
+    isFetchingSessionsRef.current = true;
+    currentRequestsRef.current.add(requestKey);
     setLoadingSessions(true);
+
     try {
       refreshApiClientAuth();
       const response = await defaultApiClient.getAllChatSessions(workflowId);
@@ -188,46 +398,18 @@ function ChatPageContent() {
           }))
         );
       } else {
-        // If no sessions found, create a session from current state
-        if (sessionId && messages.length > 0) {
-          setChatSessions([
-            {
-              id: sessionId,
-              workflowId: workflowId,
-              workflowName: workflow?.name || "Current Session",
-              messages: messages,
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            },
-          ]);
-        }
+        // No sessions found
+        setChatSessions([]);
       }
     } catch (error) {
       console.warn("Failed to fetch chat sessions:", error);
-      // Fallback: create session from current state
-      if (sessionId && messages.length > 0) {
-        setChatSessions([
-          {
-            id: sessionId,
-            workflowId: workflowId,
-            workflowName: workflow?.name || "Current Session",
-            messages: messages,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-        ]);
-      }
+      setChatSessions([]);
     } finally {
+      isFetchingSessionsRef.current = false;
+      currentRequestsRef.current.delete(requestKey);
       setLoadingSessions(false);
     }
-  }, [workflowId, sessionId, messages, workflow]);
-
-  // Load chat sessions when workflow changes
-  useEffect(() => {
-    if (workflow) {
-      fetchChatSessions();
-    }
-  }, [workflow, fetchChatSessions]);
+  }, [workflowId]);
 
   // Create a new chat session
   const createNewChatSession = useCallback(() => {
@@ -247,25 +429,32 @@ function ChatPageContent() {
     };
     setMessages([welcomeMessage]);
 
+    // Update URL with new session
+    updateSessionInUrl(newSessionId);
+
     // Save initial session
     saveSessionToBackend(newSessionId, [welcomeMessage]);
-
-    // Refresh sessions list
-    setTimeout(() => {
-      fetchChatSessions();
-    }, 500);
-  }, [workflow, saveSessionToBackend, fetchChatSessions]);
+  }, [workflow, updateSessionInUrl, saveSessionToBackend]);
 
   // Switch to an existing chat session
-  const switchChatSession = useCallback((selectedSession: ChatSession) => {
-    setSessionId(selectedSession.id);
-    setMessages(selectedSession.messages);
+  const switchChatSession = useCallback(
+    async (selectedSession: ChatSession) => {
+      setSessionId(selectedSession.id);
+      setMessages(selectedSession.messages);
 
-    // Close sidebar on mobile after selection
-    if (window.innerWidth < 768) {
-      setSidebarOpen(false);
-    }
-  }, []);
+      // Update URL
+      updateSessionInUrl(selectedSession.id);
+
+      // Load feedback for this session
+      await loadMessageFeedback(selectedSession.id);
+
+      // Close sidebar on mobile after selection
+      if (window.innerWidth < 768) {
+        setSidebarOpen(false);
+      }
+    },
+    [updateSessionInUrl, loadMessageFeedback]
+  );
 
   const handleSendMessage = async () => {
     if (!input.trim() || sending) return;
@@ -316,6 +505,7 @@ function ChatPageContent() {
         const respData: any = response.data || {};
         if (respData.conversationId) {
           setSessionId(respData.conversationId);
+          updateSessionInUrl(respData.conversationId);
         }
         if (respData.remainingCredits !== undefined) {
           setRemainingCredits(respData.remainingCredits);
@@ -357,11 +547,15 @@ function ChatPageContent() {
               m.id === typingId ? { ...m, id: stableId } : m
             );
 
-            // Session will be auto-saved by the useEffect
-            // Refresh sessions list after a brief delay
-            setTimeout(() => {
-              fetchChatSessions();
-            }, 500);
+            // Debounced session refresh to prevent multiple calls
+            if (fetchSessionsTimeoutRef.current) {
+              clearTimeout(fetchSessionsTimeoutRef.current);
+            }
+            fetchSessionsTimeoutRef.current = setTimeout(() => {
+              if (!isFetchingSessionsRef.current) {
+                fetchChatSessions();
+              }
+            }, 2000);
 
             return updatedMessages;
           });
@@ -425,24 +619,51 @@ function ChatPageContent() {
         >
           <div className="flex items-center justify-between p-4 border-b border-white/10">
             <h2 className="text-lg font-semibold">Chat History</h2>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSidebarOpen(false)}
-              className="md:hidden"
-            >
-              <X className="w-5 h-5" />
-            </Button>
+            <div className="flex items-center space-x-2">
+              {/* Desktop collapse button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(false)}
+                className="hidden md:flex"
+                title="Collapse sidebar"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </Button>
+              {/* Mobile close button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(false)}
+                className="md:hidden"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
           </div>
 
           <div className="p-4">
             <Button
               variant="outline"
-              className="w-full flex items-center text-black justify-center gap-2 mb-4 border-white/20 hover:border-white/40"
+              className="w-full flex items-center text-black justify-center gap-2 mb-2 border-white/20 hover:border-white/40"
               onClick={createNewChatSession}
             >
               <Plus className="w-4 h-4" />
               New Chat
+            </Button>
+
+            <Button
+              variant="ghost"
+              className="w-full flex items-center  justify-center gap-2 mb-4 text-gray-400 hover:text-black cursor-pointer hover:bg-gray-500"
+              onClick={fetchChatSessions}
+              disabled={loadingSessions}
+            >
+              {loadingSessions ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <MessageSquare className="w-4 h-4" />
+              )}
+              Load Chat History
             </Button>
 
             {loadingSessions ? (
@@ -494,6 +715,7 @@ function ChatPageContent() {
           <div className="border-b border-white/10 bg-[#1A1B23] px-6 py-4">
             <div className="flex items-center justify-between max-w-6xl mx-auto">
               <div className="flex items-center">
+                {/* Mobile menu button */}
                 <Button
                   variant="ghost"
                   size="icon"
@@ -502,6 +724,18 @@ function ChatPageContent() {
                 >
                   <Menu className="w-5 h-5" />
                 </Button>
+                {/* Desktop expand button (when sidebar is collapsed) */}
+                {!sidebarOpen && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setSidebarOpen(true)}
+                    className="mr-2 hidden md:flex"
+                    title="Expand sidebar"
+                  >
+                    <Menu className="w-5 h-5" />
+                  </Button>
+                )}
                 <div>
                   <h1 className="text-xl font-semibold">{workflow.name}</h1>
                   <div className="flex items-center space-x-4">
@@ -546,47 +780,87 @@ function ChatPageContent() {
                     </div>
                   )}
 
-                  <div
-                    className={`max-w-[70%] rounded-lg px-4 py-3 ${
-                      message.role === "user"
-                        ? "bg-gradient-to-r from-orange-400 to-orange-500 text-white"
-                        : "bg-[#1A1B23] border border-white/10 text-gray-100"
-                    }`}
-                  >
-                    {message.role === "assistant" ? (
-                      message.id.startsWith("typing_") && !message.content ? (
-                        <div className="flex items-center space-x-2">
-                          <div className="flex space-x-1">
-                            <div
-                              className="w-2 h-2 bg-orange-400 rounded-full animate-bounce"
-                              style={{ animationDelay: "0ms" }}
-                            ></div>
-                            <div
-                              className="w-2 h-2 bg-orange-400 rounded-full animate-bounce"
-                              style={{ animationDelay: "150ms" }}
-                            ></div>
-                            <div
-                              className="w-2 h-2 bg-orange-400 rounded-full animate-bounce"
-                              style={{ animationDelay: "300ms" }}
-                            ></div>
+                  <div className="flex flex-col max-w-[70%]">
+                    <div
+                      className={`rounded-lg px-4 py-3 ${
+                        message.role === "user"
+                          ? "bg-gradient-to-r from-orange-400 to-orange-500 text-white"
+                          : "bg-[#1A1B23] border border-white/10 text-gray-100"
+                      }`}
+                    >
+                      {message.role === "assistant" ? (
+                        message.id.startsWith("typing_") && !message.content ? (
+                          <div className="flex items-center space-x-2">
+                            <div className="flex space-x-1">
+                              <div
+                                className="w-2 h-2 bg-orange-400 rounded-full animate-bounce"
+                                style={{ animationDelay: "0ms" }}
+                              ></div>
+                              <div
+                                className="w-2 h-2 bg-orange-400 rounded-full animate-bounce"
+                                style={{ animationDelay: "150ms" }}
+                              ></div>
+                              <div
+                                className="w-2 h-2 bg-orange-400 rounded-full animate-bounce"
+                                style={{ animationDelay: "300ms" }}
+                              ></div>
+                            </div>
+                            <span className="text-sm text-gray-400">
+                              Thinking...
+                            </span>
                           </div>
-                          <span className="text-sm text-gray-400">
-                            Thinking...
-                          </span>
-                        </div>
+                        ) : (
+                          <MarkdownRenderer content={message.content} />
+                        )
                       ) : (
-                        <MarkdownRenderer content={message.content} />
-                      )
-                    ) : (
-                      <p className="whitespace-pre-wrap">{message.content}</p>
-                    )}
-                    {!(
-                      message.id.startsWith("typing_") && !message.content
-                    ) && (
-                      <p className="text-xs mt-2 opacity-70">
-                        {message.timestamp.toLocaleTimeString()}
-                      </p>
-                    )}
+                        <p className="whitespace-pre-wrap">{message.content}</p>
+                      )}
+                      {!(
+                        message.id.startsWith("typing_") && !message.content
+                      ) && (
+                        <p className="text-xs mt-2 opacity-70">
+                          {message.timestamp.toLocaleTimeString()}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Message Feedback - Only for assistant messages */}
+                    {message.role === "assistant" &&
+                      !message.id.startsWith("typing_") &&
+                      message.content && (
+                        <div className="flex items-center space-x-2 mt-2 ml-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              handleMessageFeedback(message.id, "like")
+                            }
+                            className={cn(
+                              "h-6 w-6 p-0",
+                              messageFeedback[message.id] === "like"
+                                ? "text-green-500 bg-green-500/10"
+                                : "text-gray-400 hover:text-green-500"
+                            )}
+                          >
+                            <ThumbsUp className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              handleMessageFeedback(message.id, "unlike")
+                            }
+                            className={cn(
+                              "h-6 w-6 p-0",
+                              messageFeedback[message.id] === "unlike"
+                                ? "text-red-500 bg-red-500/10"
+                                : "text-gray-400 hover:text-red-500"
+                            )}
+                          >
+                            <ThumbsDown className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      )}
                   </div>
 
                   {message.role === "user" && (
