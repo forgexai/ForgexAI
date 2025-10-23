@@ -153,12 +153,18 @@ function ChatPageContent() {
     loadWorkflow();
   }, [workflowId, saveSessionToBackend]);
 
-  // Auto-save session when messages change
+  // Auto-save session when messages change (but not during typing animation)
   useEffect(() => {
-    if (sessionId && messages.length > 0) {
-      saveSessionToBackend(sessionId, messages);
+    if (sessionId && messages.length > 0 && !typingIndicator) {
+      // Only save if we have actual content messages (not typing placeholders)
+      const realMessages = messages.filter(
+        (m) => !m.id.startsWith("typing_") || m.content
+      );
+      if (realMessages.length > 0) {
+        saveSessionToBackend(sessionId, realMessages);
+      }
     }
-  }, [messages, sessionId, saveSessionToBackend]);
+  }, [messages, sessionId, saveSessionToBackend, typingIndicator]);
 
   // Fetch all chat sessions for the current workflow
   const fetchChatSessions = useCallback(async () => {
@@ -181,13 +187,40 @@ function ChatPageContent() {
             })),
           }))
         );
+      } else {
+        // If no sessions found, create a session from current state
+        if (sessionId && messages.length > 0) {
+          setChatSessions([
+            {
+              id: sessionId,
+              workflowId: workflowId,
+              workflowName: workflow?.name || "Current Session",
+              messages: messages,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            },
+          ]);
+        }
       }
     } catch (error) {
       console.warn("Failed to fetch chat sessions:", error);
+      // Fallback: create session from current state
+      if (sessionId && messages.length > 0) {
+        setChatSessions([
+          {
+            id: sessionId,
+            workflowId: workflowId,
+            workflowName: workflow?.name || "Current Session",
+            messages: messages,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ]);
+      }
     } finally {
       setLoadingSessions(false);
     }
-  }, [workflowId]);
+  }, [workflowId, sessionId, messages, workflow]);
 
   // Load chat sessions when workflow changes
   useEffect(() => {
@@ -324,11 +357,11 @@ function ChatPageContent() {
               m.id === typingId ? { ...m, id: stableId } : m
             );
 
-            // Save updated session to the backend
-            saveSessionToBackend(sessionId, updatedMessages);
-
-            // Refresh sessions list after saving
-            fetchChatSessions();
+            // Session will be auto-saved by the useEffect
+            // Refresh sessions list after a brief delay
+            setTimeout(() => {
+              fetchChatSessions();
+            }, 500);
 
             return updatedMessages;
           });
@@ -405,7 +438,7 @@ function ChatPageContent() {
           <div className="p-4">
             <Button
               variant="outline"
-              className="w-full flex items-center justify-center gap-2 mb-4 border-white/20 hover:border-white/40"
+              className="w-full flex items-center text-black justify-center gap-2 mb-4 border-white/20 hover:border-white/40"
               onClick={createNewChatSession}
             >
               <Plus className="w-4 h-4" />
@@ -505,7 +538,11 @@ function ChatPageContent() {
                 >
                   {message.role === "assistant" && (
                     <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-r from-orange-400 to-orange-500 flex items-center justify-center">
-                      <Bot className="w-5 h-5 text-white" />
+                      {message.id.startsWith("typing_") && !message.content ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      ) : (
+                        <Bot className="w-5 h-5 text-white" />
+                      )}
                     </div>
                   )}
 
@@ -517,13 +554,39 @@ function ChatPageContent() {
                     }`}
                   >
                     {message.role === "assistant" ? (
-                      <MarkdownRenderer content={message.content} />
+                      message.id.startsWith("typing_") && !message.content ? (
+                        <div className="flex items-center space-x-2">
+                          <div className="flex space-x-1">
+                            <div
+                              className="w-2 h-2 bg-orange-400 rounded-full animate-bounce"
+                              style={{ animationDelay: "0ms" }}
+                            ></div>
+                            <div
+                              className="w-2 h-2 bg-orange-400 rounded-full animate-bounce"
+                              style={{ animationDelay: "150ms" }}
+                            ></div>
+                            <div
+                              className="w-2 h-2 bg-orange-400 rounded-full animate-bounce"
+                              style={{ animationDelay: "300ms" }}
+                            ></div>
+                          </div>
+                          <span className="text-sm text-gray-400">
+                            Thinking...
+                          </span>
+                        </div>
+                      ) : (
+                        <MarkdownRenderer content={message.content} />
+                      )
                     ) : (
                       <p className="whitespace-pre-wrap">{message.content}</p>
                     )}
-                    <p className="text-xs mt-2 opacity-70">
-                      {message.timestamp.toLocaleTimeString()}
-                    </p>
+                    {!(
+                      message.id.startsWith("typing_") && !message.content
+                    ) && (
+                      <p className="text-xs mt-2 opacity-70">
+                        {message.timestamp.toLocaleTimeString()}
+                      </p>
+                    )}
                   </div>
 
                   {message.role === "user" && (

@@ -851,7 +851,31 @@ class ForgexApiClient {
       }>;
     }>
   > {
-    return this.request(`/chat/sessions/all/${workflowId}`);
+    // For now, let's get a single session and create a sessions array from it
+    const singleSession = await this.getChatSession(workflowId);
+    if (singleSession.success && singleSession.data) {
+      return {
+        success: true,
+        data: {
+          sessions: [
+            {
+              id: singleSession.data.sessionId,
+              workflowId: workflowId,
+              workflowName: "Current Session",
+              messages: singleSession.data.messages,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+          ],
+        },
+        status: 200,
+      };
+    }
+    return {
+      success: false,
+      data: { sessions: [] },
+      status: 404,
+    };
   }
 
   // ============================================================================
