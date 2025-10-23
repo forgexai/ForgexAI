@@ -110,6 +110,12 @@ function ChatPageContent() {
   );
 
   useEffect(() => {
+    console.debug(
+      "Messages state changed:",
+      messages.length,
+      "messages",
+      messages
+    );
     scrollToBottom();
   }, [messages]);
 
@@ -316,26 +322,134 @@ function ChatPageContent() {
           setWorkflow(response.data);
 
           if (sessionParam) {
+            console.debug("Loading session from URL parameter:", sessionParam);
             try {
               const specificSessionResp =
                 await defaultApiClient.getChatSessionById(
                   workflowId,
                   sessionParam
                 );
+              console.debug("Specific session response:", specificSessionResp);
               if (specificSessionResp.success && specificSessionResp.data) {
+                console.debug("Loading specific session:", {
+                  sessionId: sessionParam,
+                  messageCount: specificSessionResp.data.messages?.length,
+                  messages: specificSessionResp.data.messages,
+                });
+
                 setSessionId(sessionParam);
-                setMessages(
-                  specificSessionResp.data.messages.map((m: any) => ({
+                const mappedMessages = specificSessionResp.data.messages.map(
+                  (m: any) => ({
                     ...m,
                     timestamp: new Date(m.timestamp),
-                  }))
+                  })
+                );
+
+                console.debug("Mapped messages:", mappedMessages);
+                setMessages(mappedMessages);
+                console.debug(
+                  "Messages state should now be:",
+                  mappedMessages.length,
+                  "messages"
                 );
                 setRemainingCredits(
                   specificSessionResp.data.remainingCredits || 0
                 );
                 try {
+                  console.debug(
+                    "Loading message feedback for session:",
+                    sessionParam
+                  );
                   const fb = await defaultApiClient.getMessageFeedback(
                     sessionParam
+                  );
+                  console.debug("Message feedback response:", fb);
+                  if (fb.success && fb.data) {
+                    console.debug(
+                      "Setting message feedback:",
+                      fb.data.feedback
+                    );
+                    setMessageFeedback(fb.data.feedback);
+                  }
+                } catch (e) {
+                  console.warn("Failed to load message feedback:", e);
+                }
+                try {
+                  await fetchChatSessions();
+                } catch (e) {
+                  /* ignore */
+                }
+                return;
+              } else {
+                // If specific session not found, stay with the session from URL but show error
+                console.warn(
+                  `Session ${sessionParam} not found, creating new session with this ID`
+                );
+                setSessionId(sessionParam);
+                const welcomeMessage: Message = {
+                  id: `msg_${Date.now()}`,
+                  role: "assistant",
+                  content: `Hi! I'm your agent for "${response.data.name}". How can I help you today?`,
+                  timestamp: new Date(),
+                };
+                setMessages([welcomeMessage]);
+                try {
+                  await defaultApiClient.saveChatSession({
+                    workflowId,
+                    sessionId: sessionParam,
+                    messages: [welcomeMessage],
+                  });
+                } catch (e) {
+                  console.warn("Failed to save new session:", e);
+                }
+                try {
+                  await fetchChatSessions();
+                } catch (e) {
+                  /* ignore */
+                }
+                return;
+              }
+            } catch (e) {
+              console.warn("Failed to load session from URL parameter:", e);
+              // Even if there's an error, keep the session ID from URL
+              setSessionId(sessionParam);
+              const welcomeMessage: Message = {
+                id: `msg_${Date.now()}`,
+                role: "assistant",
+                content: `Hi! I'm your agent for "${response.data.name}". How can I help you today?`,
+                timestamp: new Date(),
+              };
+              setMessages([welcomeMessage]);
+              return;
+            }
+          }
+
+          // Only try to load latest session if NO session was specified in URL
+          if (!sessionParam) {
+            console.debug("No session param, loading latest session");
+            try {
+              const sessionResponse = await defaultApiClient.getChatSession(
+                workflowId
+              );
+
+              if (sessionResponse.success && sessionResponse.data?.sessionId) {
+                const loadedSessionId = sessionResponse.data.sessionId;
+                setSessionId(loadedSessionId);
+                setMessages(
+                  sessionResponse.data.messages.map((m: any) => ({
+                    ...m,
+                    timestamp: new Date(m.timestamp),
+                  }))
+                );
+                setRemainingCredits(sessionResponse.data.remainingCredits || 0);
+
+                // Update URL with the loaded session
+                router.replace(
+                  `/chat?workflow=${workflowId}&session=${loadedSessionId}`
+                );
+                try {
+                  const fb = await defaultApiClient.getMessageFeedback(
+                    loadedSessionId
                   );
                   if (fb.success && fb.data)
                     setMessageFeedback(fb.data.feedback);
@@ -347,52 +461,44 @@ function ChatPageContent() {
                 } catch (e) {
                   /* ignore */
                 }
-                return;
+              } else {
+                const newSessionId = `session_${Date.now()}_${Math.random()
+                  .toString(36)
+                  .substr(2, 9)}`;
+                setSessionId(newSessionId);
+
+                const welcomeMessage: Message = {
+                  id: `msg_${Date.now()}`,
+                  role: "assistant",
+                  content: `Hi! I'm your agent for "${response.data.name}". How can I help you today?`,
+                  timestamp: new Date(),
+                };
+                setMessages([welcomeMessage]);
+
+                router.replace(
+                  `/chat?workflow=${workflowId}&session=${newSessionId}`
+                );
+                try {
+                  await defaultApiClient.saveChatSession({
+                    workflowId,
+                    sessionId: newSessionId,
+                    messages: [welcomeMessage],
+                  });
+                } catch (e) {
+                  console.warn("Failed to save new session:", e);
+                }
+                try {
+                  await fetchChatSessions();
+                } catch (e) {
+                  /* ignore */
+                }
               }
             } catch (e) {
-              console.warn("Failed to load session from URL parameter:", e);
-            }
-          }
-
-          try {
-            const sessionResponse = await defaultApiClient.getChatSession(
-              workflowId
-            );
-
-            if (sessionResponse.success && sessionResponse.data?.sessionId) {
-              const loadedSessionId = sessionResponse.data.sessionId;
-              setSessionId(loadedSessionId);
-              setMessages(
-                sessionResponse.data.messages.map((m: any) => ({
-                  ...m,
-                  timestamp: new Date(m.timestamp),
-                }))
-              );
-              setRemainingCredits(sessionResponse.data.remainingCredits || 0);
-
-              // Update URL with the loaded session
-              router.replace(
-                `/chat?workflow=${workflowId}&session=${loadedSessionId}`
-              );
-              try {
-                const fb = await defaultApiClient.getMessageFeedback(
-                  loadedSessionId
-                );
-                if (fb.success && fb.data) setMessageFeedback(fb.data.feedback);
-              } catch (e) {
-                /* ignore feedback load errors */
-              }
-              try {
-                await fetchChatSessions();
-              } catch (e) {
-                /* ignore */
-              }
-            } else {
+              console.warn("Failed to restore session, creating new one");
               const newSessionId = `session_${Date.now()}_${Math.random()
                 .toString(36)
                 .substr(2, 9)}`;
               setSessionId(newSessionId);
-
               const welcomeMessage: Message = {
                 id: `msg_${Date.now()}`,
                 role: "assistant",
@@ -400,45 +506,14 @@ function ChatPageContent() {
                 timestamp: new Date(),
               };
               setMessages([welcomeMessage]);
-
               router.replace(
                 `/chat?workflow=${workflowId}&session=${newSessionId}`
               );
-              try {
-                await defaultApiClient.saveChatSession({
-                  workflowId,
-                  sessionId: newSessionId,
-                  messages: [welcomeMessage],
-                });
-              } catch (e) {
-                console.warn("Failed to save new session:", e);
-              }
               try {
                 await fetchChatSessions();
               } catch (e) {
                 /* ignore */
               }
-            }
-          } catch (e) {
-            console.warn("Failed to restore session, creating new one");
-            const newSessionId = `session_${Date.now()}_${Math.random()
-              .toString(36)
-              .substr(2, 9)}`;
-            setSessionId(newSessionId);
-            const welcomeMessage: Message = {
-              id: `msg_${Date.now()}`,
-              role: "assistant",
-              content: `Hi! I'm your agent for "${response.data.name}". How can I help you today?`,
-              timestamp: new Date(),
-            };
-            setMessages([welcomeMessage]);
-            router.replace(
-              `/chat?workflow=${workflowId}&session=${newSessionId}`
-            );
-            try {
-              await fetchChatSessions();
-            } catch (e) {
-              /* ignore */
             }
           }
         } else {
