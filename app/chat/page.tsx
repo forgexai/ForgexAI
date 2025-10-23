@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Bot, User, Loader2 } from "lucide-react";
+import { MarkdownRenderer } from "@/components/ui/Chat/markdown-renderer";
 
 interface Message {
   id: string;
@@ -36,6 +37,7 @@ function ChatPageContent() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [sessionId, setSessionId] = useState<string>("");
+  const [remainingCredits, setRemainingCredits] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -99,19 +101,30 @@ function ChatPageContent() {
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInput("");
     setSending(true);
 
     try {
+      // Add a typing placeholder message so UI shows assistant typing
+      const typingId = `typing_${Date.now()}`;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: typingId,
+          role: "assistant",
+          content: "",
+          timestamp: new Date(),
+        },
+      ]);
+
       // Use the API client for proper auth handling
       const response = await defaultApiClient.chatCompletion({
-        messages: messages
-          .map((m) => ({
-            role: m.role,
-            content: m.content,
-          }))
-          .concat([{ role: "user", content: userMessage.content }]),
+        messages: updatedMessages.map((m) => ({
+          role: m.role,
+          content: m.content,
+        })),
         agentId: workflowId ?? undefined,
         sessionId,
         workflowContext: {
@@ -121,15 +134,54 @@ function ChatPageContent() {
         },
       });
 
-      if (response.success && response.data?.message) {
-        const assistantMessage: Message = {
-          id: `msg_${Date.now()}`,
-          role: "assistant",
-          content: response.data.message,
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, assistantMessage]);
+      if (response.success) {
+        // update conversation/session id if backend returned one
+        const respData: any = response.data || {};
+        if (respData.conversationId) {
+          setSessionId(respData.conversationId);
+        }
+        if (respData.remainingCredits !== undefined) {
+          setRemainingCredits(respData.remainingCredits);
+        }
+
+        // extract assistant text from different possible shapes
+        let assistantText = "";
+        if (typeof respData.message === "string") {
+          assistantText = respData.message;
+        } else if (respData.choices && respData.choices[0]) {
+          assistantText =
+            respData.choices[0].message?.content ||
+            respData.choices[0].text ||
+            "";
+        } else if (respData.choicesText) {
+          assistantText = respData.choicesText;
+        }
+
+        // Animate typing by updating the placeholder message incrementally
+        const chars = assistantText.split("");
+        chars.forEach((_, i) => {
+          setTimeout(() => {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === typingId
+                  ? { ...m, content: assistantText.slice(0, i + 1) }
+                  : m
+              )
+            );
+          }, 15 * i);
+        });
+
+        // After animation completes, replace placeholder id with a stable id
+        setTimeout(() => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === typingId ? { ...m, id: `msg_${Date.now()}` } : m
+            )
+          );
+        }, 15 * chars.length + 100);
       } else {
+        // Remove typing placeholder and report error
+        setMessages((prev) => prev.filter((m) => !m.id.startsWith("typing_")));
         toast.error(response.error || "Failed to get response");
       }
     } catch (error) {
@@ -180,9 +232,16 @@ function ChatPageContent() {
           <div className="flex items-center justify-between max-w-6xl mx-auto">
             <div>
               <h1 className="text-xl font-semibold">{workflow.name}</h1>
-              <p className="text-sm text-gray-400">
-                {workflow.description || "Chat with your workflow agent"}
-              </p>
+              <div className="flex items-center space-x-4">
+                <p className="text-sm text-gray-400">
+                  {workflow.description || "Chat with your workflow agent"}
+                </p>
+                {remainingCredits !== null && (
+                  <div className="text-sm text-yellow-300 bg-gray-800 px-2 py-1 rounded">
+                    Credits: {remainingCredits}
+                  </div>
+                )}
+              </div>
             </div>
             <Button
               variant="outline"
@@ -217,7 +276,11 @@ function ChatPageContent() {
                       : "bg-[#1A1B23] border border-white/10 text-gray-100"
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{message.content}</p>
+                  {message.role === "assistant" ? (
+                    <MarkdownRenderer content={message.content} />
+                  ) : (
+                    <p className="whitespace-pre-wrap">{message.content}</p>
+                  )}
                   <p className="text-xs mt-2 opacity-70">
                     {message.timestamp.toLocaleTimeString()}
                   </p>

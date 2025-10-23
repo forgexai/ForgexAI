@@ -786,7 +786,14 @@ class ForgexApiClient {
     sessionId?: string;
     workflowContext?: any;
     model?: string;
-  }): Promise<ApiResponse<{ message: string }>> {
+  }): Promise<
+    ApiResponse<{
+      message?: string;
+      conversationId?: string;
+      remainingCredits?: number;
+      choices?: any;
+    }>
+  > {
     return this.request("/chat/completion", {
       method: "POST",
       body: JSON.stringify(params),
