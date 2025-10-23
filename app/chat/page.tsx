@@ -18,8 +18,10 @@ import {
   MessageSquare,
   Plus,
   ChevronRight,
+  ChevronLeft,
   ThumbsUp,
   ThumbsDown,
+  Clock4,
 } from "lucide-react";
 import { MarkdownRenderer } from "@/components/ui/Chat/markdown-renderer";
 import { cn } from "@/lib/utils";
@@ -59,7 +61,7 @@ function ChatPageContent() {
   const [typingIndicator, setTypingIndicator] = useState(false);
   const [messageFeedback, setMessageFeedback] = useState<
     Record<string, string>
-  >({});
+  >({}); // Always initialized as empty object
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fetchSessionsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isFetchingSessionsRef = useRef(false);
@@ -202,6 +204,91 @@ function ChatPageContent() {
     [sessionId]
   );
 
+  const fetchChatSessions = useCallback(async () => {
+    if (!workflowId) return;
+
+    const requestKey = `fetch-sessions-${workflowId}`;
+    console.debug("fetchChatSessions: start", {
+      workflowId,
+      requestKey,
+      currentRequests: Array.from(currentRequestsRef.current),
+    });
+    if (
+      isFetchingSessionsRef.current ||
+      currentRequestsRef.current.has(requestKey)
+    ) {
+      console.debug("fetchChatSessions: skipped due to existing request", {
+        requestKey,
+        isFetching: isFetchingSessionsRef.current,
+      });
+      return;
+    }
+
+    // Clear any pending timeout
+    if (fetchSessionsTimeoutRef.current) {
+      clearTimeout(fetchSessionsTimeoutRef.current);
+    }
+
+    isFetchingSessionsRef.current = true;
+    currentRequestsRef.current.add(requestKey);
+    setLoadingSessions(true);
+
+    try {
+      refreshApiClientAuth();
+      const response = await defaultApiClient.getAllChatSessions(workflowId);
+
+      if (response.success) {
+        const sessionsCandidate =
+          response.data?.sessions ?? (response.data as any)?.data?.sessions;
+        const sessionsRaw = Array.isArray(sessionsCandidate)
+          ? sessionsCandidate
+          : [];
+
+        const mapped = sessionsRaw.map((session: any) => ({
+          id: String(session.id || session.sessionId || ""),
+          workflowId: String(session.workflowId || workflowId || ""),
+          workflowName: session.workflowName || session.workflowName || "",
+          createdAt: session.createdAt
+            ? new Date(session.createdAt)
+            : new Date(),
+          updatedAt: session.updatedAt
+            ? new Date(session.updatedAt)
+            : session.createdAt
+            ? new Date(session.createdAt)
+            : new Date(),
+          messages: Array.isArray(session.messages)
+            ? session.messages.map((m: any) => ({
+                id: String(m.id || ""),
+                role: m.role || "assistant",
+                content: m.content || "",
+                timestamp: m.timestamp ? new Date(m.timestamp) : new Date(),
+              }))
+            : [],
+        }));
+
+        console.debug("fetchChatSessions: received", {
+          count: mapped.length,
+          ids: mapped.map((s) => s.id),
+          rawCount: sessionsRaw.length,
+          rawSample: sessionsRaw[0],
+        });
+
+        setChatSessions(mapped);
+        console.debug("fetchChatSessions: setChatSessions ->", mapped.length);
+      } else {
+        setChatSessions([]);
+      }
+    } catch (error) {
+      console.warn("Failed to fetch chat sessions:", error);
+      setChatSessions([]);
+    } finally {
+      console.debug("fetchChatSessions: finally", { requestKey });
+      isFetchingSessionsRef.current = false;
+      currentRequestsRef.current.delete(requestKey);
+      setLoadingSessions(false);
+    }
+  }, [workflowId]);
+
   useEffect(() => {
     const loadWorkflow = async () => {
       if (!workflowId) {
@@ -210,7 +297,6 @@ function ChatPageContent() {
         return;
       }
 
-      // Prevent duplicate workflow loads
       const requestKey = `workflow-${workflowId}`;
       if (
         isLoadingWorkflowRef.current ||
@@ -229,10 +315,8 @@ function ChatPageContent() {
         if (response.success && response.data) {
           setWorkflow(response.data);
 
-          // If session ID is in URL, try to load that specific session first
           if (sessionParam) {
             try {
-              // call API directly to avoid extra deps
               const specificSessionResp =
                 await defaultApiClient.getChatSessionById(
                   workflowId,
@@ -258,6 +342,11 @@ function ChatPageContent() {
                 } catch (e) {
                   /* ignore feedback load errors */
                 }
+                try {
+                  await fetchChatSessions();
+                } catch (e) {
+                  /* ignore */
+                }
                 return;
               }
             } catch (e) {
@@ -265,7 +354,6 @@ function ChatPageContent() {
             }
           }
 
-          // Try to restore the most recent session from backend
           try {
             const sessionResponse = await defaultApiClient.getChatSession(
               workflowId
@@ -294,8 +382,12 @@ function ChatPageContent() {
               } catch (e) {
                 /* ignore feedback load errors */
               }
+              try {
+                await fetchChatSessions();
+              } catch (e) {
+                /* ignore */
+              }
             } else {
-              // create new session inline
               const newSessionId = `session_${Date.now()}_${Math.random()
                 .toString(36)
                 .substr(2, 9)}`;
@@ -309,7 +401,6 @@ function ChatPageContent() {
               };
               setMessages([welcomeMessage]);
 
-              // Update URL and save session
               router.replace(
                 `/chat?workflow=${workflowId}&session=${newSessionId}`
               );
@@ -322,10 +413,14 @@ function ChatPageContent() {
               } catch (e) {
                 console.warn("Failed to save new session:", e);
               }
+              try {
+                await fetchChatSessions();
+              } catch (e) {
+                /* ignore */
+              }
             }
           } catch (e) {
             console.warn("Failed to restore session, creating new one");
-            // fallback: create new session (minimal)
             const newSessionId = `session_${Date.now()}_${Math.random()
               .toString(36)
               .substr(2, 9)}`;
@@ -340,6 +435,11 @@ function ChatPageContent() {
             router.replace(
               `/chat?workflow=${workflowId}&session=${newSessionId}`
             );
+            try {
+              await fetchChatSessions();
+            } catch (e) {
+              /* ignore */
+            }
           }
         } else {
           toast.error("Failed to load workflow");
@@ -354,64 +454,7 @@ function ChatPageContent() {
       }
     };
     loadWorkflow();
-  }, [workflowId, sessionParam, router]);
-
-  // Note: Session saving is now handled by the backend after chat completion
-  // This prevents multiple saves and ensures both user and assistant messages are saved together
-
-  // Fetch all chat sessions for the current workflow
-  const fetchChatSessions = useCallback(async () => {
-    if (!workflowId) return;
-
-    // Prevent duplicate simultaneous requests
-    const requestKey = `fetch-sessions-${workflowId}`;
-    if (
-      isFetchingSessionsRef.current ||
-      currentRequestsRef.current.has(requestKey)
-    ) {
-      return;
-    }
-
-    // Clear any pending timeout
-    if (fetchSessionsTimeoutRef.current) {
-      clearTimeout(fetchSessionsTimeoutRef.current);
-    }
-
-    isFetchingSessionsRef.current = true;
-    currentRequestsRef.current.add(requestKey);
-    setLoadingSessions(true);
-
-    try {
-      refreshApiClientAuth();
-      const response = await defaultApiClient.getAllChatSessions(workflowId);
-
-      if (response.success && response.data?.sessions) {
-        setChatSessions(
-          response.data.sessions.map((session: any) => ({
-            ...session,
-            createdAt: new Date(session.createdAt),
-            updatedAt: new Date(session.updatedAt || session.createdAt),
-            messages: session.messages.map((m: any) => ({
-              ...m,
-              timestamp: new Date(m.timestamp),
-            })),
-          }))
-        );
-      } else {
-        // No sessions found
-        setChatSessions([]);
-      }
-    } catch (error) {
-      console.warn("Failed to fetch chat sessions:", error);
-      setChatSessions([]);
-    } finally {
-      isFetchingSessionsRef.current = false;
-      currentRequestsRef.current.delete(requestKey);
-      setLoadingSessions(false);
-    }
-  }, [workflowId]);
-
-  // Create a new chat session
+  }, [workflowId, sessionParam, router, fetchChatSessions]);
   const createNewChatSession = useCallback(() => {
     if (!workflow) return;
 
@@ -420,7 +463,6 @@ function ChatPageContent() {
       .substr(2, 9)}`;
     setSessionId(newSessionId);
 
-    // Add welcome message
     const welcomeMessage: Message = {
       id: `msg_${Date.now()}`,
       role: "assistant",
@@ -501,12 +543,9 @@ function ChatPageContent() {
       });
 
       if (response.success) {
-        // update conversation/session id if backend returned one
+        // Update remaining credits but DO NOT change session ID
+        // The conversationId from chat completion is different from our session management
         const respData: any = response.data || {};
-        if (respData.conversationId) {
-          setSessionId(respData.conversationId);
-          updateSessionInUrl(respData.conversationId);
-        }
         if (respData.remainingCredits !== undefined) {
           setRemainingCredits(respData.remainingCredits);
         }
@@ -546,6 +585,9 @@ function ChatPageContent() {
             const updatedMessages = prev.map((m) =>
               m.id === typingId ? { ...m, id: stableId } : m
             );
+
+            // Save session with updated messages
+            saveSessionToBackend(sessionId, updatedMessages);
 
             // Debounced session refresh to prevent multiple calls
             if (fetchSessionsTimeoutRef.current) {
@@ -612,130 +654,157 @@ function ChatPageContent() {
     <AuthGuard>
       <div className="flex h-screen bg-[#0A0B0F] text-white">
         {/* Sidebar */}
+
         <div
-          className={`fixed md:relative inset-y-0 left-0 z-50 w-80 border-r border-white/10 bg-[#0f1014] transform transition-transform duration-300 ease-in-out ${
-            sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-          }`}
+          className={`fixed md:relative inset-y-0 left-0 z-50 border-r border-white/10 bg-[#0f1014] transform transition-all duration-300 ease-in-out ${
+            sidebarOpen
+              ? "w-80 translate-x-0"
+              : "w-0 md:w-0 -translate-x-full md:translate-x-0"
+          } ${!sidebarOpen && "md:border-r-0"}`}
         >
-          <div className="flex items-center justify-between p-4 border-b border-white/10">
-            <h2 className="text-lg font-semibold">Chat History</h2>
-            <div className="flex items-center space-x-2">
-              {/* Desktop collapse button */}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSidebarOpen(false)}
-                className="hidden md:flex"
-                title="Collapse sidebar"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </Button>
-              {/* Mobile close button */}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSidebarOpen(false)}
-                className="md:hidden"
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-          </div>
+          {sidebarOpen && (
+            <>
+              <div className="flex items-center justify-between p-4 border-b border-white/10">
+                <h2 className="text-lg font-semibold">Chat History</h2>
+                <div className="flex items-center space-x-2">
+                  {/* Desktop toggle: show left chevron when closed (expand), right when open (collapse) */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                    className="hidden md:flex"
+                    title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+                  >
+                    {!sidebarOpen ? (
+                      <ChevronRight className="w-5 h-5 transition-transform duration-200" />
+                    ) : (
+                      <ChevronLeft className="w-5 h-5 transition-transform duration-200" />
+                    )}
+                  </Button>
 
-          <div className="p-4">
-            <Button
-              variant="outline"
-              className="w-full flex items-center text-black justify-center gap-2 mb-2 border-white/20 hover:border-white/40"
-              onClick={createNewChatSession}
-            >
-              <Plus className="w-4 h-4" />
-              New Chat
-            </Button>
-
-            <Button
-              variant="ghost"
-              className="w-full flex items-center  justify-center gap-2 mb-4 text-gray-400 hover:text-black cursor-pointer hover:bg-gray-500"
-              onClick={fetchChatSessions}
-              disabled={loadingSessions}
-            >
-              {loadingSessions ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <MessageSquare className="w-4 h-4" />
-              )}
-              Load Chat History
-            </Button>
-
-            {loadingSessions ? (
-              <div className="flex justify-center py-4">
-                <Loader2 className="w-6 h-6 animate-spin text-orange-400" />
+                  {/* Mobile toggle: show X when open, Menu when closed */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                    className="md:hidden"
+                    title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+                  >
+                    {sidebarOpen ? (
+                      <X className="w-5 h-5 transition-transform duration-200" />
+                    ) : (
+                      <Menu className="w-5 h-5 transition-transform duration-200" />
+                    )}
+                  </Button>
+                </div>
               </div>
-            ) : (
-              <div className="space-y-2 max-h-[calc(100vh-200px)] overflow-y-auto">
-                {chatSessions.length === 0 ? (
-                  <p className="text-center text-gray-500 py-4">
-                    No chat history found
-                  </p>
+
+              <div className="p-4">
+                <Button
+                  variant="outline"
+                  className="w-full flex items-center text-black justify-center gap-2 mb-2 border-white/20 hover:border-white/40"
+                  onClick={createNewChatSession}
+                >
+                  <Plus className="w-4 h-4" />
+                  New Chat
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  className="w-full flex items-center  justify-center gap-2 mb-4 text-gray-400 hover:text-black cursor-pointer hover:bg-gray-500"
+                  onClick={fetchChatSessions}
+                  disabled={loadingSessions}
+                >
+                  {loadingSessions ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <MessageSquare className="w-4 h-4" />
+                  )}
+                  Load Chat History
+                </Button>
+
+                {loadingSessions ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="w-6 h-6 animate-spin text-orange-400" />
+                  </div>
                 ) : (
-                  chatSessions.map((session) => (
-                    <div
-                      key={session.id}
-                      className={`p-3 rounded-md cursor-pointer flex items-center justify-between ${
-                        sessionId === session.id
-                          ? "bg-orange-500/20 border border-orange-500/40"
-                          : "hover:bg-white/5 border border-transparent"
-                      }`}
-                      onClick={() => switchChatSession(session)}
-                    >
-                      <div className="flex items-center space-x-3 overflow-hidden">
-                        <MessageSquare className="w-5 h-5 flex-shrink-0 text-gray-400" />
-                        <div className="overflow-hidden">
-                          <p className="font-medium truncate">
-                            {session.messages[0]?.content.slice(0, 30) ||
-                              "New chat"}
-                          </p>
-                          <p className="text-xs text-gray-400 truncate">
-                            {new Date(session.updatedAt).toLocaleString()}
-                          </p>
+                  <div className="space-y-2 max-h-[calc(100vh-200px)] overflow-y-auto">
+                    {chatSessions.length === 0 ? (
+                      <p className="text-center text-gray-500 py-4">
+                        No chat history found
+                      </p>
+                    ) : (
+                      chatSessions.map((session) => (
+                        <div
+                          key={session.id}
+                          className={`p-3 rounded-md cursor-pointer flex items-center justify-between ${
+                            sessionId === session.id
+                              ? "bg-orange-500/20 border border-orange-500/40"
+                              : "hover:bg-white/5 border border-transparent"
+                          }`}
+                          onClick={() => switchChatSession(session)}
+                        >
+                          <div className="flex items-center space-x-3 overflow-hidden">
+                            <MessageSquare className="w-5 h-5 flex-shrink-0 text-gray-400" />
+                            <div className="overflow-hidden">
+                              <p className="font-medium truncate">
+                                {session.messages[0]?.content.slice(0, 30) ||
+                                  "New chat"}
+                              </p>
+                              <p className="text-xs text-gray-400 truncate">
+                                {new Date(session.updatedAt).toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                          {sessionId === session.id && (
+                            <ChevronRight className="w-5 h-5 text-orange-500" />
+                          )}
                         </div>
-                      </div>
-                      {sessionId === session.id && (
-                        <ChevronRight className="w-5 h-5 text-orange-500" />
-                      )}
-                    </div>
-                  ))
+                      ))
+                    )}
+                  </div>
                 )}
               </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
 
-        <div className="flex flex-col flex-1 h-full">
+        <div className="flex flex-col flex-1 h-full transition-[margin] duration-300 ease-in-out">
           {/* Header */}
-          <div className="border-b border-white/10 bg-[#1A1B23] px-6 py-4">
-            <div className="flex items-center justify-between max-w-6xl mx-auto">
+
+          <div className="border-b flex w-full border-white/10 bg-[#1A1B23] px-6 py-4">
+            {!sidebarOpen && (
+              <div className="flex items-center gap-3">
+                <Clock4 className="w-5 h-5" />
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="mr-2 hidden  md:flex"
+                  title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </Button>
+              </div>
+            )}
+            <div className="flex items-center justify-between max-w-6xl  w-full">
               <div className="flex items-center">
-                {/* Mobile menu button */}
+                {/* Mobile menu button: Menu when closed, X when open */}
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setSidebarOpen(!sidebarOpen)}
                   className="mr-2 md:hidden"
+                  title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
                 >
-                  <Menu className="w-5 h-5" />
-                </Button>
-                {/* Desktop expand button (when sidebar is collapsed) */}
-                {!sidebarOpen && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setSidebarOpen(true)}
-                    className="mr-2 hidden md:flex"
-                    title="Expand sidebar"
-                  >
+                  {sidebarOpen ? (
+                    <X className="w-5 h-5" />
+                  ) : (
                     <Menu className="w-5 h-5" />
-                  </Button>
-                )}
+                  )}
+                </Button>
+
                 <div>
                   <h1 className="text-xl font-semibold">{workflow.name}</h1>
                   <div className="flex items-center space-x-4">
@@ -837,7 +906,7 @@ function ChatPageContent() {
                             }
                             className={cn(
                               "h-6 w-6 p-0",
-                              messageFeedback[message.id] === "like"
+                              messageFeedback?.[message.id] === "like"
                                 ? "text-green-500 bg-green-500/10"
                                 : "text-gray-400 hover:text-green-500"
                             )}
@@ -852,7 +921,7 @@ function ChatPageContent() {
                             }
                             className={cn(
                               "h-6 w-6 p-0",
-                              messageFeedback[message.id] === "unlike"
+                              messageFeedback?.[message.id] === "unlike"
                                 ? "text-red-500 bg-red-500/10"
                                 : "text-gray-400 hover:text-red-500"
                             )}
