@@ -86,11 +86,12 @@ export function DeployWorkflowModal({
 
       let response;
       if (platform === "telegram") {
+        // Let the backend generate the webhook URL automatically
         response = await defaultApiClient.deployTelegramBot({
           workflowId,
           botToken: botToken.trim(),
           botName: botName.trim(),
-          webhookUrl: `https://your-domain.com/webhook`,
+          // Remove the hardcoded webhookUrl - let backend generate it
           commands: [],
           allowedUsers: [],
         });
