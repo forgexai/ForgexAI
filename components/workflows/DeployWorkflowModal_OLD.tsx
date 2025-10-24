@@ -30,7 +30,6 @@ import {
   Phone,
   CheckCircle,
   Copy,
-  HelpCircle,
 } from "lucide-react";
 import {
   Tooltip,
@@ -259,68 +258,6 @@ export function DeployWorkflowModal({
         return <Phone className="w-4 h-4" />;
       default:
         return <Bot className="w-4 h-4" />;
-    }
-  };
-
-  const getPlatformHelpInstructions = (platform: string) => {
-    switch (platform) {
-      case "telegram":
-        return {
-          title: "Telegram Bot Setup Instructions",
-          steps: [
-            "Create a bot using @BotFather on Telegram",
-            "Send /newbot to @BotFather and choose a name and username for your bot",
-            "Copy the bot token provided by @BotFather",
-            "Paste the bot token in the form above and deploy",
-            "After deployment, configure the webhook URL in your Telegram app settings",
-            "Test your bot by sending a message to it on Telegram",
-          ],
-        };
-      case "discord":
-        return {
-          title: "Discord Bot Setup Instructions",
-          steps: [
-            "Go to Discord Developer Portal (https://discord.com/developers/applications)",
-            "Create a new application and go to the 'Bot' section",
-            "Click 'Add Bot' and copy the bot token",
-            "Get your server's Guild ID (enable Developer Mode in Discord settings)",
-            "Optionally get a specific Channel ID where the bot should respond",
-            "Invite the bot to your server with appropriate permissions",
-            "Deploy the bot and configure the webhook URL",
-            "Test by mentioning the bot or using commands in Discord",
-          ],
-        };
-      case "slack":
-        return {
-          title: "Slack Bot Setup Instructions",
-          steps: [
-            "Go to Slack API website (https://api.slack.com/apps)",
-            "Create a new Slack app for your workspace",
-            "Go to 'OAuth & Permissions' and copy the Bot User OAuth Token (xoxb-...)",
-            "Add necessary bot token scopes (chat:write, app_mentions:read, etc.)",
-            "Install the app to your workspace",
-            "Optionally get a specific Channel ID where the bot should respond",
-            "Deploy the bot and configure the webhook URL in Event Subscriptions",
-            "Test by mentioning the bot or sending DMs in Slack",
-          ],
-        };
-      case "whatsapp":
-        return {
-          title: "WhatsApp Business API Setup Instructions",
-          steps: [
-            "Set up a Meta Developer account and create an app",
-            "Add WhatsApp Business API product to your app",
-            "Get your Access Token from the app dashboard",
-            "Get your Phone Number ID from WhatsApp Business API settings",
-            "Configure your business profile and verify your phone number",
-            "Deploy the bot and configure the webhook URL in Meta dashboard",
-            "Set up webhook verification and subscribe to message events",
-            "Test by sending messages to your WhatsApp Business number",
-            "Note: Production use requires Meta approval for your app",
-          ],
-        };
-      default:
-        return { title: "Setup Instructions", steps: [] };
     }
   };
 
@@ -623,64 +560,11 @@ export function DeployWorkflowModal({
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="bg-[#1A1B23] border-white/10 text-white max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center ">
-            <div className="flex items-center space-x-2">
-              {getPlatformIcon(platform)}
-              <span>
-                {deploymentSuccess
-                  ? "Deployment Successful!"
-                  : "Deploy Workflow"}
-              </span>
-            </div>
-            {!deploymentSuccess && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 text-gray-400 hover:text-white hover:bg-white/10"
-                    >
-                      <HelpCircle className="w-4 h-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent
-                    side="left"
-                    className="bg-[#1A1B23] border-white/10 text-white max-w-md p-4"
-                  >
-                    <div className="space-y-3">
-                      <h4 className="font-semibold text-sm">
-                        {getPlatformHelpInstructions(platform).title}
-                      </h4>
-                      <div className="space-y-2">
-                        {getPlatformHelpInstructions(platform).steps.map(
-                          (step, index) => (
-                            <div
-                              key={index}
-                              className="flex items-start space-x-2 text-xs"
-                            >
-                              <span className="flex-shrink-0 w-4 h-4 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] font-bold mt-0.5">
-                                {index + 1}
-                              </span>
-                              <span className="text-gray-300 leading-relaxed">
-                                {step}
-                              </span>
-                            </div>
-                          )
-                        )}
-                      </div>
-                      <div className="mt-3 p-2 bg-blue-900/20 border border-blue-500/20 rounded text-xs">
-                        <p className="text-blue-400 font-medium">💡 Tip:</p>
-                        <p className="text-gray-300 mt-1">
-                          After deployment, you&apos;ll get a webhook URL to
-                          configure in your {platform} app settings.
-                        </p>
-                      </div>
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
+          <DialogTitle className="flex items-center space-x-2">
+            {getPlatformIcon(platform)}
+            <span>
+              {deploymentSuccess ? "Deployment Successful!" : "Deploy Workflow"}
+            </span>
           </DialogTitle>
           <DialogDescription className="text-gray-400">
             {deploymentSuccess
