@@ -3,13 +3,14 @@
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { AuthLoader } from "./AuthLoader";
 
 interface AuthGuardProps {
   children: React.ReactNode;
 }
 
 export function AuthGuard({ children }: AuthGuardProps) {
-  const { ready, authenticated } = usePrivyAuth();
+  const { ready, authenticated, forgexAuth } = usePrivyAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -17,6 +18,10 @@ export function AuthGuard({ children }: AuthGuardProps) {
       router.push('/');
     }
   }, [ready, authenticated, router]);
+
+  if (forgexAuth.isLoading) {
+    return <AuthLoader />;
+  }
 
   if (!ready) {
     return (

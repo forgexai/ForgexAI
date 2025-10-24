@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { nodesAtom, edgesAtom } from "@/lib/state/atoms";
+import { nodesAtom, edgesAtom, workflowNameAtom } from "@/lib/state/atoms";
 import { defaultApiClient } from "@/lib/api-utils";
 import { toast } from "sonner";
 import { Save, Download, ChevronLeft } from "lucide-react";
@@ -31,13 +31,12 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
   const router = useRouter();
   const [nodes] = useAtom(nodesAtom);
   const [edges] = useAtom(edgesAtom);
+  const [workflowName, setWorkflowName] = useAtom(workflowNameAtom);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [workflowDescription, setWorkflowDescription] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [workflowName, setWorkflowName] = useState("Untitled Workflow");
   const [isEditingName, setIsEditingName] = useState(false);
-  const [newWorkflowName, setNewWorkflowName] = useState("Untitled Workflow");
   const { authenticated } = usePrivyAuth();
 
   useEffect(() => {
@@ -108,7 +107,7 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
   };
 
   const handleCreateWorkflow = async () => {
-    if (!newWorkflowName.trim()) {
+    if (!workflowName.trim()) {
       toast.error("Please enter a workflow name");
       return;
     }
@@ -214,7 +213,7 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
       }));
 
       const workflowData = {
-        name: newWorkflowName,
+        name: workflowName,
         description: workflowDescription || `A workflow created on ${new Date().toLocaleDateString()}`,
         nodes: transformedNodes,
         connections: transformedConnections,
@@ -230,7 +229,7 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
       if (response.success) {
         toast.success("Workflow created successfully!");
         setIsCreateModalOpen(false);
-        setNewWorkflowName("Untitled Workflow");
+        setWorkflowName("Untitled Workflow");
         setWorkflowDescription("");
         router.push('/workflows');
       } else {
@@ -252,6 +251,11 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
 
     if (!workflowName.trim()) {
       toast.error("Please enter a workflow name");
+      return;
+    }
+
+    if (nodes.length === 0) {
+      toast.error("Please add nodes to your workflow before saving");
       return;
     }
 
@@ -477,7 +481,7 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
             <Button
               size="sm"
               onClick={() => {
-                setNewWorkflowName(isTemplateMode ? "Template Workflow" : "Untitled Workflow");
+                setWorkflowName(isTemplateMode ? "Template Workflow" : "Untitled Workflow");
                 setIsCreateModalOpen(true);
               }}
               disabled={!authenticated}
@@ -508,8 +512,8 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
               </Label>
               <Input
                 id="workflow-name"
-                value={newWorkflowName}
-                onChange={(e) => setNewWorkflowName(e.target.value)}
+                value={workflowName}
+                onChange={(e) => setWorkflowName(e.target.value)}
                 placeholder="Enter workflow name"
                 className="bg-[#0B0C10] border-gray-700 text-white"
               />
@@ -538,7 +542,7 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
             </Button>
             <Button
               onClick={handleCreateWorkflow}
-              disabled={isCreating || !newWorkflowName.trim()}
+              disabled={isCreating || !workflowName.trim() || nodes.length === 0}
               className="bg-gradient-to-r from-[#ff6b35] to-[#f7931e] text-white hover:opacity-90 cursor-pointer"
             >
               {isCreating ? "Creating..." : (isTemplateMode ? "Save as Workflow" : "Create Workflow")}

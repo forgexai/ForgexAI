@@ -170,14 +170,14 @@ export function DashboardLayout({
 
         {/* Settings Section */}
         <div className="p-4 border-t border-white/10 space-y-2">
-          <Button
+          {/* <Button
             variant="ghost"
             size="sm"
             className="w-full justify-start cursor-pointer text-white"
           >
             <Settings className="w-4 h-4 mr-3" />
             Settings
-          </Button>
+          </Button> */}
           <Button
             variant="ghost"
             size="sm"
