@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,7 +23,7 @@ import { usePrivyAuth } from "@/hooks/usePrivyAuth";
 import { defaultApiClient } from "@/lib/api-utils";
 import { refreshApiClientAuth } from "@/lib/auth-utils";
 import { toast } from "sonner";
-import { Loader2, Bot, MessageSquare } from "lucide-react";
+import { Loader2, Bot, MessageSquare, Phone, CheckCircle } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -38,6 +38,13 @@ interface DeployWorkflowModalProps {
   workflowName: string;
 }
 
+interface ExistingDeployment {
+  id: string;
+  platform: string;
+  status: string;
+  name: string;
+}
+
 export function DeployWorkflowModal({
   isOpen,
   onClose,
@@ -47,10 +54,51 @@ export function DeployWorkflowModal({
   const [platform, setPlatform] = useState<
     "telegram" | "discord" | "slack" | "whatsapp"
   >("telegram");
-  const [deploymentName, setDeploymentName] = useState("");
   const [botToken, setBotToken] = useState("");
+  const [accessToken, setAccessToken] = useState("");
+  const [phoneNumberId, setPhoneNumberId] = useState("");
+  const [channelId, setChannelId] = useState("");
+  const [guildId, setGuildId] = useState("");
   const [isDeploying, setIsDeploying] = useState(false);
+  const [existingDeployments, setExistingDeployments] = useState<ExistingDeployment[]>([]);
+  const [isLoadingDeployments, setIsLoadingDeployments] = useState(false);
   const { forgexAuth } = usePrivyAuth();
+
+  const fetchExistingDeployments = useCallback(async () => {
+    try {
+      setIsLoadingDeployments(true);
+      refreshApiClientAuth();
+      
+      const response = await defaultApiClient.getWorkflowDeployments(workflowId);
+      if (response.success && response.data) {
+        setExistingDeployments(
+          response.data.deployments.map(d => ({
+            id: d.id,
+            platform: d.platform,
+            status: d.status,
+            name: d.name
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Error fetching deployments:", error);
+    } finally {
+      setIsLoadingDeployments(false);
+    }
+  }, [workflowId]);
+
+  // Fetch existing deployments when modal opens
+  useEffect(() => {
+    if (isOpen && workflowId) {
+      fetchExistingDeployments();
+    }
+  }, [isOpen, workflowId, fetchExistingDeployments]);
+
+  const isActivePlatform = (platformName: string) => {
+    return existingDeployments.some(
+      d => d.platform === platformName && d.status === "active"
+    );
+  };
 
   const handleDeploy = async () => {
     if (!forgexAuth.isAuthenticated) {
@@ -58,14 +106,30 @@ export function DeployWorkflowModal({
       return;
     }
 
-    if (!deploymentName.trim()) {
-      toast.error("Please enter a deployment name");
+    // Check if platform is already deployed
+    if (isActivePlatform(platform)) {
+      toast.error(`A ${platform} bot is already active for this workflow`);
       return;
     }
 
-    // For Telegram, only validate bot token
+    // Validate platform-specific fields
     if (platform === "telegram" && !botToken.trim()) {
       toast.error("Please enter bot token for Telegram");
+      return;
+    }
+    
+    if (platform === "discord" && !botToken.trim()) {
+      toast.error("Please enter bot token for Discord");
+      return;
+    }
+    
+    if (platform === "slack" && !botToken.trim()) {
+      toast.error("Please enter bot token for Slack");
+      return;
+    }
+    
+    if (platform === "whatsapp" && (!accessToken.trim() || !phoneNumberId.trim())) {
+      toast.error("Please enter access token and phone number ID for WhatsApp");
       return;
     }
 
@@ -74,12 +138,9 @@ export function DeployWorkflowModal({
       refreshApiClientAuth();
 
       let response;
-      if (platform === "telegram") {
-        // Auto-generate deployment name and bot name
-        const autoDeploymentName =
-          deploymentName.trim() || `${workflowName}-bot`;
-        const autoBotName = `${workflowName} Bot`;
+      const autoBotName = `${workflowName} Bot`;
 
+      if (platform === "telegram") {
         response = await defaultApiClient.deployTelegramBot({
           workflowId,
           botToken: botToken.trim(),
@@ -87,27 +148,49 @@ export function DeployWorkflowModal({
           commands: [],
           allowedUsers: [],
         });
-      } else {
-        // For other platforms (discord, slack)
-        const config: any = {};
-
-        response = await defaultApiClient.deployWorkflow({
+      } else if (platform === "discord") {
+        response = await defaultApiClient.deployDiscordBot({
           workflowId,
-          name: deploymentName.trim() || `${workflowName}-deployment`,
-          platform,
-          config,
+          botToken: botToken.trim(),
+          botName: autoBotName,
+          guildId: guildId.trim() || undefined,
+          channelId: channelId.trim() || undefined,
+          commands: [],
+          allowedUsers: [],
+        });
+      } else if (platform === "slack") {
+        response = await defaultApiClient.deploySlackBot({
+          workflowId,
+          botToken: botToken.trim(),
+          botName: autoBotName,
+          channelId: channelId.trim() || undefined,
+          commands: [],
+          allowedUsers: [],
+        });
+      } else if (platform === "whatsapp") {
+        response = await defaultApiClient.deployWhatsAppBot({
+          workflowId,
+          accessToken: accessToken.trim(),
+          phoneNumberId: phoneNumberId.trim(),
+          botName: autoBotName,
+          allowedNumbers: [],
         });
       }
 
-      if (response.success) {
-        toast.success("Workflow deployed successfully!");
+      if (response?.success) {
+        toast.success(`${platform.charAt(0).toUpperCase() + platform.slice(1)} bot deployed successfully!`);
         onClose();
         // Reset form
-        setDeploymentName("");
         setBotToken("");
+        setAccessToken("");
+        setPhoneNumberId("");
+        setChannelId("");
+        setGuildId("");
         setPlatform("telegram");
+        // Refresh deployments
+        fetchExistingDeployments();
       } else {
-        toast.error(response.error || "Failed to deploy workflow");
+        toast.error(response?.error || "Failed to deploy workflow");
       }
     } catch (error) {
       console.error("Error deploying workflow:", error);
@@ -126,7 +209,7 @@ export function DeployWorkflowModal({
       case "slack":
         return <MessageSquare className="w-4 h-4" />;
       case "whatsapp":
-        return <MessageSquare className="w-4 h-4" />;
+        return <Phone className="w-4 h-4" />;
       default:
         return <Bot className="w-4 h-4" />;
     }
@@ -149,18 +232,87 @@ export function DeployWorkflowModal({
         );
       case "discord":
         return (
-          <div className="space-y-2">
-            <p className="text-sm text-gray-400">
-              Discord integration coming soon...
-            </p>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="discordBotToken">Bot Token</Label>
+              <Input
+                id="discordBotToken"
+                placeholder="Enter your Discord bot token"
+                value={botToken}
+                onChange={(e) => setBotToken(e.target.value)}
+                className="bg-[#0B0C10] border-white/10"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="guildId">Guild ID (Optional)</Label>
+              <Input
+                id="guildId"
+                placeholder="Enter Discord server/guild ID"
+                value={guildId}
+                onChange={(e) => setGuildId(e.target.value)}
+                className="bg-[#0B0C10] border-white/10"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="channelId">Channel ID (Optional)</Label>
+              <Input
+                id="channelId"
+                placeholder="Enter Discord channel ID"
+                value={channelId}
+                onChange={(e) => setChannelId(e.target.value)}
+                className="bg-[#0B0C10] border-white/10"
+              />
+            </div>
           </div>
         );
       case "slack":
         return (
-          <div className="space-y-2">
-            <p className="text-sm text-gray-400">
-              Slack integration coming soon...
-            </p>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="slackBotToken">Bot Token</Label>
+              <Input
+                id="slackBotToken"
+                placeholder="Enter your Slack bot token (xoxb-...)"
+                value={botToken}
+                onChange={(e) => setBotToken(e.target.value)}
+                className="bg-[#0B0C10] border-white/10"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="slackChannelId">Channel ID (Optional)</Label>
+              <Input
+                id="slackChannelId"
+                placeholder="Enter Slack channel ID"
+                value={channelId}
+                onChange={(e) => setChannelId(e.target.value)}
+                className="bg-[#0B0C10] border-white/10"
+              />
+            </div>
+          </div>
+        );
+      case "whatsapp":
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="accessToken">Access Token</Label>
+              <Input
+                id="accessToken"
+                placeholder="Enter WhatsApp Business API access token"
+                value={accessToken}
+                onChange={(e) => setAccessToken(e.target.value)}
+                className="bg-[#0B0C10] border-white/10"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phoneNumberId">Phone Number ID</Label>
+              <Input
+                id="phoneNumberId"
+                placeholder="Enter WhatsApp Business phone number ID"
+                value={phoneNumberId}
+                onChange={(e) => setPhoneNumberId(e.target.value)}
+                className="bg-[#0B0C10] border-white/10"
+              />
+            </div>
           </div>
         );
 
@@ -195,84 +347,86 @@ export function DeployWorkflowModal({
               <SelectContent className="bg-[#1A1B23] border-white/10">
                 <SelectItem
                   value="telegram"
-                  className="text-white hover:bg-white/10"
+                  className={`text-white hover:bg-white/10 ${isActivePlatform("telegram") ? "opacity-50" : ""}`}
+                  disabled={isActivePlatform("telegram")}
                 >
-                  <div className="flex items-center space-x-2">
-                    <Bot className="w-4 h-4" />
-                    <span>Telegram</span>
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center space-x-2">
+                      <Bot className="w-4 h-4" />
+                      <span>Telegram</span>
+                    </div>
+                    {isActivePlatform("telegram") && (
+                      <div className="flex items-center space-x-1 text-green-500">
+                        <CheckCircle className="w-3 h-3" />
+                        <span className="text-xs">Active</span>
+                      </div>
+                    )}
                   </div>
                 </SelectItem>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <SelectItem
-                        value="discord"
-                        className="text-white hover:bg-white/10 cursor-not-allowed opacity-50"
-                        disabled
-                      >
-                        <div className="flex items-center space-x-2">
-                          <MessageSquare className="w-4 h-4" />
-                          <span>Discord</span>
-                        </div>
-                      </SelectItem>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Coming Soon</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <SelectItem
-                        value="slack"
-                        className="text-white hover:bg-white/10 cursor-not-allowed opacity-50"
-                        disabled
-                      >
-                        <div className="flex items-center space-x-2">
-                          <MessageSquare className="w-4 h-4" />
-                          <span>Slack</span>
-                        </div>
-                      </SelectItem>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Coming Soon</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <SelectItem
-                        value="slack"
-                        className="text-white hover:bg-white/10 cursor-not-allowed opacity-50"
-                        disabled
-                      >
-                        <div className="flex items-center space-x-2">
-                          <MessageSquare className="w-4 h-4" />
-                          <span>Whatsapp</span>
-                        </div>
-                      </SelectItem>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Coming Soon</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <SelectItem
+                  value="discord"
+                  className={`text-white hover:bg-white/10 ${isActivePlatform("discord") ? "opacity-50" : ""}`}
+                  disabled={isActivePlatform("discord")}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center space-x-2">
+                      <MessageSquare className="w-4 h-4" />
+                      <span>Discord</span>
+                    </div>
+                    {isActivePlatform("discord") && (
+                      <div className="flex items-center space-x-1 text-green-500">
+                        <CheckCircle className="w-3 h-3" />
+                        <span className="text-xs">Active</span>
+                      </div>
+                    )}
+                  </div>
+                </SelectItem>
+                <SelectItem
+                  value="slack"
+                  className={`text-white hover:bg-white/10 ${isActivePlatform("slack") ? "opacity-50" : ""}`}
+                  disabled={isActivePlatform("slack")}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center space-x-2">
+                      <MessageSquare className="w-4 h-4" />
+                      <span>Slack</span>
+                    </div>
+                    {isActivePlatform("slack") && (
+                      <div className="flex items-center space-x-1 text-green-500">
+                        <CheckCircle className="w-3 h-3" />
+                        <span className="text-xs">Active</span>
+                      </div>
+                    )}
+                  </div>
+                </SelectItem>
+                <SelectItem
+                  value="whatsapp"
+                  className={`text-white hover:bg-white/10 ${isActivePlatform("whatsapp") ? "opacity-50" : ""}`}
+                  disabled={isActivePlatform("whatsapp")}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center space-x-2">
+                      <Phone className="w-4 h-4" />
+                      <span>WhatsApp</span>
+                    </div>
+                    {isActivePlatform("whatsapp") && (
+                      <div className="flex items-center space-x-1 text-green-500">
+                        <CheckCircle className="w-3 h-3" />
+                        <span className="text-xs">Active</span>
+                      </div>
+                    )}
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="deploymentName">Deployment Name</Label>
-            <Input
-              id="deploymentName"
-              placeholder="Enter a name for this deployment"
-              value={deploymentName}
-              onChange={(e) => setDeploymentName(e.target.value)}
-              className="bg-[#0B0C10] border-white/10"
-            />
-          </div>
+          {isLoadingDeployments && (
+            <div className="flex items-center space-x-2 text-sm text-gray-400">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Loading existing deployments...</span>
+            </div>
+          )}
 
           {renderPlatformFields()}
         </div>
@@ -288,13 +442,18 @@ export function DeployWorkflowModal({
           </Button>
           <Button
             onClick={handleDeploy}
-            disabled={isDeploying}
-            className="bg-gradient-to-r from-[#ff6b35] to-[#f7931e] hover:opacity-90 cursor-pointer"
+            disabled={isDeploying || isActivePlatform(platform)}
+            className="bg-gradient-to-r from-[#ff6b35] to-[#f7931e] hover:opacity-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isDeploying ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Deploying...
+              </>
+            ) : isActivePlatform(platform) ? (
+              <>
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Active
               </>
             ) : (
               "Deploy"

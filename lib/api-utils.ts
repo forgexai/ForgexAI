@@ -603,6 +603,49 @@ class ForgexApiClient {
     });
   }
 
+  async deployDiscordBot(params: {
+    workflowId: string;
+    botToken: string;
+    botName: string;
+    guildId?: string;
+    channelId?: string;
+    commands?: any[];
+    allowedUsers?: string[];
+  }): Promise<ApiResponse<DeploymentConfig & { botInfo: any }>> {
+    return this.request("/deployments/discord", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+  }
+
+  async deploySlackBot(params: {
+    workflowId: string;
+    botToken: string;
+    botName: string;
+    channelId?: string;
+    commands?: any[];
+    allowedUsers?: string[];
+  }): Promise<ApiResponse<DeploymentConfig & { botInfo: any }>> {
+    return this.request("/deployments/slack", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+  }
+
+  async deployWhatsAppBot(params: {
+    workflowId: string;
+    accessToken: string;
+    phoneNumberId: string;
+    botName: string;
+    webhookVerifyToken?: string;
+    allowedNumbers?: string[];
+  }): Promise<ApiResponse<DeploymentConfig & { botInfo: any }>> {
+    return this.request("/deployments/whatsapp", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+  }
+
   async getDeployments(params?: {
     platform?: string;
     status?: string;
@@ -621,6 +664,14 @@ class ForgexApiClient {
     if (params?.offset) queryParams.set("offset", params.offset.toString());
 
     return this.request(`/deployments?${queryParams}`);
+  }
+
+  async getWorkflowDeployments(workflowId: string): Promise<
+    ApiResponse<{
+      deployments: DeploymentConfig[];
+    }>
+  > {
+    return this.request(`/deployments/workflow/${workflowId}`);
   }
 
   async controlDeployment(
@@ -643,7 +694,11 @@ class ForgexApiClient {
     platform: "telegram" | "discord" | "slack" | "whatsapp" | "webhook";
     config: {
       botToken?: string;
+      accessToken?: string;
+      phoneNumberId?: string;
       chatId?: string;
+      channelId?: string;
+      guildId?: string;
       webhookUrl?: string;
       [key: string]: any;
     };
