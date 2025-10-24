@@ -60,7 +60,9 @@ export function DeployWorkflowModal({
   const [channelId, setChannelId] = useState("");
   const [guildId, setGuildId] = useState("");
   const [isDeploying, setIsDeploying] = useState(false);
-  const [existingDeployments, setExistingDeployments] = useState<ExistingDeployment[]>([]);
+  const [existingDeployments, setExistingDeployments] = useState<
+    ExistingDeployment[]
+  >([]);
   const [isLoadingDeployments, setIsLoadingDeployments] = useState(false);
   const { forgexAuth } = usePrivyAuth();
 
@@ -68,15 +70,17 @@ export function DeployWorkflowModal({
     try {
       setIsLoadingDeployments(true);
       refreshApiClientAuth();
-      
-      const response = await defaultApiClient.getWorkflowDeployments(workflowId);
+
+      const response = await defaultApiClient.getWorkflowDeployments(
+        workflowId
+      );
       if (response.success && response.data) {
         setExistingDeployments(
-          response.data.deployments.map(d => ({
+          response.data.deployments.map((d) => ({
             id: d.id,
             platform: d.platform,
             status: d.status,
-            name: d.name
+            name: d.name,
           }))
         );
       }
@@ -96,7 +100,7 @@ export function DeployWorkflowModal({
 
   const isActivePlatform = (platformName: string) => {
     return existingDeployments.some(
-      d => d.platform === platformName && d.status === "active"
+      (d) => d.platform === platformName && d.status === "active"
     );
   };
 
@@ -117,18 +121,21 @@ export function DeployWorkflowModal({
       toast.error("Please enter bot token for Telegram");
       return;
     }
-    
+
     if (platform === "discord" && !botToken.trim()) {
       toast.error("Please enter bot token for Discord");
       return;
     }
-    
+
     if (platform === "slack" && !botToken.trim()) {
       toast.error("Please enter bot token for Slack");
       return;
     }
-    
-    if (platform === "whatsapp" && (!accessToken.trim() || !phoneNumberId.trim())) {
+
+    if (
+      platform === "whatsapp" &&
+      (!accessToken.trim() || !phoneNumberId.trim())
+    ) {
       toast.error("Please enter access token and phone number ID for WhatsApp");
       return;
     }
@@ -178,7 +185,11 @@ export function DeployWorkflowModal({
       }
 
       if (response?.success) {
-        toast.success(`${platform.charAt(0).toUpperCase() + platform.slice(1)} bot deployed successfully!`);
+        toast.success(
+          `${
+            platform.charAt(0).toUpperCase() + platform.slice(1)
+          } bot deployed successfully!`
+        );
         onClose();
         // Reset form
         setBotToken("");
@@ -347,7 +358,9 @@ export function DeployWorkflowModal({
               <SelectContent className="bg-[#1A1B23] border-white/10">
                 <SelectItem
                   value="telegram"
-                  className={`text-white hover:bg-white/10 ${isActivePlatform("telegram") ? "opacity-50" : ""}`}
+                  className={`text-white hover:bg-white/10 ${
+                    isActivePlatform("telegram") ? "opacity-50" : ""
+                  }`}
                   disabled={isActivePlatform("telegram")}
                 >
                   <div className="flex items-center justify-between w-full">
@@ -365,7 +378,9 @@ export function DeployWorkflowModal({
                 </SelectItem>
                 <SelectItem
                   value="discord"
-                  className={`text-white hover:bg-white/10 ${isActivePlatform("discord") ? "opacity-50" : ""}`}
+                  className={`text-white hover:bg-white/10 ${
+                    isActivePlatform("discord") ? "opacity-50" : ""
+                  }`}
                   disabled={isActivePlatform("discord")}
                 >
                   <div className="flex items-center justify-between w-full">
@@ -383,7 +398,9 @@ export function DeployWorkflowModal({
                 </SelectItem>
                 <SelectItem
                   value="slack"
-                  className={`text-white hover:bg-white/10 ${isActivePlatform("slack") ? "opacity-50" : ""}`}
+                  className={`text-white hover:bg-white/10 ${
+                    isActivePlatform("slack") ? "opacity-50" : ""
+                  }`}
                   disabled={isActivePlatform("slack")}
                 >
                   <div className="flex items-center justify-between w-full">
@@ -401,7 +418,9 @@ export function DeployWorkflowModal({
                 </SelectItem>
                 <SelectItem
                   value="whatsapp"
-                  className={`text-white hover:bg-white/10 ${isActivePlatform("whatsapp") ? "opacity-50" : ""}`}
+                  className={`text-white hover:bg-white/10 ${
+                    isActivePlatform("whatsapp") ? "opacity-50" : ""
+                  }`}
                   disabled={isActivePlatform("whatsapp")}
                 >
                   <div className="flex items-center justify-between w-full">
