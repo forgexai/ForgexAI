@@ -10,8 +10,8 @@ export function AuthLoader() {
           <Image
             src="/logo.jpg"
             alt="ForgeX"
-            width={100}
-            height={100}
+            width={80}
+            height={80}
             className="animate-spin"
             style={{ animationDuration: '2s' }}
           />

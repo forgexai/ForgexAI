@@ -7,7 +7,7 @@ import { defaultApiClient } from "@/lib/api-utils";
 import { refreshApiClientAuth } from "@/lib/auth-utils";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Send,
   Bot,
@@ -22,6 +22,7 @@ import {
   ThumbsUp,
   ThumbsDown,
   Clock4,
+  ArrowLeft,
 } from "lucide-react";
 import { MarkdownRenderer } from "@/components/ui/Chat/markdown-renderer";
 import { cn } from "@/lib/utils";
@@ -63,6 +64,7 @@ function ChatPageContent() {
     Record<string, string>
   >({}); // Always initialized as empty object
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fetchSessionsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isFetchingSessionsRef = useRef(false);
   const isLoadingWorkflowRef = useRef(false);
@@ -71,6 +73,13 @@ function ChatPageContent() {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const autoResizeTextarea = () => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 128)}px`;
+    }
   };
 
   // Update URL when session changes
@@ -118,6 +127,10 @@ function ChatPageContent() {
     );
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    autoResizeTextarea();
+  }, [input]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -771,10 +784,19 @@ function ChatPageContent() {
     }
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    autoResizeTextarea();
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
+    if (e.key === "Enter") {
+      if (e.shiftKey) {
+        return;
+      } else {
+        e.preventDefault();
+        handleSendMessage();
+      }
     }
   };
 
@@ -926,23 +948,23 @@ function ChatPageContent() {
           {/* Header */}
 
           <div className="border-b flex w-full border-white/10 bg-[#1A1B23] px-6 py-4">
-            {!sidebarOpen && (
-              <div className="flex items-center gap-3">
-                <Clock4 className="w-5 h-5" />
-
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className="mr-2 hidden  md:flex"
-                  title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </Button>
-              </div>
-            )}
-            <div className="flex items-center justify-between max-w-6xl  w-full">
+            <div className="flex items-center justify-between w-full">
               <div className="flex items-center">
+                {!sidebarOpen && (
+                  <div className="flex items-center gap-3 mr-4">
+                    <Clock4 className="w-5 h-5" />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setSidebarOpen(!sidebarOpen)}
+                      className="hidden md:flex"
+                      title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </Button>
+                  </div>
+                )}
+
                 {/* Mobile menu button: Menu when closed, X when open */}
                 <Button
                   variant="ghost"
@@ -972,11 +994,13 @@ function ChatPageContent() {
                   </div>
                 </div>
               </div>
+              
               <Button
                 variant="outline"
                 onClick={() => (window.location.href = "/workflows")}
-                className="border-gray-700 text-black cursor-pointer"
+                className="border-gray-700 text-black cursor-pointer flex items-center gap-2 cursor-pointer"
               >
+                <ArrowLeft className="!w-4 !h-4" />
                 Back to Workflows
               </Button>
             </div>
@@ -1097,27 +1121,49 @@ function ChatPageContent() {
           </div>
 
           {/* Input */}
-          <div className="border-t border-white/10 bg-[#1A1B23] px-6 py-4">
-            <div className="max-w-4xl mx-auto flex items-center space-x-3">
-              <Input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Type your message..."
-                disabled={sending}
-                className="flex-1 bg-[#0A0B0F] border-white/10 text-white placeholder:text-gray-500 focus:border-orange-500"
-              />
-              <Button
-                onClick={handleSendMessage}
-                disabled={sending || !input.trim()}
-                className="bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-600 hover:to-orange-700 disabled:opacity-50"
-              >
-                {sending ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Send className="w-5 h-5" />
-                )}
-              </Button>
+          <div className="border-t border-white/10 bg-gradient-to-r from-[#1A1B23] to-[#0f1014] px-6 py-6">
+            <div className="max-w-4xl mx-auto">
+              <div className="relative">
+                <div className="flex items-end space-x-3 bg-[#0A0B0F]/50 backdrop-blur-sm border border-white/10 rounded-2xl p-4 shadow-lg hover:border-white/20 transition-all duration-200">
+                  <div className="flex-1">
+                    <Textarea
+                      ref={textareaRef}
+                      value={input}
+                      onChange={handleInputChange}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Type your message..."
+                      disabled={sending}
+                      className="w-full bg-transparent border-0 text-white placeholder:text-gray-400 focus:ring-0 focus:outline-none focus:border-0 focus:shadow-none text-base resize-none min-h-[24px] max-h-32 overflow-hidden shadow-none"
+                      style={{ minHeight: '24px', maxHeight: '128px', border: 'none', outline: 'none', boxShadow: 'none' }}
+                      rows={1}
+                    />
+                    <div className="flex items-center justify-between mt-2">
+                      <p className="text-xs text-gray-500">
+                        Press Enter to send, Shift+Enter for new line
+                      </p>
+                      <div className="flex items-center space-x-2">
+                        {remainingCredits !== null && (
+                          <div className="text-xs text-yellow-300 bg-yellow-500/10 px-2 py-1 rounded-full">
+                            {remainingCredits} credits
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleSendMessage}
+                    disabled={sending || !input.trim()}
+                    size="lg"
+                    className="bg-gradient-to-r cursor-pointer from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-orange-500/25 transition-all duration-200 rounded-xl px-6 py-3"
+                  >
+                    {sending ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Send className="w-5 h-5" />
+                    )}
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
