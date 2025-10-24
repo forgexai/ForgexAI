@@ -3,6 +3,7 @@ import { Poppins } from "next/font/google";
 import "./globals.css";
 import ClientProvider from "@/lib/providers/ClientProvider";
 import { AuthInitializer } from "@/components/auth/AuthInitializer";
+import { GlobalAuthLoader } from "@/components/auth/GlobalAuthLoader";
 import "@/lib/suppress-privy-warnings";
 
 const poppins = Poppins({
@@ -28,6 +29,7 @@ export default function RootLayout({
       >
         <ClientProvider>
           <AuthInitializer />
+          <GlobalAuthLoader />
           {children}
         </ClientProvider>
       </body>

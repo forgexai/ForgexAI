@@ -329,21 +329,7 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
                   align="end"
                   className="bg-[#1A1B23] border-white/10"
                 >
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRunWorkflow(workflow.id);
-                    }}
-                    disabled={executingWorkflow === workflow.id}
-                    className="text-white hover:bg-white/10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {executingWorkflow === workflow.id ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <PlayIcon className="w-4 h-4 mr-2" />
-                    )}
-                    Execute
-                  </DropdownMenuItem>
+                 
                   <DropdownMenuItem
                     onClick={(e) => {
                       e.stopPropagation();

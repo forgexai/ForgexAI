@@ -6,6 +6,7 @@ export const edgesAtom = atom<Edge[]>([]);
 export const selectedNodeAtom = atom<Node | null>(null);
 export const userAtom = atom<any>(null);
 export const workspaceAtom = atom<Record<string, any>>({});
+export const workflowNameAtom = atom<string>("Untitled Workflow");
 
 export interface ForgexAuthState {
   isAuthenticated: boolean;
