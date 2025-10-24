@@ -78,14 +78,18 @@ export function usePrivyAuth() {
       environment: process.env.NODE_ENV
     });
 
-    if (!authenticated || !wallets || !wallets.length || hasAttemptedAuth || isAuthenticatingRef.current) {
+    if (!authenticated || hasAttemptedAuth || isAuthenticatingRef.current) {
       console.log('❌ Early return due to conditions:', {
         authenticated,
-        walletsLength: wallets?.length,
         hasAttemptedAuth,
         isAuthenticating: isAuthenticatingRef.current
       });
       return;
+    }
+
+    // Check if we have wallets, but don't fail if we don't - we'll try to get wallet info from user
+    if (!wallets || !wallets.length) {
+      console.log('⚠️ No wallets in array, but continuing with user account info');
     }
 
     console.log('✅ All conditions passed, proceeding with authentication');
@@ -113,12 +117,19 @@ export function usePrivyAuth() {
 
       console.log('🔍 Wallet details:', { walletAddress, walletClient });
 
-      let wallet = wallets.find((w: any) => 
-        w.address?.toLowerCase() === walletAddress.toLowerCase()
-      );
+      let wallet = null;
       
-      console.log('🔍 Found wallet in wallets array:', !!wallet);
+      // First try to find wallet in the wallets array
+      if (wallets && wallets.length > 0) {
+        wallet = wallets.find((w: any) => 
+          w.address?.toLowerCase() === walletAddress.toLowerCase()
+        );
+        console.log('🔍 Found wallet in wallets array:', !!wallet);
+      } else {
+        console.log('⚠️ Wallets array is empty, trying direct wallet access');
+      }
       
+      // If no wallet found in array, try to access Phantom directly
       if (!wallet && typeof window !== 'undefined' && (window as any).phantom?.solana) {
         console.log('🔍 Checking Phantom wallet directly');
         const phantomWallet = (window as any).phantom.solana;
@@ -140,6 +151,29 @@ export function usePrivyAuth() {
           } as any;
         } else {
           console.log('❌ Phantom wallet not connected or address mismatch');
+        }
+      }
+      
+      // If still no wallet, try to create a minimal wallet object for signing
+      if (!wallet) {
+        console.log('⚠️ No wallet found, attempting to create minimal wallet object');
+        if (typeof window !== 'undefined' && (window as any).phantom?.solana) {
+          const phantomWallet = (window as any).phantom.solana;
+          if (phantomWallet.isConnected) {
+            console.log('✅ Creating wallet object from Phantom');
+            wallet = {
+              address: walletAddress,
+              signMessage: async (message: Uint8Array) => {
+                try {
+                  const { signature } = await phantomWallet.signMessage(message, 'utf8');
+                  return signature;
+                } catch (error) {
+                  console.error('Error signing with Phantom:', error);
+                  throw error;
+                }
+              }
+            } as any;
+          }
         }
       }
       
@@ -181,28 +215,41 @@ export function usePrivyAuth() {
       }
       
       console.log('✅ Challenge generated successfully');
+      console.log('🔍 Challenge data:', challengeResponse.data);
  
+      // Get the challenge message from the backend
+      const challengeMessage = challengeResponse.data.message;
+      const challengeTimestamp = challengeResponse.data.timestamp;
+      
+      console.log('🔍 Challenge details:', {
+        challengeMessage,
+        challengeTimestamp,
+        messageLength: challengeMessage.length
+      });
+      
+      // Use the SIWS signature and message (the ones that were actually signed)
+      console.log('🔄 Using SIWS signature and message (no additional signing required)');
       const bs58 = await import('bs58');
       const signatureBytes = Buffer.from(lastSIWSData.signature, 'base64');
-      const signature = bs58.default.encode(signatureBytes);
+      const signatureString = bs58.default.encode(signatureBytes);
       
-      const issuedAtMatch = lastSIWSData.message.match(/Issued At: (.+)/);
-      const issuedAtStr = issuedAtMatch ? issuedAtMatch[1].split('\n')[0] : null;
-      const timestamp = issuedAtStr ? new Date(issuedAtStr).getTime() : Date.now();
+      const siwsMessage = lastSIWSData.message;
+      const siwsTimestamp = lastSIWSData.timestamp;
       
-      console.log('🔍 Signature processing:', {
-        originalSignature: lastSIWSData.signature,
-        processedSignature: signature,
-        timestamp,
-        message: lastSIWSData.message
+      console.log('🔍 Using SIWS signature with SIWS message:', {
+        siwsSignature: lastSIWSData.signature.substring(0, 20) + '...',
+        convertedSignature: signatureString.substring(0, 20) + '...',
+        siwsMessage: siwsMessage.substring(0, 100) + '...',
+        siwsTimestamp,
+        signatureLength: signatureString.length
       });
       
       console.log('🚀 Making API call 2: loginWithWallet');
       const loginResponse = await defaultApiClient.loginWithWallet({
         walletAddress,
-        signature,
-        message: lastSIWSData.message,
-        timestamp,
+        signature: signatureString,
+        message: siwsMessage,
+        timestamp: siwsTimestamp,
       });
 
       console.log('📡 Login response:', {
@@ -287,9 +334,31 @@ export function usePrivyAuth() {
       shouldAuthenticate: ready && authenticated && wallets && wallets.length > 0 && !hasAttemptedAuth
     });
     
-    if (ready && authenticated && wallets && wallets.length > 0 && !hasAttemptedAuth) {
-      console.log('🚀 Triggering authenticateWithForgex from useEffect');
-      authenticateWithForgex();
+    if (ready && authenticated && !hasAttemptedAuth) {
+      if (wallets && wallets.length > 0) {
+        console.log('🚀 Triggering authenticateWithForgex from useEffect - wallets available');
+        authenticateWithForgex();
+      } else {
+        console.log('⏳ Wallets not ready yet, waiting...');
+        // Add a small delay to allow wallets to load
+        const timeoutId = setTimeout(() => {
+          console.log('🔄 Retrying authentication after delay:', {
+            walletsLength: wallets?.length,
+            hasAttemptedAuth
+          });
+          if (!hasAttemptedAuth) {
+            if (wallets && wallets.length > 0) {
+              console.log('🚀 Triggering authenticateWithForgex after delay - wallets available');
+              authenticateWithForgex();
+            } else {
+              console.log('⚠️ Wallets still not available, but proceeding anyway with user account info');
+              authenticateWithForgex();
+            }
+          }
+        }, 1000);
+        
+        return () => clearTimeout(timeoutId);
+      }
     }
   }, [ready, authenticated, wallets?.length, hasAttemptedAuth, authenticateWithForgex]);
 
