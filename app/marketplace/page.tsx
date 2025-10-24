@@ -30,6 +30,7 @@ import {
   Settings,
   TrendingUp,
   Filter,
+  ArrowLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -209,7 +210,17 @@ export default function MarketplacePage() {
       <div className="min-h-screen bg-[#02021A]">
         <div className="container mx-auto px-6 py-8">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">Marketplace</h1>
+            <div className="flex items-center gap-4 mb-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.back()}
+                className="text-gray-400 hover:text-white hover:bg-white/10 p-2"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <h1 className="text-3xl font-bold text-white">Marketplace</h1>
+            </div>
             <p className="text-gray-400">Browse and install workflow templates</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -238,7 +249,17 @@ export default function MarketplacePage() {
       <div className="min-h-screen bg-[#02021A]">
         <div className="container mx-auto px-6 py-8">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">Marketplace</h1>
+            <div className="flex items-center gap-4 mb-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.back()}
+                className="text-gray-400 hover:text-white hover:bg-white/10 p-2"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <h1 className="text-3xl font-bold text-white">Marketplace</h1>
+            </div>
             <p className="text-gray-400">Browse and install workflow templates</p>
           </div>
           <Alert className="bg-red-500/10 border-red-500/20 text-red-400">
@@ -253,7 +274,17 @@ export default function MarketplacePage() {
     <div className="min-h-screen bg-[#02021A]">
       <div className="container mx-auto px-6 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Marketplace</h1>
+          <div className="flex items-center gap-4 mb-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.back()}
+              className="text-gray-400 hover:text-white hover:bg-white/10 p-2 cursor-pointer"
+            >
+              <ArrowLeft className="!w-6 !h-6" />
+            </Button>
+            <h1 className="text-3xl font-bold text-white">Marketplace</h1>
+          </div>
           <p className="text-gray-400">Browse and install workflow templates</p>
         </div>
 
@@ -348,7 +379,7 @@ export default function MarketplacePage() {
                   </div>
                   <Button
                     onClick={() => handleUseTemplate(template)}
-                    className="bg-gradient-to-r from-[#ff6b35] to-[#f7931e] hover:opacity-90 text-white cursor-pointer"
+                    className="bg-gradient-to-r mt-2 from-[#ff6b35] to-[#f7931e] hover:opacity-90 text-white cursor-pointer"
                     size="sm"
                   >
                     <Download className="w-4 h-4 mr-2" />

@@ -55,16 +55,16 @@ export default function HeroSection() {
           ease: "linear",
         }}
       />
-      <div className="relative z-10 flex flex-col-reverse md:grid md:grid-cols-2 items-center gap-6 md:gap-10 px-4 md:px-6 lg:px-12 py-8 md:py-16 min-h-screen">
-        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 shadow-lg">
-          <Badge className="mb-6">Now in Beta</Badge>
-          <h1 className="text-5xl md:text-6xl font-bold leading-tight text-white drop-shadow-xl">
+      <div className="relative z-10 flex flex-col md:grid md:grid-cols-2 items-center gap-4 md:gap-10 px-4 md:px-6 lg:px-12 py-6 md:py-16 min-h-screen">
+        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 md:p-8 shadow-lg">
+          <Badge className="mb-4 md:mb-6 text-xs md:text-sm">Now in Beta</Badge>
+          <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold leading-tight text-white drop-shadow-xl">
              Your AI Persona, Live in  <span className="text-[#ff6b35]">Minutes.</span>
           </h1>
-          <p className="text-lg md:text-xl text-gray-200 mt-4 max-w-2xl">
+          <p className="text-base sm:text-lg md:text-xl text-gray-200 mt-3 md:mt-4 max-w-2xl">
           Drag-and-drop builder for AI with persistent memory and built-in wallet. Deploy to other platforms—instantly.
           </p>
-          <div className="mt-6 h-8 overflow-hidden">
+          <div className="mt-4 md:mt-6 h-6 md:h-8 overflow-hidden">
             <AnimatePresence mode="wait">
               <motion.p
                 key={currentPhrase}
@@ -72,13 +72,13 @@ export default function HeroSection() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -50 }}
                 transition={{ duration: 0.5, ease: "easeInOut" }}
-                className="text-xl md:text-2xl font-semibold text-white"
+                className="text-lg sm:text-xl md:text-2xl font-semibold text-white"
               >
                 {phrases[currentPhrase]}
               </motion.p>
             </AnimatePresence>
           </div>
-          <div className="flex gap-4 mt-8">
+          <div className="flex flex-col sm:flex-row gap-3 md:gap-4 mt-6 md:mt-8">
             <motion.div
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -87,7 +87,7 @@ export default function HeroSection() {
                 size="lg" 
                 onClick={handleLaunchStudio}
                 disabled={!ready}
-                className="bg-gradient-to-r from-[#ff6b35] to-[#f7931e] cursor-pointer text-white border-0 hover:opacity-90"
+                className="bg-gradient-to-r from-[#ff6b35] to-[#f7931e] cursor-pointer text-white border-0 hover:opacity-90 w-full sm:w-auto text-sm md:text-base"
               >
                 Launch in minutes
               </Button>
@@ -100,14 +100,16 @@ export default function HeroSection() {
                 variant="outline" 
                 size="lg"
                 onClick={handleViewTemplates}
-                className="border-white text-black hover:text-white cursor-pointer  hover:bg-clip-text hover:bg-gradient-to-r hover:from-[#9945FF] hover:via-[#14F195] hover:to-[#00BBFF]"
+                className="border-white text-black hover:text-white cursor-pointer hover:bg-clip-text hover:bg-gradient-to-r hover:from-[#9945FF] hover:via-[#14F195] hover:to-[#00BBFF] w-full sm:w-auto text-sm md:text-base"
               >
                 View Templates
               </Button>
             </motion.div>
           </div>
         </div>
-        <WorkflowLoop />
+        <div className="w-full md:w-auto">
+          <WorkflowLoop />
+        </div>
       </div>
     </section>
   );

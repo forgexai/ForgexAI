@@ -85,7 +85,7 @@ export function DashboardLayout({
   return (
     <div className="min-h-screen bg-[#0B0C10] flex">
       {/* Sidebar */}
-      <div className="w-64 bg-[#1A1B23] border-r border-white/10 flex flex-col">
+      <div className="w-64 bg-[#1A1B23] border-r border-white/10 flex flex-col sticky top-0 h-screen">
         {/* Logo */}
         <div className="p-6 border-b border-white/10">
           <div className="flex items-center space-x-3">
