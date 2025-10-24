@@ -58,7 +58,7 @@ export default function HeroSection() {
              Your AI Persona, Live in  <span className="text-[#ff6b35]">Minutes.</span>
           </h1>
           <p className="text-lg md:text-xl text-gray-200 mt-4 max-w-2xl">
-          Drag-and-drop builder for AI with persistent memory and built-in wallet. Deploy to Telegram, Twitter, Slack—instantly.
+          Drag-and-drop builder for AI with persistent memory and built-in wallet. Deploy to other platforms—instantly.
           </p>
           <div className="mt-6 h-8 overflow-hidden">
             <AnimatePresence mode="wait">
