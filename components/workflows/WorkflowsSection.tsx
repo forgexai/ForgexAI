@@ -14,7 +14,6 @@ import { DeleteWorkflowDialog } from "@/components/workflows/DeleteWorkflowDialo
 import { ViewExecutionsModal } from "@/components/workflows/ViewExecutionsModal";
 import { ScheduleWorkflowModal } from "@/components/workflows/ScheduleWorkflowModal";
 import { DeployWorkflowModal } from "@/components/workflows/DeployWorkflowModal";
-import { ExecuteWorkflowModal } from "@/components/workflows/ExecuteWorkflowModal";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
 import { defaultApiClient } from "@/lib/api-utils";
 import { refreshApiClientAuth } from "@/lib/auth-utils";
@@ -23,8 +22,6 @@ import {
   MoreVertical,
   Edit,
   Trash2,
-  Play as PlayIcon,
-  Loader2,
   Clock,
   Calendar,
   Rocket,
@@ -82,10 +79,6 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
     id: string;
     name: string;
   } | null>(null);
-  const [executeModalOpen, setExecuteModalOpen] = useState(false);
-  const [workflowToExecute, setWorkflowToExecute] = useState<Workflow | null>(
-    null
-  );
   const { forgexAuth } = usePrivyAuth();
 
   const handleAddWorkflow = () => {
@@ -180,72 +173,6 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
     }
   };
 
-  const handleRunWorkflow = async (workflowId: string) => {
-    try {
-      refreshApiClientAuth();
-
-      // Fetch workflow details first
-      const workflowResponse = await defaultApiClient.getWorkflow(workflowId);
-
-      if (!workflowResponse.success || !workflowResponse.data) {
-        toast.error("Failed to load workflow for execution");
-        return;
-      }
-
-      // Open modal with workflow details
-      setWorkflowToExecute(workflowResponse.data);
-      setExecuteModalOpen(true);
-    } catch (error) {
-      console.error("Error loading workflow:", error);
-      toast.error("Failed to load workflow");
-    }
-  };
-
-  const executeWorkflowWithInputs = async (inputData: Record<string, any>) => {
-    if (!workflowToExecute) return;
-
-    try {
-      setExecutingWorkflow(workflowToExecute.id);
-
-      toast.loading("Starting workflow execution...", {
-        id: "workflow-execution",
-      });
-
-      const response = await defaultApiClient.executeWorkflow(
-        workflowToExecute.id,
-        inputData
-      );
-
-      if (response.success && response.data) {
-        toast.success("Workflow executed successfully!", {
-          id: "workflow-execution",
-        });
-
-        const { status, duration, results } = response.data;
-        const durationText =
-          duration < 1000
-            ? `${duration}ms`
-            : `${(duration / 1000).toFixed(1)}s`;
-
-        toast.success(
-          `Execution completed in ${durationText}. ${results.length} result${
-            results.length !== 1 ? "s" : ""
-          } generated.`,
-          { duration: 5000 }
-        );
-      } else {
-        toast.error(response.error || "Failed to execute workflow", {
-          id: "workflow-execution",
-        });
-      }
-    } catch (error) {
-      console.error("Error executing workflow:", error);
-      toast.error("Failed to execute workflow", { id: "workflow-execution" });
-    } finally {
-      setExecutingWorkflow(null);
-    }
-  };
-
   useEffect(() => {
     fetchWorkflows();
   }, []);
@@ -329,21 +256,6 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
                   align="end"
                   className="bg-[#1A1B23] border-white/10"
                 >
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRunWorkflow(workflow.id);
-                    }}
-                    disabled={executingWorkflow === workflow.id}
-                    className="text-white hover:bg-white/10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {executingWorkflow === workflow.id ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <PlayIcon className="w-4 h-4 mr-2" />
-                    )}
-                    Execute
-                  </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={(e) => {
                       e.stopPropagation();
@@ -449,14 +361,6 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
         onClose={() => setDeployModalOpen(false)}
         workflowId={workflowToDeploy?.id || ""}
         workflowName={workflowToDeploy?.name || ""}
-      />
-
-      <ExecuteWorkflowModal
-        open={executeModalOpen}
-        onOpenChange={setExecuteModalOpen}
-        workflowName={workflowToExecute?.name || ""}
-        nodes={workflowToExecute?.nodes || []}
-        onExecute={executeWorkflowWithInputs}
       />
     </>
   );

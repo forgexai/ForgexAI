@@ -640,7 +640,7 @@ class ForgexApiClient {
 
   async deployWorkflow(params: {
     workflowId: string;
-    platform: "telegram" | "discord" | "mcp" | "webhook";
+    platform: "telegram" | "discord" | "slack" | "whatsapp" | "webhook";
     config: {
       botToken?: string;
       chatId?: string;

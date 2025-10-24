@@ -23,7 +23,7 @@ import { usePrivyAuth } from "@/hooks/usePrivyAuth";
 import { defaultApiClient } from "@/lib/api-utils";
 import { refreshApiClientAuth } from "@/lib/auth-utils";
 import { toast } from "sonner";
-import { Loader2, Bot, MessageSquare, Webhook, Settings } from "lucide-react";
+import { Loader2, Bot, MessageSquare } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -45,13 +45,10 @@ export function DeployWorkflowModal({
   workflowName,
 }: DeployWorkflowModalProps) {
   const [platform, setPlatform] = useState<
-    "telegram" | "discord" | "mcp" | "webhook"
+    "telegram" | "discord" | "slack" | "whatsapp"
   >("telegram");
   const [deploymentName, setDeploymentName] = useState("");
   const [botToken, setBotToken] = useState("");
-  const [chatId, setChatId] = useState("");
-  const [botName, setBotName] = useState("");
-  const [webhookUrl, setWebhookUrl] = useState("");
   const [isDeploying, setIsDeploying] = useState(false);
   const { forgexAuth } = usePrivyAuth();
 
@@ -66,17 +63,9 @@ export function DeployWorkflowModal({
       return;
     }
 
-    // Validate platform-specific fields
-    if (
-      platform === "telegram" &&
-      (!botToken.trim() || !chatId.trim() || !botName.trim())
-    ) {
-      toast.error("Please enter bot token, chat ID, and bot name for Telegram");
-      return;
-    }
-
-    if (platform === "webhook" && !webhookUrl.trim()) {
-      toast.error("Please enter a webhook URL");
+    // For Telegram, only validate bot token
+    if (platform === "telegram" && !botToken.trim()) {
+      toast.error("Please enter bot token for Telegram");
       return;
     }
 
@@ -86,26 +75,27 @@ export function DeployWorkflowModal({
 
       let response;
       if (platform === "telegram") {
-        // Let the backend generate the webhook URL automatically
+        // Auto-generate deployment name and bot name
+        const autoDeploymentName =
+          deploymentName.trim() || `${workflowName}-bot`;
+        const autoBotName = `${workflowName} Bot`;
+
         response = await defaultApiClient.deployTelegramBot({
           workflowId,
           botToken: botToken.trim(),
-          botName: botName.trim(),
-          // Remove the hardcoded webhookUrl - let backend generate it
+          botName: autoBotName,
           commands: [],
           allowedUsers: [],
         });
       } else {
+        // For other platforms (discord, slack)
         const config: any = {};
-        if (platform === "webhook") {
-          config.webhookUrl = webhookUrl.trim();
-        }
 
         response = await defaultApiClient.deployWorkflow({
           workflowId,
+          name: deploymentName.trim() || `${workflowName}-deployment`,
           platform,
           config,
-          name: deploymentName.trim(),
         });
       }
 
@@ -115,9 +105,6 @@ export function DeployWorkflowModal({
         // Reset form
         setDeploymentName("");
         setBotToken("");
-        setChatId("");
-        setBotName("");
-        setWebhookUrl("");
         setPlatform("telegram");
       } else {
         toast.error(response.error || "Failed to deploy workflow");
@@ -136,10 +123,10 @@ export function DeployWorkflowModal({
         return <Bot className="w-4 h-4" />;
       case "discord":
         return <MessageSquare className="w-4 h-4" />;
-      case "webhook":
-        return <Webhook className="w-4 h-4" />;
-      case "mcp":
-        return <Settings className="w-4 h-4" />;
+      case "slack":
+        return <MessageSquare className="w-4 h-4" />;
+      case "whatsapp":
+        return <MessageSquare className="w-4 h-4" />;
       default:
         return <Bot className="w-4 h-4" />;
     }
@@ -149,48 +136,13 @@ export function DeployWorkflowModal({
     switch (platform) {
       case "telegram":
         return (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="botToken">Bot Token</Label>
-              <Input
-                id="botToken"
-                placeholder="Enter your Telegram bot token"
-                value={botToken}
-                onChange={(e) => setBotToken(e.target.value)}
-                className="bg-[#0B0C10] border-white/10"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="botName">Bot Name</Label>
-              <Input
-                id="botName"
-                placeholder="Enter a name for your bot"
-                value={botName}
-                onChange={(e) => setBotName(e.target.value)}
-                className="bg-[#0B0C10] border-white/10"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="chatId">Chat ID</Label>
-              <Input
-                id="chatId"
-                placeholder="Enter the chat ID to send messages to"
-                value={chatId}
-                onChange={(e) => setChatId(e.target.value)}
-                className="bg-[#0B0C10] border-white/10"
-              />
-            </div>
-          </>
-        );
-      case "webhook":
-        return (
           <div className="space-y-2">
-            <Label htmlFor="webhookUrl">Webhook URL</Label>
+            <Label htmlFor="botToken">Bot Token</Label>
             <Input
-              id="webhookUrl"
-              placeholder="https://your-webhook-url.com/endpoint"
-              value={webhookUrl}
-              onChange={(e) => setWebhookUrl(e.target.value)}
+              id="botToken"
+              placeholder="Enter your Telegram bot token"
+              value={botToken}
+              onChange={(e) => setBotToken(e.target.value)}
               className="bg-[#0B0C10] border-white/10"
             />
           </div>
@@ -198,37 +150,20 @@ export function DeployWorkflowModal({
       case "discord":
         return (
           <div className="space-y-2">
-            <Label htmlFor="botToken">Bot Token</Label>
-            <Input
-              id="botToken"
-              placeholder="Enter your Discord bot token"
-              value={botToken}
-              onChange={(e) => setBotToken(e.target.value)}
-              className="bg-[#0B0C10] border-white/10"
-            />
-            <Label htmlFor="chatId">Channel ID</Label>
-            <Input
-              id="chatId"
-              placeholder="Enter the Discord channel ID"
-              value={chatId}
-              onChange={(e) => setChatId(e.target.value)}
-              className="bg-[#0B0C10] border-white/10"
-            />
+            <p className="text-sm text-gray-400">
+              Discord integration coming soon...
+            </p>
           </div>
         );
-      case "mcp":
+      case "slack":
         return (
           <div className="space-y-2">
-            <Label htmlFor="botToken">API Key</Label>
-            <Input
-              id="botToken"
-              placeholder="Enter your MCP API key"
-              value={botToken}
-              onChange={(e) => setBotToken(e.target.value)}
-              className="bg-[#0B0C10] border-white/10"
-            />
+            <p className="text-sm text-gray-400">
+              Slack integration coming soon...
+            </p>
           </div>
         );
+
       default:
         return null;
     }
@@ -290,13 +225,13 @@ export function DeployWorkflowModal({
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <SelectItem
-                        value="webhook"
+                        value="slack"
                         className="text-white hover:bg-white/10 cursor-not-allowed opacity-50"
                         disabled
                       >
                         <div className="flex items-center space-x-2">
-                          <Webhook className="w-4 h-4" />
-                          <span>Webhook</span>
+                          <MessageSquare className="w-4 h-4" />
+                          <span>Slack</span>
                         </div>
                       </SelectItem>
                     </TooltipTrigger>
@@ -309,13 +244,13 @@ export function DeployWorkflowModal({
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <SelectItem
-                        value="mcp"
+                        value="slack"
                         className="text-white hover:bg-white/10 cursor-not-allowed opacity-50"
                         disabled
                       >
                         <div className="flex items-center space-x-2">
-                          <Settings className="w-4 h-4" />
-                          <span>MCP</span>
+                          <MessageSquare className="w-4 h-4" />
+                          <span>Whatsapp</span>
                         </div>
                       </SelectItem>
                     </TooltipTrigger>
