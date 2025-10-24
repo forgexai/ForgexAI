@@ -30,6 +30,10 @@ export default function HeroSection() {
     }
   };
 
+  const handleViewTemplates = () => {
+    router.push('/marketplace');
+  };
+
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentPhrase((prev) => (prev + 1) % phrases.length);
@@ -95,6 +99,7 @@ export default function HeroSection() {
               <Button 
                 variant="outline" 
                 size="lg"
+                onClick={handleViewTemplates}
                 className="border-white text-black hover:text-white cursor-pointer  hover:bg-clip-text hover:bg-gradient-to-r hover:from-[#9945FF] hover:via-[#14F195] hover:to-[#00BBFF]"
               >
                 View Templates
