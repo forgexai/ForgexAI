@@ -19,6 +19,7 @@ import { usePrivyAuth } from "@/hooks/usePrivyAuth";
 import { defaultApiClient } from "@/lib/api-utils";
 import { refreshApiClientAuth } from "@/lib/auth-utils";
 import { toast } from "sonner";
+import { WorkflowIllustration } from "@/components/common";
 import {
   MoreVertical,
   Edit,
@@ -269,14 +270,17 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
   if (workflows.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-        <div className="text-6xl mb-4">🤖</div>
+        <div className="mb-6">
+          <WorkflowIllustration size="md" />
+        </div>
+
         <h3 className="text-xl font-semibold mb-2">No Workflows Yet</h3>
         <p className="text-center mb-6">
           Create your first autonomous Solana agent workflow
         </p>
         <Button
           onClick={handleAddWorkflow}
-          className="bg-gradient-to-r from-[#ff6b35] to-[#f7931e] hover:opacity-90"
+          className="bg-gradient-to-r from-[#ff6b35] to-[#f7931e] hover:opacity-90 cursor-pointer"
         >
           Create Your First Workflow
         </Button>
