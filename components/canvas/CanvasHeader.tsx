@@ -400,13 +400,13 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
 
   return (
     <>
-      <div className="h-16 bg-[#1A1B23] border-b border-white/10 flex items-center justify-between px-8">
-        <div className="flex items-center gap-4">
+      <div className="h-16 bg-[#1A1B23] border-b border-white/10 flex items-center justify-between px-4 md:px-8">
+        <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
           <Button
             variant="ghost"
             size="sm"
             onClick={handleBackClick}
-            className="text-gray-400 hover:text-white hover:bg-white/10 px-3 py-2 cursor-pointer"
+            className="text-gray-400 hover:text-white hover:bg-white/10 px-2 md:px-3 py-2 cursor-pointer flex-shrink-0"
           >
             <ChevronLeft className="w-4 h-4" />
           </Button>
@@ -417,12 +417,12 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
               onChange={(e) => setWorkflowName(e.target.value)}
               onBlur={handleNameSave}
               onKeyPress={handleNameKeyPress}
-              className="bg-transparent border-none text-white font-semibold text-lg px-3 py-2 h-auto focus:ring-0 focus:border-none hover:bg-white/5 rounded"
+              className="bg-transparent border-none text-white font-semibold text-sm md:text-lg px-2 md:px-3 py-2 h-auto focus:ring-0 focus:border-none hover:bg-white/5 rounded min-w-0 flex-1"
               autoFocus
             />
           ) : (
             <h1 
-              className="text-lg font-semibold text-white cursor-pointer hover:bg-white/5 px-3 py-2 rounded transition-colors"
+              className="text-sm md:text-lg font-semibold text-white cursor-pointer hover:bg-white/5 px-2 md:px-3 py-2 rounded transition-colors truncate min-w-0 flex-1"
               onClick={handleNameEdit}
             >
               {workflowName}
@@ -430,7 +430,7 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1 md:gap-3 flex-shrink-0">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -438,7 +438,7 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
                   variant="outline"
                   size="sm"
                   onClick={handleSaveWorkflow}
-                  className="border-gray-700 text-black cursor-pointer px-4 py-2"
+                  className="border-gray-700 text-black cursor-pointer px-2 md:px-4 py-2"
                 >
                   <Save className="w-4 h-4" />
                 </Button>
@@ -456,7 +456,7 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
                   variant="outline"
                   size="sm"
                   onClick={handleLoadWorkflow}
-                  className="border-gray-700 text-black cursor-pointer px-4 py-2"
+                  className="border-gray-700 text-black cursor-pointer px-2 md:px-4 py-2"
                 >
                   <Download className="w-4 h-4" />
                 </Button>
@@ -472,10 +472,10 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
               size="sm"
               onClick={handleSaveChanges}
               disabled={!authenticated || isSaving}
-              className="bg-gradient-to-r from-green-500 to-green-600 text-white cursor-pointer hover:opacity-90"
+              className="bg-gradient-to-r from-green-500 to-green-600 text-white cursor-pointer hover:opacity-90 px-2 md:px-4"
             >
-              <Save className="w-4 h-4 mr-2" />
-              {isSaving ? "Saving..." : "Save Changes"}
+              <Save className="w-4 h-4 md:mr-2" />
+              <span className="hidden md:inline">{isSaving ? "Saving..." : "Save Changes"}</span>
             </Button>
           ) : (
             <Button
@@ -485,9 +485,10 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
                 setIsCreateModalOpen(true);
               }}
               disabled={!authenticated}
-              className="bg-gradient-to-r from-[#ff6b35] to-[#f7931e] text-white cursor-pointer hover:opacity-90"
+              className="bg-gradient-to-r from-[#ff6b35] to-[#f7931e] text-white cursor-pointer hover:opacity-90 px-2 md:px-4"
             >
-              {isTemplateMode ? "Save Template as Workflow" : "Create Workflow"}
+              <span className="hidden md:inline">{isTemplateMode ? "Save Template as Workflow" : "Create Workflow"}</span>
+              <span className="md:hidden">{isTemplateMode ? "Save" : "Create"}</span>
             </Button>
           )}
         </div>

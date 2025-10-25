@@ -609,10 +609,10 @@ export function NodeInspectorButton() {
         }}
       >
         <DialogContent
-          className="bg-[#1A1B23] border-white/10 text-white max-w-2xl max-h-[80vh] overflow-hidden"
+          className="bg-[#1A1B23] border-white/10 text-white max-w-2xl max-h-[80vh] overflow-hidden w-[95vw] sm:w-full"
           aria-describedby="node-inspector-description"
         >
-          <DialogHeader className="flex flex-row items-center justify-between pr-8">
+          <DialogHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pr-0 sm:pr-8">
             <DialogTitle>Node Inspector</DialogTitle>
             <div id="node-inspector-description" className="sr-only">
               Inspect and edit node properties including label, description, and
