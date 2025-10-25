@@ -86,8 +86,8 @@ export function FloatingToolbar() {
   };
 
   return (
-    <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10">
-      <div className="flex items-center gap-2 bg-[#1A1B23] border border-white/10 rounded-lg p-2 shadow-[0_8px_30px_rgba(0,0,0,0.4)]">
+    <div className="absolute bottom-4 md:bottom-8 left-1/2 transform -translate-x-1/2 z-10">
+      <div className="flex items-center gap-1 md:gap-2 bg-[#1A1B23] border border-white/10 rounded-lg p-1 md:p-2 shadow-[0_8px_30px_rgba(0,0,0,0.4)]">
         <Button
           variant="ghost"
           size="sm"

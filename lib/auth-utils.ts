@@ -58,7 +58,7 @@ export async function authenticateWithWallet(
     defaultApiClient.setAuthToken(response.data.sessionToken);
 
     if (typeof window !== 'undefined') {
-      sessionStorage.setItem('authToken', response.data.sessionToken);
+      localStorage.setItem('authToken', response.data.sessionToken);
     }
     
     return {
@@ -86,19 +86,19 @@ export async function logoutFromForgex(): Promise<void> {
   } finally {
     defaultApiClient.clearAuth();
     
-    // Clear session storage
+    // Clear local storage
     if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('authToken');
+      localStorage.removeItem('authToken');
     }
   }
 }
 
 /**
- * Get session token from session storage
+ * Get session token from local storage
  */
 export function getStoredSessionToken(): string | null {
   if (typeof window === 'undefined') return null;
-  return sessionStorage.getItem('authToken');
+  return localStorage.getItem('authToken');
 }
 
 /**

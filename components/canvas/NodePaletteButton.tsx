@@ -244,10 +244,10 @@ export function NodePaletteButton() {
     <>
       <Button
         onClick={() => setIsModalOpen(true)}
-        className="absolute top-4 left-4 w-14 h-14 rounded-full bg-orange-500 hover:bg-orange-600 text-white shadow-lg z-10"
+        className="absolute top-4 left-4 w-12 h-12 md:w-14 md:h-14 rounded-full bg-orange-500 hover:bg-orange-600 text-white shadow-lg z-10"
         size="icon"
       >
-        <Plus className="w-12 h-12" />
+        <Plus className="w-6 h-6 md:w-8 md:h-8" />
       </Button>
 
       {isModalOpen && (
@@ -256,7 +256,7 @@ export function NodePaletteButton() {
             className="absolute inset-0 bg-black/50 animate-in fade-in duration-200"
             onClick={() => setIsModalOpen(false)}
           />
-          <div className="relative w-80 bg-[#1A1B23] border-r border-white/10 h-full flex flex-col animate-in slide-in-from-left duration-300">
+          <div className="relative w-full sm:w-80 bg-[#1A1B23] border-r border-white/10 h-full flex flex-col animate-in slide-in-from-left duration-300">
             <div className="p-4 border-b border-white/10">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-white">Add Nodes</h2>

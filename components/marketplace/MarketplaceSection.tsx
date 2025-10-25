@@ -19,10 +19,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Star,
-  Eye,
   Download,
   Zap,
-  Users,
   Clock,
   Tag,
   Play,
@@ -108,7 +106,6 @@ export function MarketplaceSection({}: MarketplaceSectionProps) {
 
       refreshApiClientAuth();
 
-      // Only add query parameters if user has made selections
       const params: any = {
         limit: 20,
         offset: 0,
@@ -554,11 +551,11 @@ export function MarketplaceSection({}: MarketplaceSectionProps) {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <h2 className="text-2xl font-bold">Marketplace</h2>
-          <div className="flex gap-2">
-            <Skeleton className="h-10 w-32" />
-            <Skeleton className="h-10 w-32" />
+          <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+            <Skeleton className="h-10 w-full sm:w-32" />
+            <Skeleton className="h-10 w-full sm:w-32" />
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -597,14 +594,20 @@ export function MarketplaceSection({}: MarketplaceSectionProps) {
   }
 
   return (
-    <div className="space-y-6 bg-gray-950 min-h-screen p-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 bg-gray-950 min-h-screen p-4 md:p-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h2 className="text-2xl font-bold text-white">Marketplace</h2>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
-            className="px-3 py-2 border border-gray-600 rounded-md bg-gray-800 text-white"
+            className="px-3 py-2 border border-gray-600 rounded-md bg-gray-800 text-white w-full sm:w-auto appearance-none pr-10"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+              backgroundPosition: 'right 8px center',
+              backgroundRepeat: 'no-repeat',
+              backgroundSize: '16px'
+            }}
           >
             <option value="popular">Most Popular</option>
             <option value="rating">Highest Rated</option>
@@ -614,7 +617,13 @@ export function MarketplaceSection({}: MarketplaceSectionProps) {
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="px-3 py-2 border border-gray-600 rounded-md bg-gray-800 text-white"
+            className="px-3 py-2 border border-gray-600 rounded-md bg-gray-800 text-white w-full sm:w-auto appearance-none pr-10"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+              backgroundPosition: 'right 8px center',
+              backgroundRepeat: 'no-repeat',
+              backgroundSize: '16px'
+            }}
           >
             <option value="">All Categories</option>
             <option value="defi">DeFi</option>
@@ -774,7 +783,7 @@ export function MarketplaceSection({}: MarketplaceSectionProps) {
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-1 h-8">
+                    <div className="flex flex-wrap gap-1 h-8 mb-6">
                       {template.tags.slice(0, 3).map((tag) => (
                         <Badge
                           key={tag}
@@ -829,7 +838,7 @@ export function MarketplaceSection({}: MarketplaceSectionProps) {
                       </div>
                       <Button
                         size="sm"
-                        className="gap-2 bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+                        className="gap-2 bg-orange-500 hover:bg-orange-600 text-white cursor-pointer ml-1"
                         onClick={() => handleUseTemplate(template)}
                       >
                         <Play className="w-4 h-4" />

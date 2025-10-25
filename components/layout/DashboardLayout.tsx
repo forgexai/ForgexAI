@@ -6,13 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
 import { PlanPopup } from "@/components/ui/plan-popup";
+import { MobileHamburgerMenu } from "./MobileHamburgerMenu";
+import { MobileSidebar } from "./MobileSidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Workflow as WorkflowIcon,
   Clock,
   Store,
   Search,
   Plus,
-  Settings,
   LogOut,
   Sparkles,
   Rocket,
@@ -69,8 +71,10 @@ export function DashboardLayout({
   subtitle = "Manage your workflows and executions",
 }: DashboardLayoutProps) {
   const [isPlanPopupOpen, setIsPlanPopupOpen] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const router = useRouter();
   const { logout } = usePrivyAuth();
+  const isMobile = useIsMobile();
 
   const handleLogout = () => {
     logout();
@@ -84,8 +88,8 @@ export function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-[#0B0C10] flex">
-      {/* Sidebar */}
-      <div className="w-64 bg-[#1A1B23] border-r border-white/10 flex flex-col sticky top-0 h-screen">
+      {/* Desktop Sidebar */}
+      <div className="hidden md:flex w-64 bg-[#1A1B23] border-r border-white/10 flex-col sticky top-0 h-screen">
         {/* Logo */}
         <div className="p-6 border-b border-white/10">
           <div className="flex items-center space-x-3">
@@ -197,30 +201,35 @@ export function DashboardLayout({
           <div className="h-full flex flex-col">
             {/* Header */}
             <div className="px-8 py-6 flex-shrink-0">
-              <h1 className="text-3xl font-bold mb-2 text-white">{title}</h1>
-              <p className="text-gray-400">{subtitle}</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-3xl font-bold mb-2 text-white">{title}</h1>
+                  <p className="text-gray-400">{subtitle}</p>
+                </div>
+                <MobileHamburgerMenu
+                  isOpen={isMobileSidebarOpen}
+                  onToggle={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+                />
+              </div>
             </div>
 
             {/* Action Bar */}
-            <div className="px-8 pb-6 flex items-center justify-between flex-shrink-0">
-              <div className="flex items-center space-x-4">
+            <div className="px-4 md:px-8 pb-6 flex flex-col md:flex-row items-start md:items-center justify-between flex-shrink-0 gap-4">
+              <div className="flex items-center space-x-4 w-full md:w-auto">
                 {showSearch && (
-                  <>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                      <Input
-                        placeholder={searchPlaceholder}
-                        className="pl-10 w-80 bg-[#1A1B23] border-white/10"
-                      />
-                    </div>
-                    /
-                  </>
+                  <div className="relative flex-1 md:flex-none">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      placeholder={searchPlaceholder}
+                      className="pl-10 w-full md:w-80 bg-[#1A1B23] border-white/10"
+                    />
+                  </div>
                 )}
               </div>
               {onAddNew && (
                 <Button
                   onClick={onAddNew}
-                  className="bg-gradient-to-r text-white from-[#ff6b35] to-[#f7931e] hover:opacity-90 cursor-pointer"
+                  className="bg-gradient-to-r text-white from-[#ff6b35] to-[#f7931e] hover:opacity-90 cursor-pointer w-full md:w-auto"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Add New
@@ -229,10 +238,20 @@ export function DashboardLayout({
             </div>
 
             {/* Content */}
-            <div className="flex-1 px-8 overflow-y-auto">{children}</div>
+            <div className="flex-1 px-4 md:px-8 overflow-y-auto">{children}</div>
           </div>
         </div>
       </div>
+
+      {/* Mobile Sidebar */}
+      <MobileSidebar
+        isOpen={isMobileSidebarOpen}
+        onClose={() => setIsMobileSidebarOpen(false)}
+        activeSection={activeSection}
+        onSectionChange={onSectionChange}
+        userProfile={userProfile}
+        profileLoading={profileLoading}
+      />
 
       {/* Plan Popup */}
       <PlanPopup
