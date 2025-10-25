@@ -5,10 +5,18 @@ import { useEffect, useState } from "react";
 
 export default function WorkflowLoop() {
   const [isClient, setIsClient] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
+  
   const workflowNodes = [
     { id: 0, label: "On Message", angle: 0 },
     { id: 1, label: "Setup Memory", angle: 72 },
@@ -17,16 +25,16 @@ export default function WorkflowLoop() {
     { id: 4, label: "Deploy", angle: 288 },
   ];
 
-  const radius = 220;
-  const centerX = 280;
-  const centerY = 250;
+  const radius = isMobile ? 120 : 220;
+  const centerX = isMobile ? 160 : 280;
+  const centerY = isMobile ? 180 : 250;
 
   if (!isClient) {
     return (
-      <div className="relative w-full h-[420px] md:h-[500px] flex items-center justify-center">
+      <div className="relative w-full h-[300px] sm:h-[420px] md:h-[500px] flex items-center justify-center">
         <div className="relative max-w-[600px] mx-auto w-full h-full">
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-18 h-18 rounded-full bg-gradient-to-br from-[#ff6b35] to-[#f7931e] shadow-[0_0_30px_rgba(255,107,53,0.6)] flex items-center justify-center">
-            <img src="/sol.svg" alt="Solana" width="36" height="36" className="brightness-0 invert" />
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-12 sm:w-18 sm:h-18 rounded-full bg-gradient-to-br from-[#ff6b35] to-[#f7931e] shadow-[0_0_30px_rgba(255,107,53,0.6)] flex items-center justify-center">
+            <img src="/sol.svg" alt="Solana" width={isMobile ? "24" : "36"} height={isMobile ? "24" : "36"} className="brightness-0 invert" />
           </div>
         </div>
       </div>
@@ -34,11 +42,11 @@ export default function WorkflowLoop() {
   }
 
   return (
-    <div className="relative w-full h-[420px] md:h-[500px] flex items-center justify-center">
+    <div className="relative w-full h-[300px] sm:h-[420px] md:h-[500px] flex items-center justify-center">
       <div className="relative max-w-[600px] mx-auto w-full h-full">
          {/* Central Solana logo/glow */}
          <motion.div
-           className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-gradient-to-br from-[#ff6b35] to-[#f7931e] shadow-[0_0_30px_rgba(255,107,53,0.6)] flex items-center justify-center"
+           className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 ${isMobile ? 'w-8 h-8' : 'w-12 h-12'} rounded-full bg-gradient-to-br from-[#ff6b35] to-[#f7931e] shadow-[0_0_30px_rgba(255,107,53,0.6)] flex items-center justify-center`}
            animate={{
              scale: [1, 1.1, 1],
              opacity: [0.8, 1, 0.8],
@@ -49,7 +57,7 @@ export default function WorkflowLoop() {
              ease: "easeInOut",
            }}
          >
-           <img src="/sol.svg" alt="Solana" width="30" height="30" className="brightness-0 invert" />
+           <img src="/sol.svg" alt="Solana" width={isMobile ? "20" : "30"} height={isMobile ? "20" : "30"} className="brightness-0 invert" />
          </motion.div>
 
         {/* Workflow nodes */}
@@ -60,10 +68,10 @@ export default function WorkflowLoop() {
           return (
              <motion.div
                key={node.id}
-               className="absolute w-20 h-20 rounded-full bg-gradient-to-br from-[#ff6b35] to-[#f7931e] shadow-[0_0_20px_rgba(255,107,53,0.5)] flex items-center justify-center text-white text-sm font-medium text-center px-2 z-10"
+               className={`absolute ${isMobile ? 'w-12 h-12' : 'w-20 h-20'} rounded-full bg-gradient-to-br from-[#ff6b35] to-[#f7931e] shadow-[0_0_20px_rgba(255,107,53,0.5)] flex items-center justify-center text-white ${isMobile ? 'text-xs' : 'text-sm'} font-medium text-center px-1 z-10`}
               style={{
-                left: x - 32,
-                top: y - 32,
+                left: x - (isMobile ? 24 : 32),
+                top: y - (isMobile ? 24 : 32),
               }}
               animate={{
                 scale: [1, 1.1, 1],
@@ -96,7 +104,7 @@ export default function WorkflowLoop() {
              const nextNode = workflowNodes[nextIndex];
              
              // Calculate node edge positions instead of centers
-             const nodeRadius = 40; // Half of node width (20px) + some padding
+             const nodeRadius = isMobile ? 24 : 40; // Half of node width + some padding
              const startAngle = (node.angle * Math.PI) / 180;
              const endAngle = (nextNode.angle * Math.PI) / 180;
              

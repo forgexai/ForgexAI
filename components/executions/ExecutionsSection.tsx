@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ViewExecutionsModal } from "@/components/workflows/ViewExecutionsModal";
+import { ExecutionsIllustration } from "@/components/common";
 
 type ExecutionsSectionProps = Record<string, never>;
 export function ExecutionsSection({}: ExecutionsSectionProps) {
@@ -19,87 +20,8 @@ export function ExecutionsSection({}: ExecutionsSectionProps) {
   return (
     <>
       <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-        {/* SVG Icon */}
         <div className="mb-6">
-          <svg
-            width="80"
-            height="80"
-            viewBox="0 0 80 80"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            className="text-gray-500"
-          >
-            <rect
-              x="10"
-              y="20"
-              width="60"
-              height="40"
-              rx="4"
-              fill="currentColor"
-              fillOpacity="0.1"
-              stroke="currentColor"
-              strokeWidth="2"
-            />
-            <rect
-              x="15"
-              y="30"
-              width="20"
-              height="3"
-              rx="1.5"
-              fill="currentColor"
-              fillOpacity="0.3"
-            />
-            <rect
-              x="15"
-              y="38"
-              width="30"
-              height="3"
-              rx="1.5"
-              fill="currentColor"
-              fillOpacity="0.3"
-            />
-            <rect
-              x="15"
-              y="46"
-              width="25"
-              height="3"
-              rx="1.5"
-              fill="currentColor"
-              fillOpacity="0.3"
-            />
-            <circle
-              cx="50"
-              cy="35"
-              r="8"
-              fill="currentColor"
-              fillOpacity="0.2"
-              stroke="currentColor"
-              strokeWidth="2"
-            />
-            <path
-              d="M46 35L48 37L54 31"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <circle
-              cx="50"
-              cy="50"
-              r="8"
-              fill="currentColor"
-              fillOpacity="0.2"
-              stroke="currentColor"
-              strokeWidth="2"
-            />
-            <path
-              d="M46 50L48 52L54 46"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <ExecutionsIllustration size="md" />
         </div>
 
         <p className="text-center mb-6 text-gray-300">
