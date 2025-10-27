@@ -26,6 +26,7 @@ export default function WorkflowsPage() {
   const [activeSection, setActiveSection] = useState('workflows');
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
   const { forgexAuth } = usePrivyAuth();
 
   const handleAddWorkflow = () => {
@@ -54,31 +55,6 @@ export default function WorkflowsPage() {
   useEffect(() => {
     fetchUserProfile();
   }, [forgexAuth.isAuthenticated]);
-
-  const getSectionContent = () => {
-    switch (activeSection) {
-      case 'workflows':
-        return (
-          <WorkflowsSection />
-        );
-      case 'schedules':
-        return (
-          <SchedulesSection />
-        );
-      case 'deployments':
-        return (
-          <DeploymentsSection />
-        );
-      case 'marketplace':
-        return (
-          <MarketplaceSection />
-        );
-      default:
-        return (
-          <WorkflowsSection />
-        );
-    }
-  };
 
   const getSectionTitle = () => {
     switch (activeSection) {
@@ -110,6 +86,31 @@ export default function WorkflowsPage() {
     }
   };
 
+  const getSectionContent = () => {
+    switch (activeSection) {
+      case 'workflows':
+        return (
+          <WorkflowsSection searchQuery={searchQuery} />
+        );
+      case 'schedules':
+        return (
+          <SchedulesSection />
+        );
+      case 'deployments':
+        return (
+          <DeploymentsSection />
+        );
+      case 'marketplace':
+        return (
+          <MarketplaceSection />
+        );
+      default:
+        return (
+          <WorkflowsSection searchQuery={searchQuery} />
+        );
+    }
+  };
+
   return (
     <AuthGuard>
       <DashboardLayout
@@ -119,9 +120,10 @@ export default function WorkflowsPage() {
         profileLoading={profileLoading}
         onAddNew={activeSection === 'workflows' ? handleAddWorkflow : undefined}
         showSearch={activeSection === 'workflows'}
-        searchPlaceholder="Search Name or Category [Ctrl + F]"
+        searchPlaceholder="Search Name or Category"
         title={getSectionTitle()}
         subtitle={getSectionSubtitle()}
+        onSearchChange={setSearchQuery}
       >
         {getSectionContent()}
       </DashboardLayout>

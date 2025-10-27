@@ -10,6 +10,16 @@ import { MobileHamburgerMenu } from "./MobileHamburgerMenu";
 import { MobileSidebar } from "./MobileSidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Workflow as WorkflowIcon,
   Clock,
   Store,
@@ -55,6 +65,7 @@ interface DashboardLayoutProps {
   searchPlaceholder?: string;
   title?: string;
   subtitle?: string;
+  onSearchChange?: (query: string) => void;
 }
 
 export function DashboardLayout({
@@ -66,15 +77,23 @@ export function DashboardLayout({
   profileLoading = false,
   onAddNew,
   showSearch = true,
-  searchPlaceholder = "Search Name or Category [Ctrl + F]",
+  searchPlaceholder = "Search Name or Category",
   title = "Dashboard",
   subtitle = "Manage your workflows and executions",
+  onSearchChange,
 }: DashboardLayoutProps) {
   const [isPlanPopupOpen, setIsPlanPopupOpen] = useState(false);
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
   const { logout } = usePrivyAuth();
   const isMobile = useIsMobile();
+
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    onSearchChange?.(query);
+  };
 
   const handleLogout = () => {
     logout();
@@ -186,7 +205,7 @@ export function DashboardLayout({
             variant="ghost"
             size="sm"
             className="w-full justify-start cursor-pointer text-white"
-            onClick={handleLogout}
+            onClick={() => setIsLogoutDialogOpen(true)}
           >
             <LogOut className="w-4 h-4 mr-3" />
             Logout
@@ -221,7 +240,9 @@ export function DashboardLayout({
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <Input
                       placeholder={searchPlaceholder}
-                      className="pl-10 w-full md:w-80 bg-[#1A1B23] border-white/10"
+                      value={searchQuery}
+                      onChange={(e) => handleSearchChange(e.target.value)}
+                      className="pl-10 w-full md:w-80 bg-[#1A1B23] border-white/10 text-white placeholder:text-gray-500"
                     />
                   </div>
                 )}
@@ -259,6 +280,29 @@ export function DashboardLayout({
         onClose={() => setIsPlanPopupOpen(false)}
         currentTier={userProfile?.tier || "free"}
       />
+
+      {/* Logout Confirmation Dialog */}
+      <AlertDialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
+        <AlertDialogContent className="bg-[#1A1B23] border-white/10 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              Are you sure you want to logout? You will need to reconnect your wallet to continue using the platform.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-gray-700 text-black cursor-pointer hover:bg-gray-100">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleLogout}
+              className="bg-red-500 hover:bg-red-600 text-white cursor-pointer"
+            >
+              Logout
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

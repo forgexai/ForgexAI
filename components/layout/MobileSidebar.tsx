@@ -6,6 +6,16 @@ import { usePrivyAuth } from "@/hooks/usePrivyAuth";
 import { PlanPopup } from "@/components/ui/plan-popup";
 import { useState } from "react";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Workflow as WorkflowIcon,
   Clock,
   Store,
@@ -49,6 +59,7 @@ export function MobileSidebar({
   profileLoading = false,
 }: MobileSidebarProps) {
   const [isPlanPopupOpen, setIsPlanPopupOpen] = useState(false);
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const router = useRouter();
   const { logout } = usePrivyAuth();
 
@@ -164,7 +175,7 @@ export function MobileSidebar({
               variant="ghost"
               size="sm"
               className="w-full justify-start cursor-pointer text-white"
-              onClick={handleLogout}
+              onClick={() => setIsLogoutDialogOpen(true)}
             >
               <LogOut className="w-4 h-4 mr-3" />
               Logout
@@ -179,6 +190,29 @@ export function MobileSidebar({
         onClose={() => setIsPlanPopupOpen(false)}
         currentTier={userProfile?.tier || "free"}
       />
+
+      {/* Logout Confirmation Dialog */}
+      <AlertDialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
+        <AlertDialogContent className="bg-[#1A1B23] border-white/10 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              Are you sure you want to logout? You will need to reconnect your wallet to continue using the platform.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-gray-700 text-black cursor-pointer hover:bg-gray-100">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleLogout}
+              className="bg-red-500 hover:bg-red-600 text-white cursor-pointer"
+            >
+              Logout
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
