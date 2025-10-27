@@ -4,8 +4,20 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Coins, Loader2, ExternalLink, TrendingUp, Info } from "lucide-react";
 import { usePrivy } from "@privy-io/react-auth";
@@ -45,7 +57,9 @@ const stakingOptions: StakingOption[] = [
 export default function StakeWidget() {
   const { user, authenticated, connectWallet } = usePrivy();
   const [amount, setAmount] = useState("");
-  const [selectedOption, setSelectedOption] = useState<StakingOption>(stakingOptions[0]);
+  const [selectedOption, setSelectedOption] = useState<StakingOption>(
+    stakingOptions[0]
+  );
   const [staking, setStaking] = useState(false);
   const [error, setError] = useState("");
 
@@ -57,10 +71,10 @@ export default function StakeWidget() {
     const initialLst = params.get("lst");
 
     if (initialAmount) setAmount(initialAmount);
-    
+
     if (initialProtocol || initialLst) {
       const option = stakingOptions.find(
-        opt => opt.protocol === initialProtocol || opt.token === initialLst
+        (opt) => opt.protocol === initialProtocol || opt.token === initialLst
       );
       if (option) setSelectedOption(option);
     }
@@ -92,7 +106,9 @@ export default function StakeWidget() {
 
       const data = await response.json();
       if (data.success) {
-        alert(`Staking successful! You will receive ${selectedOption.token} tokens.`);
+        alert(
+          `Staking successful! You will receive ${selectedOption.token} tokens.`
+        );
         // Reset form
         setAmount("");
       } else {
@@ -106,7 +122,9 @@ export default function StakeWidget() {
     }
   };
 
-  const estimatedReceive = amount ? (parseFloat(amount) * 0.98).toFixed(6) : "0";
+  const estimatedReceive = amount
+    ? (parseFloat(amount) * 0.98).toFixed(6)
+    : "0";
 
   return (
     <div className="container mx-auto p-4 max-w-md">
@@ -128,7 +146,9 @@ export default function StakeWidget() {
             <Select
               value={selectedOption.protocol}
               onValueChange={(value) => {
-                const option = stakingOptions.find(opt => opt.protocol === value);
+                const option = stakingOptions.find(
+                  (opt) => opt.protocol === value
+                );
                 if (option) setSelectedOption(option);
               }}
             >
@@ -146,7 +166,7 @@ export default function StakeWidget() {
                 ))}
               </SelectContent>
             </Select>
-            
+
             <div className="text-sm text-muted-foreground">
               {selectedOption.description}
             </div>
@@ -177,7 +197,7 @@ export default function StakeWidget() {
               <span className="capitalize">{selectedOption.protocol}</span>
             </div>
             <div className="flex justify-between">
-              <span>You'll receive:</span>
+              <span>You&apos;ll receive:</span>
               <span>{selectedOption.token}</span>
             </div>
             <div className="flex justify-between">
@@ -186,7 +206,9 @@ export default function StakeWidget() {
             </div>
             <div className="flex justify-between">
               <span>Estimated receive:</span>
-              <span>{estimatedReceive} {selectedOption.token}</span>
+              <span>
+                {estimatedReceive} {selectedOption.token}
+              </span>
             </div>
           </div>
 
@@ -194,8 +216,9 @@ export default function StakeWidget() {
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription>
-              Liquid staking tokens can be traded, used in DeFi, or unstaked at any time. 
-              You continue earning staking rewards while maintaining liquidity.
+              Liquid staking tokens can be traded, used in DeFi, or unstaked at
+              any time. You continue earning staking rewards while maintaining
+              liquidity.
             </AlertDescription>
           </Alert>
 
