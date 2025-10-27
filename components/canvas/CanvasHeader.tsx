@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useAtom } from "jotai";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
 import { useRouter } from "next/navigation";
+import { getDefaultInputs, getDefaultOutputs, getDefaultConfig } from "@/lib/utils/nodeTransformation";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -109,6 +110,11 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
     input.click();
   };
 
+  const clearSessionStorage = () => {
+    sessionStorage.removeItem('canvas_nodes');
+    sessionStorage.removeItem('canvas_edges');
+  };
+
   const handleCreateWorkflow = async () => {
     if (!workflowName.trim()) {
       toast.error("Please enter a workflow name");
@@ -133,121 +139,9 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
         category: node.data?.category || 'trigger' as "trigger" | "condition" | "transform" | "protocol" | "memory" | "communication",
         name: node.data?.label || node.type,
         description: node.data?.description || "",
-        inputs: node.data?.inputs || (() => {
-          switch (node.data?.category) {
-            case 'communication':
-              return [
-                { id: "chatId", name: "Chat ID", type: "string" as const, required: false, description: "Telegram chat ID (optional - will use bot's default chat)" },
-                { id: "message", name: "Message", type: "string" as const, required: true, description: "Message to send" },
-                { id: "parseMode", name: "Parse Mode", type: "string" as const, required: false, default: "Markdown", description: "Message parse mode" }
-              ];
-            case 'protocol':
-              return [
-                { id: "walletAddress", name: "Wallet Address", type: "string" as const, required: true, description: "Wallet address" }
-              ];
-            case 'memory':
-              const operation = node.data?.parameters?.operation || 'store';
-              const valueSource = node.data?.parameters?.valueSource || 'connected';
-              
-              if (operation === 'store' || operation === 'update') {
-                if (valueSource === 'manual') {
-                  return [
-                    { id: "value", name: "Value", type: "any" as const, required: true, description: "Value to store" }
-                  ];
-                } else {
-
-                  return [];
-                }
-              } else {
-                return []; 
-              }
-            case 'trigger':
-              const nodeLabel = node.data?.label || '';
-              const isScheduleTimer = nodeLabel.toLowerCase().includes("schedule") || 
-                                      nodeLabel.toLowerCase().includes("timer") ||
-                                      nodeLabel.toLowerCase().includes("on schedule");
-              
-              if (isScheduleTimer) {
-                return [
-                  { id: "cronExpression", name: "Schedule Frequency", type: "string" as const, required: true, default: "0 * * * *", description: "When to run automatically" }
-                ];
-              }
-              return [
-                { id: "botToken", name: "Bot Token", type: "string" as const, required: true, description: "Telegram bot token for listening to messages" }
-              ];
-            case 'condition':
-              return [
-                { id: "condition", name: "Condition", type: "boolean" as const, required: true, description: "Boolean condition to evaluate" },
-                { id: "trueValue", name: "True Value", type: "any" as const, required: false, description: "Value when condition is true" },
-                { id: "falseValue", name: "False Value", type: "any" as const, required: false, description: "Value when condition is false" }
-              ];
-            case 'transform':
-              return [
-                { id: "data", name: "Input Data", type: "any" as const, required: true, description: "Data to transform" },
-                { id: "format", name: "Output Format", type: "string" as const, required: false, default: "json", description: "Output format (json, string, number)" }
-              ];
-            default:
-              return [];
-          }
-        })(),
-        outputs: node.data?.outputs || (() => {
-          const nodeLabelForOutputs = node.data?.label || '';
-          const isScheduleTimerOutputs = nodeLabelForOutputs.toLowerCase().includes("schedule") || 
-                                         nodeLabelForOutputs.toLowerCase().includes("timer") ||
-                                         nodeLabelForOutputs.toLowerCase().includes("on schedule");
-          
-          switch (node.data?.category) {
-            case 'trigger':
-              if (isScheduleTimerOutputs) {
-                return [
-                  { id: "timestamp", name: "Timestamp", type: "string" as const, description: "Current timestamp when triggered" }
-                ];
-              }
-              return [
-                { id: "triggered", name: "Triggered", type: "boolean" as const, description: "Trigger status" }
-              ];
-            case 'communication':
-              return [
-                { id: "messageId", name: "Message ID", type: "string" as const, description: "Sent message ID" },
-                { id: "success", name: "Success", type: "boolean" as const, description: "Whether message was sent" }
-              ];
-            case 'protocol':
-              return [
-                { id: "result", name: "Result", type: "object" as const, description: "Protocol result" }
-              ];
-            case 'memory':
-              return [
-                { id: "success", name: "Success", type: "boolean" as const, description: "Operation success" }
-              ];
-            case 'condition':
-              return [
-                { id: "result", name: "Result", type: "any" as const, description: "Conditional result" },
-                { id: "branch", name: "Branch", type: "string" as const, description: "Which branch was taken" }
-              ];
-            case 'transform':
-              return [
-                { id: "transformed", name: "Transformed Data", type: "any" as const, description: "Transformed data" }
-              ];
-            default:
-              return [];
-          }
-        })(),
-        config: (() => {
-          const config = { ...node.data?.parameters };
-          // For memory nodes, use workflow ID as memory key
-          if (node.data?.category === 'memory') {
-            config.key = workflowId;
-          }
-
-          if (node.data?.category === 'protocol') {
-            config.protocol = config.protocol || 'jupiter';
-            config.method = config.method || config.action || 'executeSwap';
-          }
-          if (node.data?.category === 'communication') {
-            config.chatId = config.chatId || '@default_chat';
-          }
-          return config;
-        })(),
+        inputs: node.data?.inputs || getDefaultInputs(node.data?.category || '', node.data || {}, workflowId || ''),
+        outputs: node.data?.outputs || getDefaultOutputs(node.data?.category || '', node.data || {}),
+        config: getDefaultConfig(node.data?.category || '', node.data || {}, workflowId || ''),
         position: node.position
       }));
 
@@ -275,9 +169,12 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
 
       if (response.success) {
         toast.success("Workflow created successfully!");
+        clearSessionStorage();
         setIsCreateModalOpen(false);
         setWorkflowName("Untitled Workflow");
         setWorkflowDescription("");
+        setNodes([]);
+        setEdges([]);
         router.push('/workflows');
       } else {
         toast.error(response.error || "Failed to create workflow");
@@ -319,119 +216,9 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
         category: node.data?.category || 'trigger' as "trigger" | "condition" | "transform" | "protocol" | "memory" | "communication",
         name: node.data?.label || node.type,
         description: node.data?.description || "",
-        inputs: node.data?.inputs || (() => {
-          switch (node.data?.category) {
-            case 'communication':
-              return [
-                { id: "chatId", name: "Chat ID", type: "string" as const, required: false, description: "Telegram chat ID (optional - will use bot's default chat)" },
-                { id: "message", name: "Message", type: "string" as const, required: true, description: "Message to send" },
-                { id: "parseMode", name: "Parse Mode", type: "string" as const, required: false, default: "Markdown", description: "Message parse mode" }
-              ];
-            case 'protocol':
-              return [
-                { id: "walletAddress", name: "Wallet Address", type: "string" as const, required: true, description: "Wallet address" }
-              ];
-            case 'memory':
-              // Value is only required for store/update operations
-              const operation = node.data?.parameters?.operation || 'store';
-              const valueSource = node.data?.parameters?.valueSource || 'connected';
-              
-              if (operation === 'store' || operation === 'update') {
-                if (valueSource === 'manual') {
-                  return [
-                    { id: "value", name: "Value", type: "any" as const, required: true, description: "Value to store" }
-                  ];
-                } else {
-                  return [];
-                }
-              } else {
-                return []; 
-              }
-            case 'trigger':
-              const nodeLabel2 = node.data?.label || '';
-              const isScheduleTimer2 = nodeLabel2.toLowerCase().includes("schedule") || 
-                                      nodeLabel2.toLowerCase().includes("timer") ||
-                                      nodeLabel2.toLowerCase().includes("on schedule");
-              
-              if (isScheduleTimer2) {
-                return [
-                  { id: "cronExpression", name: "Schedule Frequency", type: "string" as const, required: true, default: "0 * * * *", description: "When to run automatically" }
-                ];
-              }
-              return [
-                { id: "botToken", name: "Bot Token", type: "string" as const, required: true, description: "Telegram bot token for listening to messages" }
-              ];
-            case 'condition':
-              return [
-                { id: "condition", name: "Condition", type: "boolean" as const, required: true, description: "Boolean condition to evaluate" },
-                { id: "trueValue", name: "True Value", type: "any" as const, required: false, description: "Value when condition is true" },
-                { id: "falseValue", name: "False Value", type: "any" as const, required: false, description: "Value when condition is false" }
-              ];
-            case 'transform':
-              return [
-                { id: "data", name: "Input Data", type: "any" as const, required: true, description: "Data to transform" },
-                { id: "format", name: "Output Format", type: "string" as const, required: false, default: "json", description: "Output format (json, string, number)" }
-              ];
-            default:
-              return [];
-          }
-        })(),
-        outputs: node.data?.outputs || (() => {
-          const nodeLabel2 = node.data?.label || '';
-          const isScheduleTimer2 = nodeLabel2.toLowerCase().includes("schedule") || 
-                                  nodeLabel2.toLowerCase().includes("timer") ||
-                                  nodeLabel2.toLowerCase().includes("on schedule");
-          
-          switch (node.data?.category) {
-            case 'trigger':
-              if (isScheduleTimer2) {
-                return [
-                  { id: "timestamp", name: "Timestamp", type: "string" as const, description: "Current timestamp when triggered" }
-                ];
-              }
-              return [
-                { id: "triggered", name: "Triggered", type: "boolean" as const, description: "Trigger status" }
-              ];
-            case 'communication':
-              return [
-                { id: "messageId", name: "Message ID", type: "string" as const, description: "Sent message ID" },
-                { id: "success", name: "Success", type: "boolean" as const, description: "Whether message was sent" }
-              ];
-            case 'protocol':
-              return [
-                { id: "result", name: "Result", type: "object" as const, description: "Protocol result" }
-              ];
-            case 'memory':
-              return [
-                { id: "success", name: "Success", type: "boolean" as const, description: "Operation success" }
-              ];
-            case 'condition':
-              return [
-                { id: "result", name: "Result", type: "any" as const, description: "Conditional result" },
-                { id: "branch", name: "Branch", type: "string" as const, description: "Which branch was taken" }
-              ];
-            case 'transform':
-              return [
-                { id: "transformed", name: "Transformed Data", type: "any" as const, description: "Transformed data" }
-              ];
-            default:
-              return [];
-          }
-        })(),
-        config: (() => {
-          const config = { ...node.data?.parameters };
-          if (node.data?.category === 'memory') {
-            config.key = workflowId;
-          }
-          if (node.data?.category === 'protocol') {
-            config.protocol = config.protocol || 'jupiter';
-            config.method = config.method || config.action || 'executeSwap';
-          }
-          if (node.data?.category === 'communication') {
-            config.chatId = config.chatId || '@default_chat';
-          }
-          return config;
-        })(),
+        inputs: node.data?.inputs || getDefaultInputs(node.data?.category || '', node.data || {}, workflowId || ''),
+        outputs: node.data?.outputs || getDefaultOutputs(node.data?.category || '', node.data || {}),
+        config: getDefaultConfig(node.data?.category || '', node.data || {}, workflowId || ''),
         position: node.position
       }));
 
@@ -459,6 +246,7 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
 
       if (response.success) {
         toast.success("Workflow updated successfully!");
+        clearSessionStorage();
         router.push('/workflows');
       } else {
         toast.error(response.error || "Failed to update workflow");
@@ -486,6 +274,7 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
   };
 
   const handleBackClick = () => {
+    clearSessionStorage();
     router.push('/workflows');
   };
 
