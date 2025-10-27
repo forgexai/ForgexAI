@@ -421,7 +421,7 @@ function TelegramForm({ parameters, onParameterChange }: ParameterFormProps) {
           className="bg-[#1A1B23] border-gray-700 text-white"
         />
         <p className="text-xs text-gray-400">
-          Telegram chat ID (optional - uses bot's default chat)
+          Telegram chat ID (optional - uses bot&apos;s default chat)
         </p>
       </div>
 
@@ -829,7 +829,7 @@ export function ConditionNodeForm({
           id="condition"
           value={parameters.condition || ""}
           onChange={(e) => onParameterChange("condition", e.target.value)}
-          placeholder="Connect a boolean output or enter 'true'/'false'"
+          placeholder="Connect a boolean output or enter &apos;true&apos;/&apos;false&apos;"
           rows={2}
           className="bg-[#1A1B23] border-gray-700 text-white resize-none font-mono text-xs"
         />
