@@ -47,15 +47,15 @@ export default function TransferWidget() {
     setError("");
     
     try {
-      const response = await fetch("/api/chat/address/resolve", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: address.trim() }),
-      });
+      const response = await fetch("/api/wallet/balance?account=" + encodeURIComponent(address.trim()));
 
       const data = await response.json();
       if (data.success) {
-        setResolvedAddress(data.data);
+        setResolvedAddress({
+          address: data.resolvedAddress,
+          domain: data.domain,
+          type: data.addressType,
+        });
       } else {
         setError(data.error || "Failed to resolve address");
         setResolvedAddress(null);
@@ -81,7 +81,7 @@ export default function TransferWidget() {
     setError("");
 
     try {
-      const response = await fetch("/api/chat/transfer", {
+      const response = await fetch("/api/transfer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

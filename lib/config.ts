@@ -1,4 +1,4 @@
-export const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+export const baseURL = process.env.NEXT_PUBLIC_API_URL || "https://forgex-ai-backend.vercel.app/api";
 
 export const config = {
   api: {
@@ -6,7 +6,7 @@ export const config = {
     timeout: 30000,
   },
   frontend: {
-    url: process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000",
+    url: process.env.NEXT_PUBLIC_FRONTEND_URL || "https://forgex-ai-frontend.vercel.app",
   },
   solana: {
     network: process.env.NEXT_PUBLIC_SOLANA_NETWORK || "mainnet-beta",

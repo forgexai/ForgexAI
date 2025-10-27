@@ -81,16 +81,12 @@ export default function StakeWidget() {
     setError("");
 
     try {
-      const response = await fetch("/api/chat/transaction/execute", {
+      const response = await fetch("/api/stake", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          protocol: selectedOption.protocol,
-          operation: "stake",
-          parameters: {
-            amount: parseFloat(amount),
-            token: selectedOption.token,
-          },
+          amount: parseFloat(amount),
+          lst: selectedOption.token,
         }),
       });
 
