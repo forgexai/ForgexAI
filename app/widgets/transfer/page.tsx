@@ -47,7 +47,7 @@ export default function TransferWidget() {
     setError("");
     
     try {
-      const response = await fetch("/api/wallet/balance?account=" + encodeURIComponent(address.trim()));
+      const response = await fetch("/api/solana/wallet/balance?account=" + encodeURIComponent(address.trim()));
 
       const data = await response.json();
       if (data.success) {
@@ -81,7 +81,7 @@ export default function TransferWidget() {
     setError("");
 
     try {
-      const response = await fetch("/api/transfer", {
+      const response = await fetch("/api/solana/transfer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
