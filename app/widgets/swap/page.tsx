@@ -55,7 +55,7 @@ export default function SwapWidget() {
 
     setLoading(true);
     try {
-      const response = await fetch("/api/chat/swap/quote", {
+      const response = await fetch("/api/swap/quote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -92,17 +92,13 @@ export default function SwapWidget() {
 
     setExecuting(true);
     try {
-      const response = await fetch("/api/chat/transaction/execute", {
+      const response = await fetch("/api/swap/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          protocol,
-          operation: "swap",
-          parameters: {
-            inputToken,
-            outputToken,
-            amount: parseFloat(amount),
-          },
+          inputToken,
+          outputToken,
+          amount: parseFloat(amount),
         }),
       });
 
