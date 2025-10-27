@@ -9,7 +9,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import { defaultApiClient } from "@/lib/api-utils";
 import { useAtom } from "jotai";
-import { nodesAtom, edgesAtom } from "@/lib/state/atoms";
+import { nodesAtom, edgesAtom, workflowNameAtom } from "@/lib/state/atoms";
 import { toast } from "sonner";
 
 function CanvasPageContent() {
@@ -21,12 +21,70 @@ function CanvasPageContent() {
 
   const [nodes, setNodes] = useAtom(nodesAtom);
   const [edges, setEdges] = useAtom(edgesAtom);
+  const [, setWorkflowName] = useAtom(workflowNameAtom);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const loadFromSession = () => {
+      if (isEditMode || isTemplateMode) return;
+      
+      const savedNodes = sessionStorage.getItem('canvas_nodes');
+      const savedEdges = sessionStorage.getItem('canvas_edges');
+      
+      if (savedNodes) {
+        try {
+          const parsedNodes = JSON.parse(savedNodes);
+          setNodes(parsedNodes);
+        } catch (e) {
+          console.error('Failed to parse saved nodes:', e);
+        }
+      }
+      
+      if (savedEdges) {
+        try {
+          const parsedEdges = JSON.parse(savedEdges);
+          setEdges(parsedEdges);
+        } catch (e) {
+          console.error('Failed to parse saved edges:', e);
+        }
+      }
+    };
+
+    loadFromSession();
+  }, [isEditMode, isTemplateMode, setNodes, setEdges]);
+
+  useEffect(() => {
+    return () => {
+      if (isEditMode || isTemplateMode) {
+        console.log('Clearing session storage on unmount from edit/template mode');
+        sessionStorage.removeItem('canvas_nodes');
+        sessionStorage.removeItem('canvas_edges');
+      }
+    };
+  }, [isEditMode, isTemplateMode]);
+
+  useEffect(() => {
+    if (!isEditMode && !isTemplateMode && !workflowId) {
+      sessionStorage.removeItem('canvas_nodes');
+      sessionStorage.removeItem('canvas_edges');
+      setNodes([]);
+      setEdges([]);
+      setWorkflowName("Untitled Workflow");
+      console.log('Starting fresh workflow - cleared session storage and state');
+    }
+  }, [isEditMode, isTemplateMode, workflowId, setNodes, setEdges, setWorkflowName]);
+
+
+  useEffect(() => {
+    if (isEditMode || isTemplateMode) return;
+    
+    sessionStorage.setItem('canvas_nodes', JSON.stringify(nodes));
+    sessionStorage.setItem('canvas_edges', JSON.stringify(edges));
+  }, [nodes, edges, isEditMode, isTemplateMode]);
 
   useEffect(() => {
     const loadWorkflow = async () => {
       if (isTemplateMode) {
-        // Template mode - nodes and edges are already set by the marketplace
         toast.success("Template loaded successfully");
         return;
       }
@@ -38,8 +96,8 @@ function CanvasPageContent() {
           if (response.success && response.data) {
             const workflow = response.data;
 
-            const transformedNodes = workflow.nodes.map((node) => {
-              let reactFlowType = "condition"; // default
+            const transformedNodes = workflow.nodes.map((node: any) => {
+              let reactFlowType = "condition";
               if (node.type === "protocol") {
                 reactFlowType = "solana";
               } else if (node.type === "output") {
@@ -63,8 +121,7 @@ function CanvasPageContent() {
               };
             });
 
-            // Transform API connections to React Flow format
-            const transformedEdges = workflow.connections.map((connection) => ({
+            const transformedEdges = workflow.connections.map((connection: any) => ({
               id: connection.id,
               source: connection.sourceNodeId,
               target: connection.targetNodeId,
@@ -87,9 +144,14 @@ function CanvasPageContent() {
         } finally {
           setIsLoading(false);
         }
-      } else {
-        setNodes([]);
-        setEdges([]);
+      } else if (!isEditMode && !isTemplateMode) {
+        const savedNodes = sessionStorage.getItem('canvas_nodes');
+        const savedEdges = sessionStorage.getItem('canvas_edges');
+        
+        if (!savedNodes && !savedEdges) {
+          setNodes([]);
+          setEdges([]);
+        }
       }
     };
 
