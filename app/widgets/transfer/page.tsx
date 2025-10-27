@@ -4,22 +4,35 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Send, Loader2, ExternalLink, CheckCircle, AlertCircle } from "lucide-react";
+import {
+  Send,
+  Loader2,
+  ExternalLink,
+  CheckCircle,
+  AlertCircle,
+} from "lucide-react";
 import { usePrivy } from "@privy-io/react-auth";
 
 interface AddressResolution {
   address: string;
   domain?: string;
-  type: 'address' | 'sns' | 'alldomains';
+  type: "address" | "sns" | "alldomains";
 }
 
 export default function TransferWidget() {
   const { user, authenticated, connectWallet } = usePrivy();
   const [toAddress, setToAddress] = useState("");
   const [amount, setAmount] = useState("");
-  const [resolvedAddress, setResolvedAddress] = useState<AddressResolution | null>(null);
+  const [resolvedAddress, setResolvedAddress] =
+    useState<AddressResolution | null>(null);
   const [resolving, setResolving] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
@@ -45,9 +58,12 @@ export default function TransferWidget() {
 
     setResolving(true);
     setError("");
-    
+
     try {
-      const response = await fetch("/api/solana/wallet/balance?account=" + encodeURIComponent(address.trim()));
+      const response = await fetch(
+        "/api/solana/wallet/balance?account=" +
+          encodeURIComponent(address.trim())
+      );
 
       const data = await response.json();
       if (data.success) {
@@ -81,14 +97,17 @@ export default function TransferWidget() {
     setError("");
 
     try {
-      const response = await fetch("/api/solana/transfer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          toAddress: resolvedAddress.address,
-          amount: parseFloat(amount),
-        }),
-      });
+      const response = await fetch(
+        "https://forgex-ai-backend.vercel.app/api/solana/transfer",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            toAddress: resolvedAddress.address,
+            amount: parseFloat(amount),
+          }),
+        }
+      );
 
       const data = await response.json();
       if (data.success) {
@@ -114,7 +133,7 @@ export default function TransferWidget() {
     const timeoutId = setTimeout(() => {
       resolveAddress(value);
     }, 500);
-    
+
     return () => clearTimeout(timeoutId);
   };
 
@@ -141,7 +160,7 @@ export default function TransferWidget() {
               value={toAddress}
               onChange={(e) => handleAddressChange(e.target.value)}
             />
-            
+
             {resolving && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -155,13 +174,17 @@ export default function TransferWidget() {
                 <AlertDescription>
                   <div className="space-y-1">
                     <div className="font-medium">
-                      {resolvedAddress.type === 'address' ? 'Valid Address' : 
-                       resolvedAddress.type === 'sns' ? 'SNS Domain (.sol)' : 
-                       'AllDomains TLD'}
+                      {resolvedAddress.type === "address"
+                        ? "Valid Address"
+                        : resolvedAddress.type === "sns"
+                        ? "SNS Domain (.sol)"
+                        : "AllDomains TLD"}
                     </div>
                     {resolvedAddress.domain && (
                       <div className="text-sm">
-                        {resolvedAddress.domain} → {resolvedAddress.address.slice(0, 8)}...{resolvedAddress.address.slice(-8)}
+                        {resolvedAddress.domain} →{" "}
+                        {resolvedAddress.address.slice(0, 8)}...
+                        {resolvedAddress.address.slice(-8)}
                       </div>
                     )}
                   </div>
@@ -202,7 +225,11 @@ export default function TransferWidget() {
               <div className="flex justify-between">
                 <span>To:</span>
                 <span className="text-right">
-                  {resolvedAddress.domain || `${resolvedAddress.address.slice(0, 8)}...${resolvedAddress.address.slice(-8)}`}
+                  {resolvedAddress.domain ||
+                    `${resolvedAddress.address.slice(
+                      0,
+                      8
+                    )}...${resolvedAddress.address.slice(-8)}`}
                 </span>
               </div>
               <div className="flex justify-between">

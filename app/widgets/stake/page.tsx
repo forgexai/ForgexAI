@@ -95,14 +95,17 @@ export default function StakeWidget() {
     setError("");
 
     try {
-      const response = await fetch("/api/stake", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: parseFloat(amount),
-          lst: selectedOption.token,
-        }),
-      });
+      const response = await fetch(
+        "https://forgex-ai-backend.vercel.app/api/stake",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amount: parseFloat(amount),
+            lst: selectedOption.token,
+          }),
+        }
+      );
 
       const data = await response.json();
       if (data.success) {

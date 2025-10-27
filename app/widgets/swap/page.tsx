@@ -4,8 +4,20 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ArrowUpDown, Loader2, ExternalLink } from "lucide-react";
 import { usePrivy } from "@privy-io/react-auth";
 
@@ -41,11 +53,21 @@ export default function SwapWidget() {
 
     // Auto-fetch quote if we have initial values
     if (initialAmount && initialInput && initialOutput) {
-      fetchQuote(initialAmount, initialInput, initialOutput, initialProtocol || "jupiter");
+      fetchQuote(
+        initialAmount,
+        initialInput,
+        initialOutput,
+        initialProtocol || "jupiter"
+      );
     }
   }, []);
 
-  const fetchQuote = async (amt?: string, input?: string, output?: string, prot?: string) => {
+  const fetchQuote = async (
+    amt?: string,
+    input?: string,
+    output?: string,
+    prot?: string
+  ) => {
     const amountToUse = amt || amount;
     const inputToUse = input || inputToken;
     const outputToUse = output || outputToken;
@@ -55,16 +77,19 @@ export default function SwapWidget() {
 
     setLoading(true);
     try {
-      const response = await fetch("/api/swap/quote", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          inputToken: inputToUse,
-          outputToken: outputToUse,
-          amount: parseFloat(amountToUse),
-          protocol: protocolToUse,
-        }),
-      });
+      const response = await fetch(
+        "https://forgex-ai-backend.vercel.app/api/swap/quote",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            inputToken: inputToUse,
+            outputToken: outputToUse,
+            amount: parseFloat(amountToUse),
+            protocol: protocolToUse,
+          }),
+        }
+      );
 
       const data = await response.json();
       if (data.success) {
@@ -92,15 +117,18 @@ export default function SwapWidget() {
 
     setExecuting(true);
     try {
-      const response = await fetch("/api/swap/execute", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          inputToken,
-          outputToken,
-          amount: parseFloat(amount),
-        }),
-      });
+      const response = await fetch(
+        "https://forgex-ai-backend.vercel.app/api/swap/execute",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            inputToken,
+            outputToken,
+            amount: parseFloat(amount),
+          }),
+        }
+      );
 
       const data = await response.json();
       if (data.success) {
@@ -219,7 +247,11 @@ export default function SwapWidget() {
             <div className="p-3 bg-muted rounded-lg space-y-1 text-sm">
               <div className="flex justify-between">
                 <span>Price Impact:</span>
-                <span className={quote.priceImpact > 1 ? "text-red-500" : "text-green-500"}>
+                <span
+                  className={
+                    quote.priceImpact > 1 ? "text-red-500" : "text-green-500"
+                  }
+                >
                   {quote.priceImpact.toFixed(2)}%
                 </span>
               </div>
