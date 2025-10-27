@@ -200,9 +200,7 @@ export function WorkflowsSection({ searchQuery = "" }: WorkflowsSectionProps) {
     const query = searchQuery.toLowerCase();
     return (
       workflow.name.toLowerCase().includes(query) ||
-      workflow.description?.toLowerCase().includes(query) ||
-      workflow.category?.toLowerCase().includes(query) ||
-      workflow.tags?.some((tag: string) => tag.toLowerCase().includes(query))
+      workflow.description?.toLowerCase().includes(query)
     );
   });
 
@@ -232,7 +230,7 @@ export function WorkflowsSection({ searchQuery = "" }: WorkflowsSectionProps) {
       <div className="flex flex-col items-center justify-center h-64 text-gray-400">
         <h3 className="text-xl font-semibold mb-2">No Results Found</h3>
         <p className="text-center">
-          No workflows match "{searchQuery}"
+          No workflows match &quot;{searchQuery}&quot;
         </p>
       </div>
     );
