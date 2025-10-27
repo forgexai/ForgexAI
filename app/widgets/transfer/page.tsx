@@ -61,7 +61,7 @@ export default function TransferWidget() {
 
     try {
       const response = await fetch(
-        "/api/solana/wallet/balance?account=" +
+        "https://forgex-ai-backend.vercel.app/api/solana/wallet/balance?account=" +
           encodeURIComponent(address.trim())
       );
 
