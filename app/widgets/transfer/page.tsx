@@ -20,6 +20,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { usePrivy } from "@privy-io/react-auth";
+import { Connection, PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL } from "@solana/web3.js";
 
 interface AddressResolution {
   address: string;
@@ -86,7 +87,7 @@ export default function TransferWidget() {
   };
 
   const executeTransfer = async () => {
-    if (!authenticated) {
+    if (!authenticated || !user?.wallet?.address) {
       connectWallet();
       return;
     }
@@ -97,31 +98,43 @@ export default function TransferWidget() {
     setError("");
 
     try {
-      const response = await fetch(
-        "https://forgex-ai-backend.vercel.app/api/solana/transfer",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            toAddress: resolvedAddress.address,
-            amount: parseFloat(amount),
-          }),
-        }
+      // Create Solana connection
+      const connection = new Connection("https://api.mainnet-beta.solana.com");
+      
+      // Create transfer transaction
+      const fromPubkey = new PublicKey(user.wallet.address);
+      const toPubkey = new PublicKey(resolvedAddress.address);
+      const lamports = parseFloat(amount) * LAMPORTS_PER_SOL;
+
+      const transaction = new Transaction().add(
+        SystemProgram.transfer({
+          fromPubkey,
+          toPubkey,
+          lamports,
+        })
       );
 
-      const data = await response.json();
-      if (data.success) {
-        alert(`Transfer successful! Transaction: ${data.signature}`);
-        // Reset form
-        setToAddress("");
-        setAmount("");
-        setResolvedAddress(null);
-      } else {
-        setError(data.error || "Transfer failed");
-      }
-    } catch (error) {
+      // Get recent blockhash
+      const { blockhash } = await connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = fromPubkey;
+
+      // Sign and send transaction through Privy
+      const signature = await (user.wallet as any).signAndSendTransaction(transaction);
+      
+      // Wait for confirmation
+      await connection.confirmTransaction(signature);
+
+      alert(`Transfer successful! Transaction: ${signature}`);
+      
+      // Reset form
+      setToAddress("");
+      setAmount("");
+      setResolvedAddress(null);
+      
+    } catch (error: any) {
       console.error("Transfer failed:", error);
-      setError("Transfer execution failed");
+      setError(`Transfer failed: ${error.message}`);
     } finally {
       setSending(false);
     }

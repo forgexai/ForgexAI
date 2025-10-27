@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { ArrowUpDown, Loader2, ExternalLink } from "lucide-react";
 import { usePrivy } from "@privy-io/react-auth";
+import { Connection, PublicKey, VersionedTransaction } from "@solana/web3.js";
 
 interface SwapQuote {
   inputAmount: string;
@@ -108,40 +109,71 @@ export default function SwapWidget() {
   };
 
   const executeSwap = async () => {
-    if (!authenticated) {
+    if (!authenticated || !user?.wallet?.address) {
       connectWallet();
       return;
     }
 
-    if (!quote) return;
+    if (!quote) {
+      alert("Please get a quote first");
+      return;
+    }
 
     setExecuting(true);
     try {
-      const response = await fetch(
-        "https://forgex-ai-backend.vercel.app/api/swap/execute",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            inputToken,
-            outputToken,
-            amount: parseFloat(amount),
-          }),
-        }
+      // Step 1: Get Jupiter swap transaction
+      const swapResponse = await fetch("https://quote-api.jup.ag/v6/swap", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userPublicKey: user.wallet.address,
+          quoteResponse: quote.route || {
+            inputMint: inputToken === "SOL" ? "So11111111111111111111111111111111111111112" : inputToken,
+            outputMint: outputToken === "USDC" ? "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" : outputToken,
+            inAmount: (parseFloat(amount) * 1e9).toString(),
+            outAmount: (parseFloat(quote.outputAmount) * (outputToken === "USDC" ? 1e6 : 1e9)).toString(),
+            swapMode: "ExactIn",
+            slippageBps: 50,
+          },
+          wrapAndUnwrapSol: true,
+          dynamicComputeUnitLimit: true,
+          prioritizationFeeLamports: {
+            priorityLevelWithMaxLamports: {
+              priorityLevel: "medium",
+              maxLamports: 1000000,
+            },
+          },
+        }),
+      });
+
+      const swapData = await swapResponse.json();
+      
+      if (!swapData.swapTransaction) {
+        throw new Error("Failed to get swap transaction");
+      }
+
+      // Step 2: Execute transaction using Privy wallet
+      const connection = new Connection("https://api.mainnet-beta.solana.com");
+      const transaction = VersionedTransaction.deserialize(
+        Buffer.from(swapData.swapTransaction, "base64")
       );
 
-      const data = await response.json();
-      if (data.success) {
-        alert("Swap executed successfully!");
-        // Reset form
-        setAmount("");
-        setQuote(null);
-      } else {
-        alert(`Swap failed: ${data.error}`);
-      }
-    } catch (error) {
+      // Sign and send transaction through Privy
+      // Note: Privy wallet interface may vary, this is a common pattern
+      const signature = await (user.wallet as any).signAndSendTransaction(transaction);
+      
+      // Wait for confirmation
+      await connection.confirmTransaction(signature);
+
+      alert(`Swap executed successfully! Transaction: ${signature}`);
+      
+      // Reset form
+      setAmount("");
+      setQuote(null);
+      
+    } catch (error: any) {
       console.error("Swap execution failed:", error);
-      alert("Swap execution failed");
+      alert(`Swap failed: ${error.message}`);
     } finally {
       setExecuting(false);
     }
