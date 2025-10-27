@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function Home() {
   return (
-    <main className="bg-[#02021A] min-h-screen">
+    <main className="bg-[#02021A] min-h-screen overflow-x-hidden">
       <HeroSection />
       <TrustedBy />
     </main>

@@ -18,6 +18,7 @@ import { usePrivyAuth } from "@/hooks/usePrivyAuth";
 import { defaultApiClient } from "@/lib/api-utils";
 import { refreshApiClientAuth } from "@/lib/auth-utils";
 import { toast } from "sonner";
+import { WorkflowIllustration } from "@/components/common";
 import {
   MoreVertical,
   Edit,
@@ -48,9 +49,11 @@ interface Workflow {
   deployments: any[];
 }
 
-type WorkflowsSectionProps = Record<string, never>;
+interface WorkflowsSectionProps {
+  searchQuery?: string;
+}
 
-export function WorkflowsSection({}: WorkflowsSectionProps) {
+export function WorkflowsSection({ searchQuery = "" }: WorkflowsSectionProps) {
   const router = useRouter();
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [workflowsLoading, setWorkflowsLoading] = useState(true);
@@ -193,17 +196,28 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
     );
   }
 
+  const filteredWorkflows = workflows.filter((workflow) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      workflow.name.toLowerCase().includes(query) ||
+      workflow.description?.toLowerCase().includes(query)
+    );
+  });
+
   if (workflows.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-        <div className="text-6xl mb-4">🤖</div>
+        <div className="mb-6">
+          <WorkflowIllustration size="md" />
+        </div>
+
         <h3 className="text-xl font-semibold mb-2">No Workflows Yet</h3>
         <p className="text-center mb-6">
           Create your first autonomous Solana agent workflow
         </p>
         <Button
           onClick={handleAddWorkflow}
-          className="bg-gradient-to-r from-[#ff6b35] to-[#f7931e] hover:opacity-90"
+          className="bg-gradient-to-r from-[#ff6b35] to-[#f7931e] hover:opacity-90 cursor-pointer"
         >
           Create Your First Workflow
         </Button>
@@ -211,10 +225,21 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
     );
   }
 
+  if (filteredWorkflows.length === 0 && searchQuery) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+        <h3 className="text-xl font-semibold mb-2">No Results Found</h3>
+        <p className="text-center">
+          No workflows match &quot;{searchQuery}&quot;
+        </p>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {workflows.map((workflow) => (
+        {filteredWorkflows.map((workflow) => (
           <div
             key={workflow.id}
             className="bg-[#1A1B23] border border-white/10 rounded-lg p-6 hover:border-white/20 transition-all duration-200 hover:shadow-lg hover:shadow-white/5"
@@ -228,10 +253,6 @@ export function WorkflowsSection({}: WorkflowsSectionProps) {
                   {workflow.description || "No description provided"}
                 </p>
                 <div className="flex items-center space-x-4 text-xs text-gray-500">
-                  <div className="flex items-center space-x-1">
-                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                    <span className="capitalize">{workflow.status}</span>
-                  </div>
                   <div className="flex items-center space-x-1">
                     <span>{workflow.nodes.length} nodes</span>
                   </div>

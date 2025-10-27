@@ -23,16 +23,29 @@ import {
 } from "@/components/ui/select";
 import { selectedNodeAtom, nodesAtom, edgesAtom } from "@/lib/state/atoms";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
+import { Trash2, Clock } from "lucide-react";
+
+const cronPresets = [
+  { label: "Every hour", value: "0 * * * *" },
+  { label: "Every 6 hours", value: "0 */6 * * *" },
+  { label: "Every 12 hours", value: "0 */12 * * *" },
+  { label: "Daily at midnight", value: "0 0 * * *" },
+  { label: "Daily at 9:00 AM", value: "0 9 * * *" },
+  { label: "Daily at 6:00 PM", value: "0 18 * * *" },
+  { label: "Weekly on Monday at 9:00 AM", value: "0 9 * * 1" },
+  { label: "Monthly on the 1st at 9:00 AM", value: "0 9 1 * *" },
+];
 
 interface ParameterFormProps {
   parameters: Record<string, any>;
   onParameterChange: (key: string, value: any) => void;
+  selectedNode?: any;
 }
 
 function ProtocolNodeForm({
   parameters,
   onParameterChange,
+  selectedNode,
 }: ParameterFormProps) {
   return (
     <div className="space-y-4">
@@ -133,7 +146,7 @@ function ProtocolNodeForm({
   );
 }
 
-function MemoryNodeForm({ parameters, onParameterChange }: ParameterFormProps) {
+function MemoryNodeForm({ parameters, onParameterChange, selectedNode }: ParameterFormProps) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -223,6 +236,7 @@ function MemoryNodeForm({ parameters, onParameterChange }: ParameterFormProps) {
 function CommunicationNodeForm({
   parameters,
   onParameterChange,
+  selectedNode,
 }: ParameterFormProps) {
   return (
     <div className="space-y-4">
@@ -299,6 +313,7 @@ function CommunicationNodeForm({
 function ConditionNodeForm({
   parameters,
   onParameterChange,
+  selectedNode,
 }: ParameterFormProps) {
   return (
     <div className="space-y-4">
@@ -357,91 +372,117 @@ function ConditionNodeForm({
 function TriggerNodeForm({
   parameters,
   onParameterChange,
+  selectedNode,
 }: ParameterFormProps) {
+  const nodeLabel = selectedNode?.data?.label || "";
+  const isScheduleTimer = nodeLabel.toLowerCase().includes("schedule") || 
+                          nodeLabel.toLowerCase().includes("timer") ||
+                          nodeLabel.toLowerCase().includes("on schedule");
+  const isMessageTrigger = nodeLabel.toLowerCase().includes("message") ||
+                           nodeLabel.toLowerCase().includes("telegram");
+
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="botToken" className="text-sm text-gray-300">
-          Bot Token
-        </Label>
-        <Input
-          id="botToken"
-          type="password"
-          value={parameters.botToken || ""}
-          onChange={(e) => onParameterChange("botToken", e.target.value)}
-          placeholder="Your Telegram bot token"
-          className="bg-[#1A1B23] border-gray-700 text-white font-mono text-xs"
-        />
-        <p className="text-xs text-gray-400">
-          Get your bot token from @BotFather on Telegram
-        </p>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="triggerType" className="text-sm text-gray-300">
-          Trigger Type
-        </Label>
-        <Select
-          value={parameters.triggerType || "webhook"}
-          onValueChange={(value) => onParameterChange("triggerType", value)}
-        >
-          <SelectTrigger className="bg-[#1A1B23] border-gray-700 text-white">
-            <SelectValue placeholder="Select trigger type" />
-          </SelectTrigger>
-          <SelectContent className="bg-[#1A1B23] border-gray-700 text-white">
-            <SelectItem value="webhook">Webhook</SelectItem>
-            <SelectItem value="schedule">Schedule</SelectItem>
-            <SelectItem value="event">Event</SelectItem>
-            <SelectItem value="manual">Manual</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {parameters.triggerType === "schedule" && (
+      {isScheduleTimer && (
         <div className="space-y-2">
-          <Label htmlFor="cronExpression" className="text-sm text-gray-300">
-            Cron Expression
+          <Label htmlFor="schedule-frequency" className="text-sm text-gray-300 flex items-center gap-2">
+            <Clock className="w-4 h-4 text-orange-500" />
+            Schedule Frequency
           </Label>
-          <Input
-            id="cronExpression"
-            value={parameters.cronExpression || ""}
-            onChange={(e) =>
-              onParameterChange("cronExpression", e.target.value)
-            }
-            placeholder="*/5 * * * *"
-            className="bg-[#1A1B23] border-gray-700 text-white font-mono"
-          />
+          <Select
+            value={parameters.cronExpression || parameters.interval || ""}
+            onValueChange={(value) => onParameterChange("cronExpression", value)}
+          >
+            <SelectTrigger className="bg-[#1A1B23] border-gray-700 text-white">
+              <SelectValue placeholder="Select when to run" />
+            </SelectTrigger>
+            <SelectContent className="bg-[#1A1B23] border-gray-700 text-white">
+              {cronPresets.map((preset) => (
+                <SelectItem
+                  key={preset.value}
+                  value={preset.value}
+                  className="text-white hover:bg-white/10"
+                >
+                  {preset.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-gray-400">
+            Choose when the workflow should run automatically
+          </p>
         </div>
       )}
 
-      {parameters.triggerType === "webhook" && (
-        <div className="space-y-2">
-          <Label htmlFor="webhookPath" className="text-sm text-gray-300">
-            Webhook Path
-          </Label>
-          <Input
-            id="webhookPath"
-            value={parameters.webhookPath || ""}
-            onChange={(e) => onParameterChange("webhookPath", e.target.value)}
-            placeholder="/webhook/..."
-            className="bg-[#1A1B23] border-gray-700 text-white font-mono"
-          />
-        </div>
-      )}
+      {isMessageTrigger && (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="botToken" className="text-sm text-gray-300">
+              Bot Token
+            </Label>
+            <Input
+              id="botToken"
+              type="password"
+              value={parameters.botToken || ""}
+              onChange={(e) => onParameterChange("botToken", e.target.value)}
+              placeholder="Your Telegram bot token"
+              className="bg-[#1A1B23] border-gray-700 text-white font-mono text-xs"
+            />
+            <p className="text-xs text-gray-400">
+              Get your bot token from @BotFather on Telegram
+            </p>
+          </div>
 
-      {parameters.triggerType === "event" && (
-        <div className="space-y-2">
-          <Label htmlFor="eventName" className="text-sm text-gray-300">
-            Event Name
-          </Label>
-          <Input
-            id="eventName"
-            value={parameters.eventName || ""}
-            onChange={(e) => onParameterChange("eventName", e.target.value)}
-            placeholder="event.name"
-            className="bg-[#1A1B23] border-gray-700 text-white"
-          />
-        </div>
+          <div className="space-y-2">
+            <Label htmlFor="triggerType" className="text-sm text-gray-300">
+              Trigger Type
+            </Label>
+            <Select
+              value={parameters.triggerType || "webhook"}
+              onValueChange={(value) => onParameterChange("triggerType", value)}
+            >
+              <SelectTrigger className="bg-[#1A1B23] border-gray-700 text-white">
+                <SelectValue placeholder="Select trigger type" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#1A1B23] border-gray-700 text-white">
+                <SelectItem value="webhook">Webhook</SelectItem>
+                <SelectItem value="schedule">Schedule</SelectItem>
+                <SelectItem value="event">Event</SelectItem>
+                <SelectItem value="manual">Manual</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {parameters.triggerType === "webhook" && (
+            <div className="space-y-2">
+              <Label htmlFor="webhookPath" className="text-sm text-gray-300">
+                Webhook Path
+              </Label>
+              <Input
+                id="webhookPath"
+                value={parameters.webhookPath || ""}
+                onChange={(e) => onParameterChange("webhookPath", e.target.value)}
+                placeholder="/webhook/..."
+                className="bg-[#1A1B23] border-gray-700 text-white font-mono"
+              />
+            </div>
+          )}
+
+          {parameters.triggerType === "event" && (
+            <div className="space-y-2">
+              <Label htmlFor="eventName" className="text-sm text-gray-300">
+                Event Name
+              </Label>
+              <Input
+                id="eventName"
+                value={parameters.eventName || ""}
+                onChange={(e) => onParameterChange("eventName", e.target.value)}
+                placeholder="event.name"
+                className="bg-[#1A1B23] border-gray-700 text-white"
+              />
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -450,6 +491,7 @@ function TriggerNodeForm({
 function TransformNodeForm({
   parameters,
   onParameterChange,
+  selectedNode,
 }: ParameterFormProps) {
   return (
     <div className="space-y-4">
@@ -609,10 +651,10 @@ export function NodeInspectorButton() {
         }}
       >
         <DialogContent
-          className="bg-[#1A1B23] border-white/10 text-white max-w-2xl max-h-[80vh] overflow-hidden"
+          className="bg-[#1A1B23] border-white/10 text-white max-w-2xl max-h-[80vh] overflow-hidden w-[95vw] sm:w-full"
           aria-describedby="node-inspector-description"
         >
-          <DialogHeader className="flex flex-row items-center justify-between pr-8">
+          <DialogHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pr-0 sm:pr-8">
             <DialogTitle>Node Inspector</DialogTitle>
             <div id="node-inspector-description" className="sr-only">
               Inspect and edit node properties including label, description, and
@@ -734,6 +776,7 @@ export function NodeInspectorButton() {
                               <ProtocolNodeForm
                                 parameters={parameters}
                                 onParameterChange={handleParameterChange}
+                                selectedNode={selectedNode}
                               />
                             );
                           case "memory":
@@ -741,6 +784,7 @@ export function NodeInspectorButton() {
                               <MemoryNodeForm
                                 parameters={parameters}
                                 onParameterChange={handleParameterChange}
+                                selectedNode={selectedNode}
                               />
                             );
                           case "communication":
@@ -748,6 +792,7 @@ export function NodeInspectorButton() {
                               <CommunicationNodeForm
                                 parameters={parameters}
                                 onParameterChange={handleParameterChange}
+                                selectedNode={selectedNode}
                               />
                             );
                           case "condition":
@@ -755,6 +800,7 @@ export function NodeInspectorButton() {
                               <ConditionNodeForm
                                 parameters={parameters}
                                 onParameterChange={handleParameterChange}
+                                selectedNode={selectedNode}
                               />
                             );
                           case "trigger":
@@ -762,6 +808,7 @@ export function NodeInspectorButton() {
                               <TriggerNodeForm
                                 parameters={parameters}
                                 onParameterChange={handleParameterChange}
+                                selectedNode={selectedNode}
                               />
                             );
                           case "transform":
@@ -769,6 +816,7 @@ export function NodeInspectorButton() {
                               <TransformNodeForm
                                 parameters={parameters}
                                 onParameterChange={handleParameterChange}
+                                selectedNode={selectedNode}
                               />
                             );
                           default:

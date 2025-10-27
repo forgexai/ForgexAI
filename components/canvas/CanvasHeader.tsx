@@ -29,8 +29,8 @@ interface CanvasHeaderProps {
 
 export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = false }: CanvasHeaderProps) {
   const router = useRouter();
-  const [nodes] = useAtom(nodesAtom);
-  const [edges] = useAtom(edgesAtom);
+  const [nodes, setNodes] = useAtom(nodesAtom);
+  const [edges, setEdges] = useAtom(edgesAtom);
   const [workflowName, setWorkflowName] = useAtom(workflowNameAtom);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [workflowDescription, setWorkflowDescription] = useState("");
@@ -95,6 +95,9 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
         const workflow = JSON.parse(text);
 
         if (workflow.nodes && workflow.edges) {
+          setNodes(workflow.nodes);
+          setEdges(workflow.edges);
+          
           toast.success("Workflow loaded successfully");
         } else {
           toast.error("Invalid workflow file");
@@ -159,15 +162,50 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
                 return []; 
               }
             case 'trigger':
+              const nodeLabel = node.data?.label || '';
+              const isScheduleTimer = nodeLabel.toLowerCase().includes("schedule") || 
+                                      nodeLabel.toLowerCase().includes("timer") ||
+                                      nodeLabel.toLowerCase().includes("on schedule");
+              
+              if (isScheduleTimer) {
+                return [
+                  { id: "cronExpression", name: "Schedule Frequency", type: "string" as const, required: true, default: "0 * * * *", description: "When to run automatically" }
+                ];
+              }
               return [
                 { id: "botToken", name: "Bot Token", type: "string" as const, required: true, description: "Telegram bot token for listening to messages" }
+              ];
+            case 'condition':
+              return [
+                { id: "condition", name: "Condition", type: "boolean" as const, required: true, description: "Boolean condition to evaluate" },
+                { id: "trueValue", name: "True Value", type: "any" as const, required: false, description: "Value when condition is true" },
+                { id: "falseValue", name: "False Value", type: "any" as const, required: false, description: "Value when condition is false" }
+              ];
+            case 'transform':
+              return [
+                { id: "data", name: "Input Data", type: "any" as const, required: true, description: "Data to transform" },
+                { id: "format", name: "Output Format", type: "string" as const, required: false, default: "json", description: "Output format (json, string, number)" }
               ];
             default:
               return [];
           }
         })(),
         outputs: node.data?.outputs || (() => {
+          const nodeLabelForOutputs = node.data?.label || '';
+          const isScheduleTimerOutputs = nodeLabelForOutputs.toLowerCase().includes("schedule") || 
+                                         nodeLabelForOutputs.toLowerCase().includes("timer") ||
+                                         nodeLabelForOutputs.toLowerCase().includes("on schedule");
+          
           switch (node.data?.category) {
+            case 'trigger':
+              if (isScheduleTimerOutputs) {
+                return [
+                  { id: "timestamp", name: "Timestamp", type: "string" as const, description: "Current timestamp when triggered" }
+                ];
+              }
+              return [
+                { id: "triggered", name: "Triggered", type: "boolean" as const, description: "Trigger status" }
+              ];
             case 'communication':
               return [
                 { id: "messageId", name: "Message ID", type: "string" as const, description: "Sent message ID" },
@@ -180,6 +218,15 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
             case 'memory':
               return [
                 { id: "success", name: "Success", type: "boolean" as const, description: "Operation success" }
+              ];
+            case 'condition':
+              return [
+                { id: "result", name: "Result", type: "any" as const, description: "Conditional result" },
+                { id: "branch", name: "Branch", type: "string" as const, description: "Which branch was taken" }
+              ];
+            case 'transform':
+              return [
+                { id: "transformed", name: "Transformed Data", type: "any" as const, description: "Transformed data" }
               ];
             default:
               return [];
@@ -301,15 +348,50 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
                 return []; 
               }
             case 'trigger':
+              const nodeLabel2 = node.data?.label || '';
+              const isScheduleTimer2 = nodeLabel2.toLowerCase().includes("schedule") || 
+                                      nodeLabel2.toLowerCase().includes("timer") ||
+                                      nodeLabel2.toLowerCase().includes("on schedule");
+              
+              if (isScheduleTimer2) {
+                return [
+                  { id: "cronExpression", name: "Schedule Frequency", type: "string" as const, required: true, default: "0 * * * *", description: "When to run automatically" }
+                ];
+              }
               return [
                 { id: "botToken", name: "Bot Token", type: "string" as const, required: true, description: "Telegram bot token for listening to messages" }
+              ];
+            case 'condition':
+              return [
+                { id: "condition", name: "Condition", type: "boolean" as const, required: true, description: "Boolean condition to evaluate" },
+                { id: "trueValue", name: "True Value", type: "any" as const, required: false, description: "Value when condition is true" },
+                { id: "falseValue", name: "False Value", type: "any" as const, required: false, description: "Value when condition is false" }
+              ];
+            case 'transform':
+              return [
+                { id: "data", name: "Input Data", type: "any" as const, required: true, description: "Data to transform" },
+                { id: "format", name: "Output Format", type: "string" as const, required: false, default: "json", description: "Output format (json, string, number)" }
               ];
             default:
               return [];
           }
         })(),
         outputs: node.data?.outputs || (() => {
+          const nodeLabel2 = node.data?.label || '';
+          const isScheduleTimer2 = nodeLabel2.toLowerCase().includes("schedule") || 
+                                  nodeLabel2.toLowerCase().includes("timer") ||
+                                  nodeLabel2.toLowerCase().includes("on schedule");
+          
           switch (node.data?.category) {
+            case 'trigger':
+              if (isScheduleTimer2) {
+                return [
+                  { id: "timestamp", name: "Timestamp", type: "string" as const, description: "Current timestamp when triggered" }
+                ];
+              }
+              return [
+                { id: "triggered", name: "Triggered", type: "boolean" as const, description: "Trigger status" }
+              ];
             case 'communication':
               return [
                 { id: "messageId", name: "Message ID", type: "string" as const, description: "Sent message ID" },
@@ -322,6 +404,15 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
             case 'memory':
               return [
                 { id: "success", name: "Success", type: "boolean" as const, description: "Operation success" }
+              ];
+            case 'condition':
+              return [
+                { id: "result", name: "Result", type: "any" as const, description: "Conditional result" },
+                { id: "branch", name: "Branch", type: "string" as const, description: "Which branch was taken" }
+              ];
+            case 'transform':
+              return [
+                { id: "transformed", name: "Transformed Data", type: "any" as const, description: "Transformed data" }
               ];
             default:
               return [];
@@ -400,13 +491,13 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
 
   return (
     <>
-      <div className="h-16 bg-[#1A1B23] border-b border-white/10 flex items-center justify-between px-8">
-        <div className="flex items-center gap-4">
+      <div className="h-16 bg-[#1A1B23] border-b border-white/10 flex items-center justify-between px-4 md:px-8">
+        <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
           <Button
             variant="ghost"
             size="sm"
             onClick={handleBackClick}
-            className="text-gray-400 hover:text-white hover:bg-white/10 px-3 py-2 cursor-pointer"
+            className="text-gray-400 hover:text-white hover:bg-white/10 px-2 md:px-3 py-2 cursor-pointer flex-shrink-0"
           >
             <ChevronLeft className="w-4 h-4" />
           </Button>
@@ -417,12 +508,12 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
               onChange={(e) => setWorkflowName(e.target.value)}
               onBlur={handleNameSave}
               onKeyPress={handleNameKeyPress}
-              className="bg-transparent border-none text-white font-semibold text-lg px-3 py-2 h-auto focus:ring-0 focus:border-none hover:bg-white/5 rounded"
+              className="bg-transparent border-none text-white font-semibold text-sm md:text-lg px-2 md:px-3 py-2 h-auto focus:ring-0 focus:border-none hover:bg-white/5 rounded min-w-0 flex-1"
               autoFocus
             />
           ) : (
             <h1 
-              className="text-lg font-semibold text-white cursor-pointer hover:bg-white/5 px-3 py-2 rounded transition-colors"
+              className="text-sm md:text-lg font-semibold text-white cursor-pointer hover:bg-white/5 px-2 md:px-3 py-2 rounded transition-colors truncate min-w-0 flex-1"
               onClick={handleNameEdit}
             >
               {workflowName}
@@ -430,7 +521,7 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1 md:gap-3 flex-shrink-0">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -438,7 +529,7 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
                   variant="outline"
                   size="sm"
                   onClick={handleSaveWorkflow}
-                  className="border-gray-700 text-black cursor-pointer px-4 py-2"
+                  className="border-gray-700 text-black cursor-pointer px-2 md:px-4 py-2"
                 >
                   <Save className="w-4 h-4" />
                 </Button>
@@ -456,7 +547,7 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
                   variant="outline"
                   size="sm"
                   onClick={handleLoadWorkflow}
-                  className="border-gray-700 text-black cursor-pointer px-4 py-2"
+                  className="border-gray-700 text-black cursor-pointer px-2 md:px-4 py-2"
                 >
                   <Download className="w-4 h-4" />
                 </Button>
@@ -472,22 +563,25 @@ export function CanvasHeader({ workflowId, isEditMode = false, isTemplateMode = 
               size="sm"
               onClick={handleSaveChanges}
               disabled={!authenticated || isSaving}
-              className="bg-gradient-to-r from-green-500 to-green-600 text-white cursor-pointer hover:opacity-90"
+              className="bg-gradient-to-r from-green-500 to-green-600 text-white cursor-pointer hover:opacity-90 px-2 md:px-4"
             >
-              <Save className="w-4 h-4 mr-2" />
-              {isSaving ? "Saving..." : "Save Changes"}
+              <Save className="w-4 h-4 md:mr-2" />
+              <span className="hidden md:inline">{isSaving ? "Saving..." : "Save Changes"}</span>
             </Button>
           ) : (
             <Button
               size="sm"
               onClick={() => {
-                setWorkflowName(isTemplateMode ? "Template Workflow" : "Untitled Workflow");
+                if (!workflowName || workflowName === "Untitled Workflow") {
+                  setWorkflowName(isTemplateMode ? "Template Workflow" : "Untitled Workflow");
+                }
                 setIsCreateModalOpen(true);
               }}
               disabled={!authenticated}
-              className="bg-gradient-to-r from-[#ff6b35] to-[#f7931e] text-white cursor-pointer hover:opacity-90"
+              className="bg-gradient-to-r from-[#ff6b35] to-[#f7931e] text-white cursor-pointer hover:opacity-90 px-2 md:px-4"
             >
-              {isTemplateMode ? "Save Template as Workflow" : "Create Workflow"}
+              <span className="hidden md:inline">{isTemplateMode ? "Save Template as Workflow" : "Create Workflow"}</span>
+              <span className="md:hidden">{isTemplateMode ? "Save" : "Create"}</span>
             </Button>
           )}
         </div>
