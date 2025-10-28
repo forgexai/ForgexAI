@@ -4,8 +4,12 @@ import { useEffect, useState } from "react";
 import { useWidgetProps } from "@/app/hooks/use-widget-props";
 import { useMaxHeight } from "@/app/hooks/use-max-height";
 import { useOpenAIGlobal } from "@/app/hooks/use-openai-global";
-import { externalWallet } from "@/lib/solana-config";
-import { ensureWalletConnected, getWalletPublicKey, signAndSendTransaction } from "@/lib/wallet-utils";
+// External wallet is always used - no need to import the config
+import {
+  ensureWalletConnected,
+  getWalletPublicKey,
+  signAndSendTransaction,
+} from "@/lib/wallet-utils";
 
 type TransferWidgetProps = {
   toAddress?: string;
@@ -42,18 +46,14 @@ export default function TransferPage() {
     setError("");
     setResult(null);
     try {
-      let userPublicKey: string | undefined;
-
-      // If using external wallet, connect and get public key
-      if (externalWallet) {
-        const provider = await ensureWalletConnected();
-        const publicKey = getWalletPublicKey(provider);
-        if (!publicKey) {
-          throw new Error("Failed to get wallet public key");
-        }
-        userPublicKey = publicKey;
-        setWalletAddress(publicKey);
+      // Connect external wallet and get public key
+      const provider = await ensureWalletConnected();
+      const publicKey = getWalletPublicKey(provider);
+      if (!publicKey) {
+        throw new Error("Failed to get wallet public key");
       }
+      const userPublicKey = publicKey;
+      setWalletAddress(publicKey);
 
       const res = await fetch("/api/transfer", {
         method: "POST",
@@ -63,16 +63,18 @@ export default function TransferPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to send SOL");
 
-      // If external wallet mode, sign and send the transaction
-      if (externalWallet && data.transferTransaction) {
+      // Sign and send the transaction with external wallet
+      if (data.transferTransaction) {
         const provider = await ensureWalletConnected();
-        const signature = await signAndSendTransaction(provider, data.transferTransaction);
-        
+        const signature = await signAndSendTransaction(
+          provider,
+          data.transferTransaction
+        );
+
         const explorerUrl = `https://solscan.io/tx/${signature}`;
         setResult({ signature, explorerUrl });
       } else {
-        // Server wallet mode - transaction already executed
-        setResult({ signature: data.signature, explorerUrl: data.explorerUrl });
+        throw new Error("No transaction data received");
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to send SOL");
@@ -141,19 +143,32 @@ export default function TransferPage() {
               padding: 12,
               borderRadius: 8,
               background: theme === "dark" ? "#0F1612" : "#eefcf3",
-              border: theme === "dark" ? "1px solid #193b2d" : "1px solid #c7f0d9",
+              border:
+                theme === "dark" ? "1px solid #193b2d" : "1px solid #c7f0d9",
               fontSize: 14,
             }}
           >
             <div style={{ marginBottom: 6 }}>Transfer sent successfully.</div>
-            <a href={result.explorerUrl} target="_blank" rel="noreferrer" style={{ color: "#16a34a" }}>
+            <a
+              href={result.explorerUrl}
+              target="_blank"
+              rel="noreferrer"
+              style={{ color: "#16a34a" }}
+            >
               View on Solscan
             </a>
           </div>
         ) : null}
 
-        {externalWallet && walletAddress ? (
-          <div style={{ fontSize: 12, color: "#6b7280", textAlign: "center", wordBreak: "break-all" }}>
+        {walletAddress ? (
+          <div
+            style={{
+              fontSize: 12,
+              color: "#6b7280",
+              textAlign: "center",
+              wordBreak: "break-all",
+            }}
+          >
             Connected: {walletAddress}
           </div>
         ) : null}
@@ -176,5 +191,3 @@ export default function TransferPage() {
     </div>
   );
 }
-
-

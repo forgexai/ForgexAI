@@ -2,13 +2,11 @@ import { NextResponse } from "next/server";
 import { VersionedTransaction, PublicKey } from "@solana/web3.js";
 import {
   getSolanaConnection,
-  getWalletKeypair,
   JUPITER_API,
   TOKENS,
   TOKEN_DECIMALS,
   JUPSOL_MINT,
   LST_DECIMALS,
-  externalWallet,
 } from "@/lib/solana-config";
 
 type TokenInfo = {
@@ -42,23 +40,22 @@ async function resolveLstMintAndDecimals(param?: string): Promise<{ mint: string
 export async function POST(request: Request) {
   try {
     const { amount, lst, userPublicKey } = await request.json();
-    console.log("[STAKE] incoming:", { amount, lst, userPublicKey, externalWallet });
+    console.log("[STAKE] incoming:", { amount, lst, userPublicKey });
 
     if (!amount) {
       return NextResponse.json({ error: "Amount is required" }, { status: 400 });
     }
 
-    // Validate userPublicKey when using external wallet
-    if (externalWallet && !userPublicKey) {
+    // Validate userPublicKey (required for external wallet)
+    if (!userPublicKey) {
       return NextResponse.json(
-        { error: "userPublicKey is required when using external wallet" },
+        { error: "userPublicKey is required" },
         { status: 400 }
       );
     }
 
     const connection = getSolanaConnection();
-    const wallet = externalWallet ? null : getWalletKeypair();
-    const publicKeyString = externalWallet ? userPublicKey : wallet!.publicKey.toString();
+    const publicKeyString = userPublicKey;
 
     // Input is SOL → output is LST (default JupSOL)
     const inputMint = TOKENS.SOL;
@@ -107,40 +104,14 @@ export async function POST(request: Request) {
 
     const outputAmount = parseFloat(quoteData.outAmount) / Math.pow(10, lstDecimals);
 
-    // If using external wallet, return unsigned transaction for client to sign
-    if (externalWallet) {
-      console.log("[STAKE] Prepared unsigned transaction for client signing.");
-      return NextResponse.json({
-        success: true,
-        swapTransaction, // base64 encoded unsigned transaction
-        expectedOutputAmount: outputAmount,
-        inputAmount: parseFloat(amount),
-        inputToken: "SOL",
-        outputToken: lstSymbol,
-        outputMint: lstMint,
-        timestamp: new Date().toISOString(),
-      });
-    }
-
-    // Sign and send (server wallet mode)
-    const txBuf = Buffer.from(swapTransaction, "base64");
-    const tx = VersionedTransaction.deserialize(txBuf);
-    tx.sign([wallet!]);
-    const raw = tx.serialize();
-    const signature = await connection.sendRawTransaction(raw, { skipPreflight: true, maxRetries: 2 });
-
-    const confirmation = await connection.confirmTransaction(signature, "confirmed");
-    if (confirmation.value.err) {
-      throw new Error(`Stake transaction failed: ${JSON.stringify(confirmation.value.err)}`);
-    }
-
+    // Return unsigned transaction for client to sign (external wallet only)
+    console.log("[STAKE] Prepared unsigned transaction for client signing.");
     return NextResponse.json({
       success: true,
-      signature,
-      explorerUrl: `https://solscan.io/tx/${signature}`,
+      swapTransaction, // base64 encoded unsigned transaction
+      expectedOutputAmount: outputAmount,
       inputAmount: parseFloat(amount),
       inputToken: "SOL",
-      outputAmount,
       outputToken: lstSymbol,
       outputMint: lstMint,
       timestamp: new Date().toISOString(),

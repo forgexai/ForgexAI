@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowDownUp } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useDisplayMode, useMaxHeight, useWidgetProps } from "../hooks";
-import { externalWallet } from "@/lib/solana-config";
+// External wallet is always used - no need to import the config
 import { ensureWalletConnected, getWalletPublicKey, signAndSendTransaction } from "@/lib/wallet-utils";
 
 interface SwapWidgetProps extends Record<string, unknown> {
@@ -96,18 +96,14 @@ export default function SwapPage() {
     setSwapResult(null);
 
     try {
-      let userPublicKey: string | undefined;
-
-      // If using external wallet, connect and get public key
-      if (externalWallet) {
-        const provider = await ensureWalletConnected();
-        const publicKey = getWalletPublicKey(provider);
-        if (!publicKey) {
-          throw new Error("Failed to get wallet public key");
-        }
-        userPublicKey = publicKey;
-        setWalletAddress(publicKey);
+      // Connect external wallet and get public key
+      const provider = await ensureWalletConnected();
+      const publicKey = getWalletPublicKey(provider);
+      if (!publicKey) {
+        throw new Error("Failed to get wallet public key");
       }
+      const userPublicKey = publicKey;
+      setWalletAddress(publicKey);
 
       const response = await fetch("/api/swap/execute", {
         method: "POST",
@@ -129,8 +125,8 @@ export default function SwapPage() {
 
       const data = await response.json();
 
-      // If external wallet mode, sign and send the transaction
-      if (externalWallet && data.swapTransaction) {
+      // Sign and send the transaction with external wallet
+      if (data.swapTransaction) {
         const provider = await ensureWalletConnected();
         const signature = await signAndSendTransaction(provider, data.swapTransaction);
         
@@ -141,12 +137,7 @@ export default function SwapPage() {
           explorerUrl,
         });
       } else {
-        // Server wallet mode - transaction already executed
-        setSwapResult({
-          outputAmount: data.outputAmount,
-          outputToken: data.outputToken,
-          explorerUrl: data.explorerUrl,
-        });
+        throw new Error("No transaction data received");
       }
     } catch (err) {
       console.error("Error executing swap:", err);
@@ -285,7 +276,7 @@ export default function SwapPage() {
             {isSwapping ? "Swapping..." : "Swap"}
           </Button>
 
-          {externalWallet && walletAddress && (
+          {walletAddress && (
             <p className="text-xs text-center text-muted-foreground break-all">
               Connected: {walletAddress}
             </p>

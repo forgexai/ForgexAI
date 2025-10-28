@@ -2,9 +2,7 @@ import { NextResponse } from "next/server";
 import { VersionedTransaction } from "@solana/web3.js";
 import {
   getSolanaConnection,
-  getWalletKeypair,
   JUPITER_API,
-  externalWallet,
 } from "@/lib/solana-config";
 import { resolveTokenParam } from "@/lib/token-resolver";
 
@@ -21,18 +19,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate userPublicKey when using external wallet
-    if (externalWallet && !userPublicKey) {
+    // Validate userPublicKey (required for external wallet)
+    if (!userPublicKey) {
       return NextResponse.json(
-        { error: "userPublicKey is required when using external wallet" },
+        { error: "userPublicKey is required" },
         { status: 400 }
       );
     }
 
-    // Get wallet and connection
+    // Get connection
     const connection = getSolanaConnection();
-    const wallet = externalWallet ? null : getWalletKeypair();
-    const publicKeyString = externalWallet ? userPublicKey : wallet!.publicKey.toString();
+    const publicKeyString = userPublicKey;
 
     // Resolve token params (accept ticker or mint)
     const inputResolved = await resolveTokenParam(inputToken, "SOL");
@@ -49,7 +46,6 @@ export async function POST(request: Request) {
       outputMint,
       amount: scaledAmount,
       userPublicKey: publicKeyString,
-      externalWallet,
     });
 
     // Step 1: Get quote
@@ -94,58 +90,16 @@ export async function POST(request: Request) {
 
     const { swapTransaction } = await swapResponse.json();
 
-    // If using external wallet, return unsigned transaction for client to sign
-    if (externalWallet) {
-      console.log("Prepared unsigned transaction for client signing.");
-      const outputAmount = parseFloat(quoteData.outAmount) / Math.pow(10, outputResolved.decimals || 6);
-
-      return NextResponse.json({
-        success: true,
-        swapTransaction, // base64 encoded unsigned transaction
-        expectedOutputAmount: outputAmount,
-        inputAmount: parseFloat(amount),
-        inputToken: inputResolved.symbol,
-        outputToken: outputResolved.symbol,
-        timestamp: new Date().toISOString(),
-      });
-    }
-
-    // Step 3: Deserialize and sign transaction (server wallet mode)
-    console.log("Signing transaction with server wallet...");
-    const transactionBuf = Buffer.from(swapTransaction, "base64");
-    const transaction = VersionedTransaction.deserialize(transactionBuf);
-
-    // Sign the transaction
-    transaction.sign([wallet!]);
-
-    // Step 4: Send transaction
-    console.log("Sending transaction to Solana network...");
-    const rawTransaction = transaction.serialize();
-    const txid = await connection.sendRawTransaction(rawTransaction, {
-      skipPreflight: true,
-      maxRetries: 2,
-    });
-
-    console.log("Transaction sent:", txid);
-
-    // Wait for confirmation
-    console.log("Waiting for confirmation...");
-    const confirmation = await connection.confirmTransaction(txid, "confirmed");
-
-    if (confirmation.value.err) {
-      throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
-    }
-
-    // Calculate output amount for response
+    // Return unsigned transaction for client to sign (external wallet only)
+    console.log("Prepared unsigned transaction for client signing.");
     const outputAmount = parseFloat(quoteData.outAmount) / Math.pow(10, outputResolved.decimals || 6);
 
     return NextResponse.json({
       success: true,
-      signature: txid,
-      explorerUrl: `https://solscan.io/tx/${txid}`,
+      swapTransaction, // base64 encoded unsigned transaction
+      expectedOutputAmount: outputAmount,
       inputAmount: parseFloat(amount),
       inputToken: inputResolved.symbol,
-      outputAmount,
       outputToken: outputResolved.symbol,
       timestamp: new Date().toISOString(),
     });

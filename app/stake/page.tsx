@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useWidgetProps } from "@/app/hooks/use-widget-props";
 import { useMaxHeight } from "@/app/hooks/use-max-height";
 import { useOpenAIGlobal } from "@/app/hooks/use-openai-global";
-import { externalWallet } from "@/lib/solana-config";
+// External wallet is always used - no need to import the config
 import { ensureWalletConnected, getWalletPublicKey, signAndSendTransaction } from "@/lib/wallet-utils";
 
 type StakeWidgetProps = {
@@ -44,18 +44,14 @@ export default function StakePage() {
     setError("");
     setResult(null);
     try {
-      let userPublicKey: string | undefined;
-
-      // If using external wallet, connect and get public key
-      if (externalWallet) {
-        const provider = await ensureWalletConnected();
-        const publicKey = getWalletPublicKey(provider);
-        if (!publicKey) {
-          throw new Error("Failed to get wallet public key");
-        }
-        userPublicKey = publicKey;
-        setWalletAddress(publicKey);
+      // Connect external wallet and get public key
+      const provider = await ensureWalletConnected();
+      const publicKey = getWalletPublicKey(provider);
+      if (!publicKey) {
+        throw new Error("Failed to get wallet public key");
       }
+      const userPublicKey = publicKey;
+      setWalletAddress(publicKey);
 
       const res = await fetch("/api/stake", {
         method: "POST",
@@ -65,8 +61,8 @@ export default function StakePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to stake SOL");
 
-      // If external wallet mode, sign and send the transaction
-      if (externalWallet && data.swapTransaction) {
+      // Sign and send the transaction with external wallet
+      if (data.swapTransaction) {
         const provider = await ensureWalletConnected();
         const signature = await signAndSendTransaction(provider, data.swapTransaction);
         
@@ -78,13 +74,7 @@ export default function StakePage() {
           outputToken: data.outputToken,
         });
       } else {
-        // Server wallet mode - transaction already executed
-        setResult({
-          signature: data.signature,
-          explorerUrl: data.explorerUrl,
-          outputAmount: data.outputAmount,
-          outputToken: data.outputToken,
-        });
+        throw new Error("No transaction data received");
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to stake SOL");
@@ -166,7 +156,7 @@ export default function StakePage() {
           </div>
         ) : null}
 
-        {externalWallet && walletAddress ? (
+        {walletAddress ? (
           <div style={{ fontSize: 12, color: "#6b7280", textAlign: "center", wordBreak: "break-all" }}>
             Connected: {walletAddress}
           </div>

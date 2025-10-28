@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction, type Connection } from "@solana/web3.js";
-import { getSolanaConnection, getWalletKeypair, externalWallet } from "@/lib/solana-config";
+import { getSolanaConnection } from "@/lib/solana-config";
 import { resolveAddressOrDomain } from "@/lib/address-resolver";
 
 export async function POST(request: Request) {
@@ -14,17 +14,16 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate userPublicKey when using external wallet
-    if (externalWallet && !userPublicKey) {
+    // Validate userPublicKey (required for external wallet)
+    if (!userPublicKey) {
       return NextResponse.json(
-        { error: "userPublicKey is required when using external wallet" },
+        { error: "userPublicKey is required" },
         { status: 400 }
       );
     }
 
     const connection = getSolanaConnection();
-    const wallet = externalWallet ? null : getWalletKeypair();
-    const fromPublicKey = externalWallet ? new PublicKey(userPublicKey) : wallet!.publicKey;
+    const fromPublicKey = new PublicKey(userPublicKey);
 
     // Resolve destination (address or domain)
     let destination: PublicKey;
@@ -60,39 +59,14 @@ export async function POST(request: Request) {
     const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
     transaction.recentBlockhash = blockhash;
 
-    // If using external wallet, return unsigned transaction for client to sign
-    if (externalWallet) {
-      console.log("Prepared unsigned transfer transaction for client signing.");
-      const serialized = transaction.serialize({ requireAllSignatures: false });
-      const transferTransaction = Buffer.from(serialized).toString("base64");
-
-      return NextResponse.json({
-        success: true,
-        transferTransaction, // base64 encoded unsigned transaction
-        from: fromPublicKey.toString(),
-        to: destination.toString(),
-        amount: solAmount,
-        unit: "SOL",
-        timestamp: new Date().toISOString(),
-      });
-    }
-
-    // Sign and send (server wallet mode)
-    transaction.sign(wallet!);
-    const signature = await connection.sendRawTransaction(transaction.serialize(), {
-      skipPreflight: false,
-      maxRetries: 2,
-    });
-
-    const confirmation = await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
-    if (confirmation.value.err) {
-      throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
-    }
+    // Return unsigned transaction for client to sign (external wallet only)
+    console.log("Prepared unsigned transfer transaction for client signing.");
+    const serialized = transaction.serialize({ requireAllSignatures: false });
+    const transferTransaction = Buffer.from(serialized).toString("base64");
 
     return NextResponse.json({
       success: true,
-      signature,
-      explorerUrl: `https://solscan.io/tx/${signature}`,
+      transferTransaction, // base64 encoded unsigned transaction
       from: fromPublicKey.toString(),
       to: destination.toString(),
       amount: solAmount,
