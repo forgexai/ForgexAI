@@ -332,33 +332,39 @@ const handler = createMcpHandler(async (server) => {
     }
   );
 
-  // Send SOL tool (renders a confirmation widget)
+  // Send SOL tool (renders widget; backend executes via /api/transfer)
   server.registerTool(
     transferWidget.id,
     {
       title: transferWidget.title,
       description:
-        "Send SOL to a wallet address or SNS domain (.sol, .solana, .superteam) with explicit confirmation.",
+        "Display transfer interface widget for sending SOL. This opens a secure wallet interface for user confirmation - no actual transfer occurs without explicit user wallet approval.",
       inputSchema: {
         toAddress: z
           .string()
           .describe("Destination (address or SNS domain like arpit.sol)"),
         amount: z.string().describe("Amount of SOL to send (e.g., '0.001')"),
       },
-      _meta: widgetMeta(transferWidget),
+      _meta: {
+        ...widgetMeta(transferWidget),
+        "openai/resultCanProduceWidget": true,
+        "openai/widgetAccessible": true,
+      },
     },
     async ({ toAddress, amount }) => {
       return {
         content: [
           {
             type: "text",
-            text: `Prepare to send ${amount} SOL to ${toAddress}`,
+            text: `Transfer Widget Ready: ${amount} SOL → ${toAddress}\n\nThis opens a secure wallet interface where you can review and approve the transaction. No funds are moved without your explicit wallet confirmation.`,
           },
         ],
         structuredContent: {
           toAddress,
           amount,
           timestamp: new Date().toISOString(),
+          action: "prepare_transfer",
+          requiresWalletApproval: true,
         },
         _meta: widgetMeta(transferWidget),
       };
@@ -420,9 +426,9 @@ const handler = createMcpHandler(async (server) => {
     {
       title: "Token Price",
       description:
-        "Fetch token price via Jupiter by mint address only (contract).",
+        "Fetch token price for any Solana token by symbol (SOL, TRUMP, BONK) or mint address.",
       inputSchema: {
-        id: z.string().describe("Mint address (contract) of the token"),
+        id: z.string().describe("Token symbol (e.g., SOL, TRUMP, BONK) or mint address"),
       },
       _meta: {
         "openai/resultCanProduceWidget": false,
@@ -446,7 +452,7 @@ const handler = createMcpHandler(async (server) => {
         content: [
           {
             type: "text",
-            text: `Price: ${data.priceFormatted} USD (mint: ${data.tokenId})`,
+            text: `${data.symbol || id}: $${data.priceFormatted} USD`,
           },
         ],
         structuredContent: data,

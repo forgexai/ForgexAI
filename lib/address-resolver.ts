@@ -26,52 +26,73 @@ export async function resolveAddressOrDomain(
     const parser = new TldParser(connection);
     const owner = await parser.getOwnerFromDomainTld(normalized);
     if (owner) {
-      const ownerStr = typeof owner === "string" ? owner : (owner as PublicKey).toBase58?.() ?? String(owner);
+      const ownerStr =
+        typeof owner === "string"
+          ? owner
+          : (owner as PublicKey).toBase58?.() ?? String(owner);
       return new PublicKey(ownerStr);
     }
   } catch {}
 
-  // 3) Fallback to Bonfida SNS (.sol + SOL record)
+  // 3) Fallback to Bonfida SNS (.sol domains)
   try {
     const sns: any = await import("@bonfida/spl-name-service");
 
-    // Prefer SOL record (if set)
+    // For .sol domains, use the resolve function directly
+    if (normalized.endsWith(".sol")) {
+      try {
+        const domainName = normalized.replace(/\.sol$/i, "");
+        const owner = await sns.resolve(connection, domainName);
+        if (owner) {
+          return owner;
+        }
+      } catch (error) {
+        console.warn("SNS resolve failed:", error);
+      }
+    }
+
+    // Try SOL record for other domains
     try {
-      const solRecord = await sns.getRecordV2(connection, normalized, sns.Record.SOL);
-      const recordStr = typeof solRecord === "string" ? solRecord : solRecord?.data ?? solRecord?.value;
+      const solRecord = await sns.getRecordV2(
+        connection,
+        normalized,
+        sns.Record.SOL
+      );
+      const recordStr =
+        typeof solRecord === "string"
+          ? solRecord
+          : solRecord?.data ?? solRecord?.value;
       if (recordStr) {
         return new PublicKey(recordStr);
       }
     } catch {}
 
-    // Generic domain key
+    // Generic domain key approach
     let pubkey: PublicKey | undefined;
-    if (typeof sns.getDomainKeyFromDomain === "function") {
-      const res = await sns.getDomainKeyFromDomain(normalized);
-      pubkey = res?.pubkey;
-    }
-
-    // Classic .sol fallback
-    if (!pubkey && normalized.endsWith(".sol") && typeof sns.getDomainKey === "function") {
-      const nameOnly = normalized.replace(/\.sol$/i, "");
-      const res = await sns.getDomainKey(nameOnly);
-      pubkey = res?.pubkey;
+    
+    // Try getDomainKey for .sol domains
+    if (normalized.endsWith(".sol")) {
+      try {
+        const nameOnly = normalized.replace(/\.sol$/i, "");
+        const domainKey = await sns.getDomainKey(nameOnly);
+        pubkey = domainKey;
+      } catch {}
     }
 
     if (!pubkey) {
       throw new Error("Failed to resolve domain");
     }
 
+    // Get the registry state to find the owner
     const registry = await sns.NameRegistryState.retrieve(connection, pubkey);
-    const owner = registry?.owner ?? registry?.registry?.owner;
+    const owner = registry?.owner;
     if (!owner) {
       throw new Error("Failed to resolve domain owner");
     }
-    const ownerStr = typeof owner === "string" ? owner : new PublicKey(owner).toBase58();
-    return new PublicKey(ownerStr);
+    
+    return new PublicKey(owner);
   } catch (e) {
-    throw new Error("Failed to resolve domain");
+    console.error("Domain resolution error:", e);
+    throw new Error(`Failed to resolve domain: ${e instanceof Error ? e.message : 'Unknown error'}`);
   }
 }
-
-

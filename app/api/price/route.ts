@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { PublicKey } from "@solana/web3.js";
 import { getMint } from "@solana/spl-token";
 import { getSolanaConnection } from "@/lib/solana-config";
+import { searchTokens } from "@/lib/token-resolver";
 
 const MINT_REGEX = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
@@ -22,13 +23,31 @@ export async function GET(request: Request) {
       raw: tokenIdParam,
     });
     if (!tokenIdParam) {
-      return NextResponse.json({ error: "tokenId (mint address) is required" }, { status: 400 });
+      return NextResponse.json({ error: "tokenId (mint address or symbol) is required" }, { status: 400 });
     }
 
-    const tokenId = tokenIdParam.trim();
+    let tokenId = tokenIdParam.trim();
+    let tokenSymbol = tokenId;
+    
+    // If it's not a mint address, try to resolve it as a symbol
     if (!MINT_REGEX.test(tokenId)) {
-      console.warn("[PRICE] invalid mint provided", tokenId);
-      return NextResponse.json({ error: "Provide a valid mint address (contract)" }, { status: 400 });
+      console.log("[PRICE] Resolving symbol to mint address:", tokenId);
+      try {
+        const tokens = await searchTokens(tokenId, 1);
+        if (tokens.length === 0) {
+          return NextResponse.json({ 
+            error: `Token "${tokenId}" not found. Please provide a valid token symbol or mint address.` 
+          }, { status: 404 });
+        }
+        tokenId = tokens[0].id; // Use the mint address
+        tokenSymbol = tokens[0].symbol;
+        console.log("[PRICE] Resolved", tokenSymbol, "to mint:", tokenId);
+      } catch (error) {
+        console.error("[PRICE] Token resolution failed:", error);
+        return NextResponse.json({ 
+          error: `Failed to resolve token "${tokenId}". Please provide a valid mint address.` 
+        }, { status: 400 });
+      }
     }
 
     // Fetch USD price via lite-api v3
@@ -61,6 +80,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       tokenId,
+      symbol: tokenSymbol,
       price: parseFloat(usdPrice),
       priceFormatted: formatPrice(parseFloat(usdPrice)),
       marketCap,
