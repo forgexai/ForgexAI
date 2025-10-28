@@ -180,7 +180,10 @@ export function getMemoryInputs(nodeData: NodeData, workflowId?: string): NodeIn
 
 export function getConditionInputs(nodeData: NodeData): NodeInput[] {
   return [
-    { id: "condition", name: "Condition", type: "boolean" as const, required: true, description: "Boolean condition to evaluate" },
+    { id: "condition", name: "Boolean Condition", type: "boolean" as const, required: false, description: "Direct boolean condition (true/false)" },
+    { id: "leftOperand", name: "Left Operand", type: "any" as const, required: false, description: "Left side of comparison (e.g., Price, HealthFactor)" },
+    { id: "operator", name: "Operator", type: "string" as const, required: false, description: "Comparison operator (greaterThan, lessThan, equals, notEquals)" },
+    { id: "rightOperand", name: "Right Operand", type: "any" as const, required: false, description: "Right side of comparison (e.g., 200, 1.5)" },
     { id: "trueValue", name: "True Value", type: "any" as const, required: false, description: "Value when condition is true" },
     { id: "falseValue", name: "False Value", type: "any" as const, required: false, description: "Value when condition is false" }
   ];
