@@ -503,9 +503,9 @@ export function DeployWorkflowModal({
           </div>
         )}
 
-        <div className="space-y-3">
+        <div>
           <Label className="text-sm font-semibold">
-            {deploymentInstructions.title}
+            {/* {deploymentInstructions.title} */}
           </Label>
           <div className="space-y-2">
             {deploymentInstructions.steps.map((step, index) => (
@@ -519,24 +519,6 @@ export function DeployWorkflowModal({
           </div>
         </div>
 
-        <div className="p-4 bg-blue-900/20 border border-blue-500/20 rounded-lg">
-          <h4 className="font-semibold text-blue-400 mb-2">Important Notes:</h4>
-          <ul className="text-sm text-gray-300 space-y-1">
-            <li>
-              • Make sure to save your webhook URL and configure it in your{" "}
-              {platform} app
-            </li>
-            <li>• Your bot is now active and ready to receive messages</li>
-            <li>
-              • You can test the bot by sending a message through {platform}
-            </li>
-            {platform === "whatsapp" && (
-              <li>
-                • WhatsApp bots require approval from Meta for production use
-              </li>
-            )}
-          </ul>
-        </div>
       </div>
     );
   };
