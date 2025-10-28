@@ -1,3 +1,4 @@
+"use client";
 /**
  * Source: https://github.com/openai/openai-apps-sdk-examples/tree/main/src
  */
@@ -12,10 +13,10 @@ import {
 /**
  * Low-level hook to subscribe to a specific OpenAI global value.
  * Uses React's useSyncExternalStore for efficient reactivity.
- * 
+ *
  * @param key - The key of the OpenAI global to subscribe to
  * @returns The current value of the global or null if not available
- * 
+ *
  * @example
  * ```tsx
  * const theme = useOpenAIGlobal("theme"); // "light" | "dark" | null
