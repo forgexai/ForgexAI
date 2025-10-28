@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ArrowUpDown, Loader2, ExternalLink } from "lucide-react";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { Connection, PublicKey, VersionedTransaction } from "@solana/web3.js";
 
 interface SwapQuote {
@@ -30,7 +30,8 @@ interface SwapQuote {
 }
 
 export default function SwapWidget() {
-  const { user, authenticated, connectWallet } = usePrivy();
+  const { user, authenticated, login } = usePrivy();
+  const { wallets } = useWallets();
   const [inputToken, setInputToken] = useState("SOL");
   const [outputToken, setOutputToken] = useState("USDC");
   const [amount, setAmount] = useState("");
@@ -38,6 +39,49 @@ export default function SwapWidget() {
   const [loading, setLoading] = useState(false);
   const [executing, setExecuting] = useState(false);
   const [protocol, setProtocol] = useState("jupiter");
+
+  const fetchQuote = useCallback(
+    async (amt?: string, input?: string, output?: string, prot?: string) => {
+      const amountToUse = amt || amount;
+      const inputToUse = input || inputToken;
+      const outputToUse = output || outputToken;
+      const protocolToUse = prot || protocol;
+
+      if (!amountToUse || !inputToUse || !outputToUse) return;
+
+      setLoading(true);
+      try {
+        const response = await fetch(
+          "https://forgex-ai-backend.vercel.app/api/swap/quote",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              inputToken: inputToUse,
+              outputToken: outputToUse,
+              amount: parseFloat(amountToUse),
+              protocol: protocolToUse,
+            }),
+          }
+        );
+
+        const data = await response.json();
+        if (data.success && data.quote) {
+          setQuote({
+            inputAmount: amountToUse,
+            outputAmount: data.quote.outputAmount || "0",
+            priceImpact: data.quote.priceImpact || 0,
+            route: data.quote.route,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch quote:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [amount, inputToken, outputToken, protocol]
+  );
 
   // Get initial values from URL params (from ChatGPT)
   useEffect(() => {
@@ -61,56 +105,11 @@ export default function SwapWidget() {
         initialProtocol || "jupiter"
       );
     }
-  }, []);
-
-  const fetchQuote = async (
-    amt?: string,
-    input?: string,
-    output?: string,
-    prot?: string
-  ) => {
-    const amountToUse = amt || amount;
-    const inputToUse = input || inputToken;
-    const outputToUse = output || outputToken;
-    const protocolToUse = prot || protocol;
-
-    if (!amountToUse || !inputToUse || !outputToUse) return;
-
-    setLoading(true);
-    try {
-      const response = await fetch(
-        "https://forgex-ai-backend.vercel.app/api/swap/quote",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            inputToken: inputToUse,
-            outputToken: outputToUse,
-            amount: parseFloat(amountToUse),
-            protocol: protocolToUse,
-          }),
-        }
-      );
-
-      const data = await response.json();
-      if (data.success) {
-        setQuote({
-          inputAmount: amountToUse,
-          outputAmount: data.data.outputAmount || "0",
-          priceImpact: data.data.priceImpact || 0,
-          route: data.data.route,
-        });
-      }
-    } catch (error) {
-      console.error("Failed to fetch quote:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [fetchQuote]);
 
   const executeSwap = async () => {
     if (!authenticated || !user?.wallet?.address) {
-      connectWallet();
+      login();
       return;
     }
 
@@ -122,16 +121,25 @@ export default function SwapWidget() {
     setExecuting(true);
     try {
       // Step 1: Get Jupiter swap transaction
-      const swapResponse = await fetch("https://quote-api.jup.ag/v6/swap", {
+      const swapResponse = await fetch("https://lite-api.jup.ag/swap/v1/swap", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userPublicKey: user.wallet.address,
           quoteResponse: quote.route || {
-            inputMint: inputToken === "SOL" ? "So11111111111111111111111111111111111111112" : inputToken,
-            outputMint: outputToken === "USDC" ? "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" : outputToken,
+            inputMint:
+              inputToken === "SOL"
+                ? "So11111111111111111111111111111111111111112"
+                : inputToken,
+            outputMint:
+              outputToken === "USDC"
+                ? "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+                : outputToken,
             inAmount: (parseFloat(amount) * 1e9).toString(),
-            outAmount: (parseFloat(quote.outputAmount) * (outputToken === "USDC" ? 1e6 : 1e9)).toString(),
+            outAmount: (
+              parseFloat(quote.outputAmount) *
+              (outputToken === "USDC" ? 1e6 : 1e9)
+            ).toString(),
             swapMode: "ExactIn",
             slippageBps: 50,
           },
@@ -147,7 +155,7 @@ export default function SwapWidget() {
       });
 
       const swapData = await swapResponse.json();
-      
+
       if (!swapData.swapTransaction) {
         throw new Error("Failed to get swap transaction");
       }
@@ -158,19 +166,37 @@ export default function SwapWidget() {
         Buffer.from(swapData.swapTransaction, "base64")
       );
 
-      // Sign and send transaction through Privy
-      // Note: Privy wallet interface may vary, this is a common pattern
-      const signature = await (user.wallet as any).signAndSendTransaction(transaction);
-      
-      // Wait for confirmation
-      await connection.confirmTransaction(signature);
+      // Sign and send transaction through a Solana wallet
+      // Prefer a Solana wallet from Privy, fallback to Phantom if available
+      let signedTx: VersionedTransaction | null = null;
+      const solanaWallet = wallets?.find(
+        (w: any) => w.chainType === "solana"
+      ) as any;
 
-      alert(`Swap executed successfully! Transaction: ${signature}`);
-      
+      if (solanaWallet && typeof solanaWallet.signTransaction === "function") {
+        signedTx = await solanaWallet.signTransaction(transaction);
+      } else if (
+        typeof window !== "undefined" &&
+        (window as any).phantom?.solana?.isConnected
+      ) {
+        const phantom = (window as any).phantom.solana;
+        signedTx = await phantom.signTransaction(transaction);
+      } else {
+        throw new Error("No Solana wallet available to sign the transaction");
+      }
+
+      // Send signed transaction bytes
+      if (!signedTx) {
+        throw new Error("Failed to sign transaction");
+      }
+      const txid = await connection.sendRawTransaction(signedTx.serialize());
+      await connection.confirmTransaction(txid);
+
+      alert(`Swap executed successfully! Transaction: ${txid}`);
+
       // Reset form
       setAmount("");
       setQuote(null);
-      
     } catch (error: any) {
       console.error("Swap execution failed:", error);
       alert(`Swap failed: ${error.message}`);
@@ -314,7 +340,7 @@ export default function SwapWidget() {
 
             <Button
               onClick={executeSwap}
-              disabled={executing || !quote || !authenticated}
+              disabled={executing || !quote}
               className="w-full"
             >
               {executing ? (
