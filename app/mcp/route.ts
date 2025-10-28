@@ -201,10 +201,12 @@ const handler = createMcpHandler(async (server) => {
       description:
         "Fetch and display the homepage content with the name of the user",
       inputSchema: {
-        name: z.string().describe("The name of the user to display on the homepage"),
+        name: z
+          .string()
+          .describe("The name of the user to display on the homepage"),
       },
       _meta: widgetMeta(contentWidget),
-    },
+    } as any,
     async ({ name }) => {
       return {
         content: [
@@ -229,22 +231,39 @@ const handler = createMcpHandler(async (server) => {
       description:
         "Swap tokens on Solana with Jupiter. Accepts tickers or mints (e.g., '0.001 SOL to $SEND') or free-form text.",
       inputSchema: {
-        amount: z.string().describe("The amount to swap (e.g., '0.001')").optional(),
-        inputToken: z.string().describe("Input token ticker (e.g., SOL) or mint address").optional(),
-        outputToken: z.string().describe("Output token ticker (e.g., $SEND) or mint address").optional(),
-        text: z.string().describe("Free-form request, e.g., 'swap 0.001 SOL to $SEND'").optional(),
+        amount: z
+          .string()
+          .describe("The amount to swap (e.g., '0.001')")
+          .optional(),
+        inputToken: z
+          .string()
+          .describe("Input token ticker (e.g., SOL) or mint address")
+          .optional(),
+        outputToken: z
+          .string()
+          .describe("Output token ticker (e.g., $SEND) or mint address")
+          .optional(),
+        text: z
+          .string()
+          .describe("Free-form request, e.g., 'swap 0.001 SOL to $SEND'")
+          .optional(),
       },
       _meta: widgetMeta(swapWidget),
-    },
+    } as any,
     async ({ amount, inputToken, outputToken, text }) => {
       // Parse free-form if provided
       if (text && (!amount || !inputToken || !outputToken)) {
         const s = String(text);
         const amountMatch = s.match(/\b(\d+\.\d+|\d+)\b/);
-        const toMatch = s.match(/to\s+([$]?[a-z0-9]+|[1-9A-HJ-NP-Za-km-z]{32,44})/i);
-        const fromMatch = s.match(/swap\s+(\d+\.\d+|\d+)\s+([$]?[a-z0-9]+|[1-9A-HJ-NP-Za-km-z]{32,44}|SOL)/i);
+        const toMatch = s.match(
+          /to\s+([$]?[a-z0-9]+|[1-9A-HJ-NP-Za-km-z]{32,44})/i
+        );
+        const fromMatch = s.match(
+          /swap\s+(\d+\.\d+|\d+)\s+([$]?[a-z0-9]+|[1-9A-HJ-NP-Za-km-z]{32,44}|SOL)/i
+        );
         amount = amount || (amountMatch ? amountMatch[1] : undefined);
-        inputToken = inputToken || (fromMatch ? String(fromMatch[2]) : undefined);
+        inputToken =
+          inputToken || (fromMatch ? String(fromMatch[2]) : undefined);
         outputToken = outputToken || (toMatch ? String(toMatch[1]) : undefined);
       }
 
@@ -277,14 +296,18 @@ const handler = createMcpHandler(async (server) => {
       description:
         "Parse a message like 'swap 0.0001 SOL to $SEND' and prefill the swap widget.",
       inputSchema: {
-        text: z.string().describe("Free-form user request, e.g., 'swap 0.001 SOL to $SEND'"),
+        text: z
+          .string()
+          .describe("Free-form user request, e.g., 'swap 0.001 SOL to $SEND'"),
       },
       _meta: widgetMeta(swapWidget),
-    },
+    } as any,
     async ({ text }) => {
       const s = String(text || "");
       const amountMatch = s.match(/\b(\d+\.\d+|\d+)\b/);
-      const toMatch = s.match(/to\s+([$]?[a-z0-9]+|[1-9A-HJ-NP-Za-km-z]{32,44})/i);
+      const toMatch = s.match(
+        /to\s+([$]?[a-z0-9]+|[1-9A-HJ-NP-Za-km-z]{32,44})/i
+      );
       const fromMatch = s.match(/swap\s+(\d+\.\d+|\d+)\s+([$]?[a-z0-9]+|SOL)/i);
 
       const amount = amountMatch ? amountMatch[1] : "0.001";
@@ -293,7 +316,10 @@ const handler = createMcpHandler(async (server) => {
 
       return {
         content: [
-          { type: "text", text: `Preparing to swap ${amount} ${inputToken} to ${outputToken}` },
+          {
+            type: "text",
+            text: `Preparing to swap ${amount} ${inputToken} to ${outputToken}`,
+          },
         ],
         structuredContent: {
           initialAmount: amount,
@@ -314,11 +340,13 @@ const handler = createMcpHandler(async (server) => {
       description:
         "Send SOL to a wallet address or SNS domain (.sol, .solana, .superteam) with explicit confirmation.",
       inputSchema: {
-        toAddress: z.string().describe("Destination (address or SNS domain like arpit.sol)"),
+        toAddress: z
+          .string()
+          .describe("Destination (address or SNS domain like arpit.sol)"),
         amount: z.string().describe("Amount of SOL to send (e.g., '0.001')"),
       },
       _meta: widgetMeta(transferWidget),
-    },
+    } as any,
     async ({ toAddress, amount }) => {
       return {
         content: [
@@ -345,25 +373,35 @@ const handler = createMcpHandler(async (server) => {
       description:
         "Fetch SOL balance for a wallet address or domain (.sol, AllDomains TLDs).",
       inputSchema: {
-        account: z.string().describe("Address or domain (e.g., arpit.superteam or 26k...QjC)"),
+        account: z
+          .string()
+          .describe("Address or domain (e.g., arpit.superteam or 26k...QjC)"),
       },
       _meta: {
         "openai/resultCanProduceWidget": false,
       },
-    },
+    } as any,
     async ({ account }) => {
-      const res = await fetch(`${baseURL}/api/wallet/balance?account=${encodeURIComponent(account)}`);
+      const res = await fetch(
+        `${baseURL}/api/wallet/balance?account=${encodeURIComponent(account)}`
+      );
       const data = await res.json();
       if (!res.ok) {
         return {
           content: [
-            { type: "text", text: `Error: ${data?.error || "Failed to fetch balance"}` },
+            {
+              type: "text",
+              text: `Error: ${data?.error || "Failed to fetch balance"}`,
+            },
           ],
         };
       }
       return {
         content: [
-          { type: "text", text: `Balance: ${data.sol} SOL (address: ${data.resolvedAddress})` },
+          {
+            type: "text",
+            text: `Balance: ${data.sol} SOL (address: ${data.resolvedAddress})`,
+          },
         ],
         structuredContent: {
           account,
@@ -389,13 +427,20 @@ const handler = createMcpHandler(async (server) => {
       _meta: {
         "openai/resultCanProduceWidget": false,
       },
-    },
+    } as any,
     async ({ id }) => {
       const params = new URLSearchParams({ id: String(id) });
       const res = await fetch(`${baseURL}/api/price?${params.toString()}`);
       const data = await res.json();
       if (!res.ok) {
-        return { content: [{ type: "text", text: `Error: ${data?.error || "Failed to fetch price"}` }] };
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error: ${data?.error || "Failed to fetch price"}`,
+            },
+          ],
+        };
       }
       return {
         content: [
@@ -418,18 +463,24 @@ const handler = createMcpHandler(async (server) => {
         "Stake SOL into a liquid staking token (default JupSOL). Confirm in widget.",
       inputSchema: {
         amount: z.string().describe("Amount of SOL to stake (e.g., '0.5')"),
-        lst: z.string().optional().describe("LST symbol or mint (default: JupSOL)"),
+        lst: z
+          .string()
+          .optional()
+          .describe("LST symbol or mint (default: JupSOL)"),
       },
       _meta: {
         ...widgetMeta(stakeWidget),
         "openai/widgetAccessible": false,
       },
-    },
+    } as any,
     async ({ amount, lst }) => {
       // Provide state for UI to prefill and call /api/stake when user confirms
       return {
         content: [
-          { type: "text", text: `Prepare to stake ${amount} SOL into ${lst || "JupSOL"}` },
+          {
+            type: "text",
+            text: `Prepare to stake ${amount} SOL into ${lst || "JupSOL"}`,
+          },
         ],
         structuredContent: {
           initialAmount: amount,
