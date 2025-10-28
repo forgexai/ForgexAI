@@ -48,7 +48,7 @@ export function NodeInspectorButton() {
   const [selectedNode, setSelectedNode] = useAtom(selectedNodeAtom);
   const [nodes, setNodes] = useAtom(nodesAtom);
   const [edges, setEdges] = useAtom(edgesAtom);
-  
+
   const [label, setLabel] = useState("");
   const [description, setDescription] = useState("");
   const [parameters, setParameters] = useState<Record<string, any>>({});
@@ -77,12 +77,6 @@ export function NodeInspectorButton() {
 
   const handleSaveChanges = () => {
     if (!selectedNode) return;
-
-    console.log("Saving node parameters:", {
-      nodeId: selectedNode.id,
-      parameters,
-      category: selectedNode.data?.category,
-    });
 
     setNodes((currentNodes) =>
       currentNodes.map((node) =>

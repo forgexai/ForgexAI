@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Clock } from "lucide-react";
+import { Clock, MessageSquare, Globe } from "lucide-react";
 
 interface ParameterFormProps {
   parameters: Record<string, any>;
@@ -464,34 +464,17 @@ function TelegramForm({ parameters, onParameterChange }: ParameterFormProps) {
 function DiscordForm({ parameters, onParameterChange }: ParameterFormProps) {
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="channelId" className="text-sm text-gray-300">
-          Channel ID
-        </Label>
-        <Input
-          id="channelId"
-          value={parameters.channelId || ""}
-          onChange={(e) => onParameterChange("channelId", e.target.value)}
-          placeholder="Discord channel ID"
-          className="bg-[#1A1B23] border-gray-700 text-white"
-        />
-        <p className="text-xs text-gray-400">
-          Discord channel ID where to send message
-        </p>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="message" className="text-sm text-gray-300">
-          Message
-        </Label>
-        <Textarea
-          id="message"
-          value={parameters.message || ""}
-          onChange={(e) => onParameterChange("message", e.target.value)}
-          placeholder="Message to send"
-          rows={4}
-          className="bg-[#1A1B23] border-gray-700 text-white resize-none"
-        />
+      <div className="flex items-center justify-center p-8 bg-gray-800/50 rounded-lg border border-gray-700">
+        <div className="text-center">
+          <div className="text-gray-400 mb-2">
+            <MessageSquare className="w-8 h-8 mx-auto" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-300 mb-2">Discord Integration</h3>
+          <p className="text-sm text-gray-400 mb-4">Discord support is coming soon!</p>
+          <div className="inline-flex items-center px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-xs font-medium">
+            Coming Soon
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -500,53 +483,17 @@ function DiscordForm({ parameters, onParameterChange }: ParameterFormProps) {
 function WebForm({ parameters, onParameterChange }: ParameterFormProps) {
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="sessionId" className="text-sm text-gray-300">
-          Session ID
-        </Label>
-        <Input
-          id="sessionId"
-          value={parameters.sessionId || ""}
-          onChange={(e) => onParameterChange("sessionId", e.target.value)}
-          placeholder="Web session ID"
-          className="bg-[#1A1B23] border-gray-700 text-white"
-        />
-        <p className="text-xs text-gray-400">
-          Web session ID to send message to
-        </p>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="message" className="text-sm text-gray-300">
-          Message
-        </Label>
-        <Textarea
-          id="message"
-          value={parameters.message || ""}
-          onChange={(e) => onParameterChange("message", e.target.value)}
-          placeholder="Message to send"
-          rows={4}
-          className="bg-[#1A1B23] border-gray-700 text-white resize-none"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="messageType" className="text-sm text-gray-300">
-          Message Type
-        </Label>
-        <Select
-          value={parameters.messageType || "text"}
-          onValueChange={(value) => onParameterChange("messageType", value)}
-        >
-          <SelectTrigger className="bg-[#1A1B23] border-gray-700 text-white">
-            <SelectValue placeholder="Select message type" />
-          </SelectTrigger>
-          <SelectContent className="bg-[#1A1B23] border-gray-700 text-white">
-            <SelectItem value="text">Text</SelectItem>
-            <SelectItem value="html">HTML</SelectItem>
-            <SelectItem value="markdown">Markdown</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex items-center justify-center p-8 bg-gray-800/50 rounded-lg border border-gray-700">
+        <div className="text-center">
+          <div className="text-gray-400 mb-2">
+            <Globe className="w-8 h-8 mx-auto" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-300 mb-2">Web Integration</h3>
+          <p className="text-sm text-gray-400 mb-4">Web platform support is coming soon!</p>
+          <div className="inline-flex items-center px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-xs font-medium">
+            Coming Soon
+          </div>
+        </div>
       </div>
     </div>
   );
