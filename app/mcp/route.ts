@@ -247,13 +247,18 @@ const handler = createMcpHandler(async (server) => {
           .string()
           .describe("Free-form request, e.g., 'swap 0.001 SOL to $SEND'")
           .optional(),
+        quote: z
+          .string()
+          .describe("Free-form swap quote request, e.g., '1 SOL to TRUMP'")
+          .optional(),
       }),
       _meta: widgetMeta(swapWidget),
     } as any,
-    async ({ amount, inputToken, outputToken, text }) => {
-      // Parse free-form if provided
-      if (text && (!amount || !inputToken || !outputToken)) {
-        const s = String(text);
+    async ({ amount, inputToken, outputToken, text, quote }) => {
+      // Parse free-form if provided (support both text and quote parameters)
+      const freeFormText = text || quote;
+      if (freeFormText && (!amount || !inputToken || !outputToken)) {
+        const s = String(freeFormText);
         const amountMatch = s.match(/\b(\d+\.\d+|\d+)\b/);
         const toMatch = s.match(
           /to\s+([$]?[a-z0-9]+|[1-9A-HJ-NP-Za-km-z]{32,44})/i
@@ -422,14 +427,14 @@ const handler = createMcpHandler(async (server) => {
       description:
         "Fetch token price via Jupiter by mint address only (contract).",
       inputSchema: z.object({
-        id: z.string().describe("Mint address (contract) of the token"),
+        token: z.string().describe("Token symbol (e.g., SOL, TRUMP) or mint address"),
       }),
       _meta: {
         "openai/resultCanProduceWidget": false,
       },
     } as any,
-    async ({ id }) => {
-      const params = new URLSearchParams({ id: String(id) });
+    async ({ token }) => {
+      const params = new URLSearchParams({ id: String(token) });
       const res = await fetch(`${baseURL}/api/price?${params.toString()}`);
       const data = await res.json();
       if (!res.ok) {
@@ -446,7 +451,7 @@ const handler = createMcpHandler(async (server) => {
         content: [
           {
             type: "text",
-            text: `Price: ${data.priceFormatted} USD (mint: ${data.tokenId})`,
+            text: `Price: ${data.priceFormatted} USD (token: ${data.token || token})`,
           },
         ],
         structuredContent: data,
