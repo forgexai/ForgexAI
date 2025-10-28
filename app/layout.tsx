@@ -4,6 +4,7 @@ import "./globals.css";
 import ClientProvider from "@/lib/providers/ClientProvider";
 import { AuthInitializer } from "@/components/auth/AuthInitializer";
 import { GlobalAuthLoader } from "@/components/auth/GlobalAuthLoader";
+import { Toaster } from "@/components/ui/sonner";
 import "@/lib/suppress-privy-warnings";
 import { baseURL } from "@/baseUrl";
 
@@ -31,6 +32,7 @@ export default function RootLayout({
           <NextChatSDKBootstrap baseUrl={baseURL} />
           <GlobalAuthLoader />
           {children}
+          <Toaster />
         </ClientProvider>
       </body>
     </html>
