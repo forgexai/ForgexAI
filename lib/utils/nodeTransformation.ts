@@ -179,6 +179,15 @@ export function getMemoryInputs(nodeData: NodeData, workflowId?: string): NodeIn
 }
 
 export function getConditionInputs(nodeData: NodeData): NodeInput[] {
+  const nodeLabel = (nodeData.label || '').toLowerCase();
+  
+  if (nodeLabel.includes("user approval") || nodeLabel.includes("approval")) {
+    return [
+      { id: "message", name: "Approval Message", type: "string" as const, required: true, description: "Message to show for approval" },
+      { id: "timeout", name: "Timeout (seconds)", type: "number" as const, required: false, default: 300, description: "Approval timeout in seconds" }
+    ];
+  }
+  
   return [
     { id: "condition", name: "Boolean Condition", type: "boolean" as const, required: false, description: "Direct boolean condition (true/false)" },
     { id: "leftOperand", name: "Left Operand", type: "any" as const, required: false, description: "Left side of comparison (e.g., Price, HealthFactor)" },
@@ -203,6 +212,15 @@ export function getTransformOutputs(nodeData: NodeData): NodeOutput[] {
 }
 
 export function getConditionOutputs(nodeData: NodeData): NodeOutput[] {
+  const nodeLabel = (nodeData.label || '').toLowerCase();
+  
+  if (nodeLabel.includes("user approval") || nodeLabel.includes("approval")) {
+    return [
+      { id: "approved", name: "Approved", type: "boolean" as const, description: "Whether user approved" },
+      { id: "response", name: "Response", type: "string" as const, description: "User response" }
+    ];
+  }
+  
   return [
     { id: "result", name: "Result", type: "any" as const, description: "Conditional result" },
     { id: "branch", name: "Branch", type: "string" as const, description: "Which branch was taken" }
@@ -288,9 +306,17 @@ export function getDefaultConfig(category: string, nodeData: NodeData, workflowI
   }
   
   if (category === 'condition') {
-    config.leftOperand = nodeData.parameters?.leftOperand;
-    config.operator = nodeData.parameters?.operator;
-    config.rightOperand = nodeData.parameters?.rightOperand;
+    const nodeLabel = (nodeData.label || '').toLowerCase();
+    
+    if (nodeLabel.includes("user approval") || nodeLabel.includes("approval")) {
+      config.message = nodeData.parameters?.message;
+      config.timeout = nodeData.parameters?.timeout || 300;
+      config.credits = 1;
+    } else {
+      config.leftOperand = nodeData.parameters?.leftOperand;
+      config.operator = nodeData.parameters?.operator;
+      config.rightOperand = nodeData.parameters?.rightOperand;
+    }
   }
   
   return config;

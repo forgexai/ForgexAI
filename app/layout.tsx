@@ -4,6 +4,7 @@ import "./globals.css";
 import ClientProvider from "@/lib/providers/ClientProvider";
 import { AuthInitializer } from "@/components/auth/AuthInitializer";
 import { GlobalAuthLoader } from "@/components/auth/GlobalAuthLoader";
+import { Toaster } from "@/components/ui/sonner";
 import "@/lib/suppress-privy-warnings";
 
 const poppins = Poppins({
@@ -31,6 +32,7 @@ export default function RootLayout({
           <AuthInitializer />
           <GlobalAuthLoader />
           {children}
+          <Toaster />
         </ClientProvider>
       </body>
     </html>
