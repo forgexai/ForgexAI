@@ -762,10 +762,61 @@ export function MemoryNodeForm({ parameters, onParameterChange }: ParameterFormP
   );
 }
 
-export function ConditionNodeForm({
+function UserApprovalForm({
   parameters,
   onParameterChange,
 }: ParameterFormProps) {
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="message" className="text-sm text-gray-300">
+          Approval Message
+        </Label>
+        <Textarea
+          id="message"
+          value={parameters.message || ""}
+          onChange={(e) => onParameterChange("message", e.target.value)}
+          placeholder="Enter the message that will be shown to the user for approval"
+          rows={3}
+          className="bg-[#1A1B23] border-gray-700 text-white resize-none"
+        />
+        <p className="text-xs text-gray-400">
+          The message that will be shown to the user requesting approval
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="timeout" className="text-sm text-gray-300">
+          Timeout (seconds)
+        </Label>
+        <Input
+          id="timeout"
+          type="number"
+          value={parameters.timeout || "300"}
+          onChange={(e) => onParameterChange("timeout", e.target.value)}
+          placeholder="300"
+          className="bg-[#1A1B23] border-gray-700 text-white"
+        />
+        <p className="text-xs text-gray-400">
+          How long to wait for user approval before timing out (default: 300 seconds)
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export function ConditionNodeForm({
+  parameters,
+  onParameterChange,
+  selectedNode,
+}: ParameterFormProps) {
+  const nodeLabel = selectedNode?.data?.label || selectedNode?.data?.name || "";
+  const nodeNameLower = nodeLabel.toLowerCase();
+  
+  if (nodeNameLower.includes("user approval") || nodeNameLower.includes("approval")) {
+    return <UserApprovalForm parameters={parameters} onParameterChange={onParameterChange} />;
+  }
+  
   return (
     <div className="space-y-4">
       <div className="space-y-2">
