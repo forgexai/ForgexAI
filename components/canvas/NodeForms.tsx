@@ -822,19 +822,77 @@ export function ConditionNodeForm({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="condition" className="text-sm text-gray-300">
-          Boolean Condition
+        <Label htmlFor="operator" className="text-sm text-gray-300">
+          Comparison Operator
         </Label>
-        <Textarea
+        <Select
+          value={parameters.operator || "greaterThan"}
+          onValueChange={(value) => onParameterChange("operator", value)}
+        >
+          <SelectTrigger className="bg-[#1A1B23] border-gray-700 text-white">
+            <SelectValue placeholder="Select operator" />
+          </SelectTrigger>
+          <SelectContent className="bg-[#1A1B23] border-gray-700 text-white">
+            <SelectItem value="greaterThan">&gt; (Greater Than)</SelectItem>
+            <SelectItem value="lessThan">&lt; (Less Than)</SelectItem>
+            <SelectItem value="equals">= (Equals)</SelectItem>
+            <SelectItem value="notEquals">≠ (Not Equals)</SelectItem>
+            <SelectItem value="greaterThanOrEqual">≥ (Greater Than or Equal)</SelectItem>
+            <SelectItem value="lessThanOrEqual">≤ (Less Than or Equal)</SelectItem>
+            <SelectItem value="contains">Contains</SelectItem>
+            <SelectItem value="notContains">Not Contains</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-gray-400">
+          How to compare the values
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="leftOperand" className="text-sm text-gray-300">
+          Left Operand
+        </Label>
+        <Input
+          id="leftOperand"
+          value={parameters.leftOperand || ""}
+          onChange={(e) => onParameterChange("leftOperand", e.target.value)}
+          placeholder="e.g., Price, HealthFactor, or connect from node"
+          className="bg-[#1A1B23] border-gray-700 text-white"
+        />
+        <p className="text-xs text-gray-400">
+          The value to compare. Connect from previous node or enter field name (e.g., &quot;Price&quot;, &quot;HealthFactor&quot;)
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="rightOperand" className="text-sm text-gray-300">
+          Right Operand (Threshold)
+        </Label>
+        <Input
+          id="rightOperand"
+          value={parameters.rightOperand || ""}
+          onChange={(e) => onParameterChange("rightOperand", e.target.value)}
+          placeholder="e.g., 200, 1.5"
+          className="bg-[#1A1B23] border-gray-700 text-white"
+        />
+        <p className="text-xs text-gray-400">
+          The threshold value to compare against (e.g., &quot;200&quot; for price, &quot;1.5&quot; for health factor)
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="condition" className="text-sm text-gray-300">
+          Boolean Condition (Optional)
+        </Label>
+        <Input
           id="condition"
           value={parameters.condition || ""}
           onChange={(e) => onParameterChange("condition", e.target.value)}
-          placeholder="Connect a boolean output or enter &apos;true&apos;/&apos;false&apos;"
-          rows={2}
-          className="bg-[#1A1B23] border-gray-700 text-white resize-none font-mono text-xs"
+          placeholder="Override with &apos;true&apos;/&apos;false&apos; (leave empty to use comparison above)"
+          className="bg-[#1A1B23] border-gray-700 text-white font-mono text-xs"
         />
         <p className="text-xs text-gray-400">
-          The condition to evaluate (true/false). Connect from another node or enter manually.
+          Optional: Override with manual boolean (true/false). Leave empty to use comparison above.
         </p>
       </div>
 
