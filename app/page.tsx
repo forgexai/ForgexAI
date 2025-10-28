@@ -11,12 +11,6 @@ import {
   useIsChatGptApp,
 } from "./hooks";
 
-export const metadata: Metadata = {
-  title: "Solana Agent Studio — Build AI Agents for the On-Chain World",
-  description:
-    "A no-code platform to visually build, test, and deploy Solana AI agents with memory and Telegram integration.",
-};
-
 export default function Home() {
   const toolOutput = useWidgetProps<{
     name?: string;

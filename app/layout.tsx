@@ -15,8 +15,9 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "ForgeX AI",
-  description: "",
+  title: "Solana Agent Studio — Build AI Agents for the On-Chain World",
+  description:
+    "A no-code platform to visually build, test, and deploy Solana AI agents with memory and Telegram integration.",
 };
 
 export default function RootLayout({
