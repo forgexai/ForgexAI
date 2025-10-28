@@ -1,3 +1,4 @@
+"use client";
 import HeroSection from "@/components/landing/HeroSection";
 import TrustedBy from "@/components/landing/TrustedBy";
 import { Metadata } from "next";
