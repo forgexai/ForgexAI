@@ -279,21 +279,48 @@ const handler = createMcpHandler(async (server) => {
       const finalAmount: string = (amount as string) || "0.001";
       const finalInput: string = (inputToken as string) || "SOL";
       const finalOutput: string = (outputToken as string) || "USDC";
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Preparing to swap ${finalAmount} ${finalInput} to ${finalOutput}`,
-          },
-        ],
-        structuredContent: {
-          initialAmount: finalAmount,
+      
+      // Get actual swap quote from API
+      try {
+        const params = new URLSearchParams({
           inputToken: finalInput,
           outputToken: finalOutput,
-          timestamp: new Date().toISOString(),
-        },
-        _meta: widgetMeta(swapWidget),
-      };
+          amount: finalAmount,
+        });
+        const res = await fetch(`${baseURL}/api/swap/quote?${params.toString()}`);
+        const data = await res.json();
+        
+        if (!res.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error getting swap quote: ${data?.error || "Failed to fetch quote"}`,
+              },
+            ],
+          };
+        }
+        
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Swap Quote: ${data.inputAmount} ${data.inputToken} → ${data.outputAmount.toFixed(6)} ${data.outputToken}\nPrice Impact: ${data.priceImpact || 0}%`,
+            },
+          ],
+          structuredContent: data,
+          _meta: widgetMeta(swapWidget),
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error: ${error instanceof Error ? error.message : "Failed to get swap quote"}`,
+            },
+          ],
+        };
+      }
     }
   );
 
