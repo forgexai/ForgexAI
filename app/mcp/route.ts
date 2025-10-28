@@ -426,9 +426,9 @@ const handler = createMcpHandler(async (server) => {
     {
       title: "Token Price",
       description:
-        "Fetch token price for any Solana token by symbol (SOL, TRUMP, BONK) or mint address.",
+        "Fetch current USD price for any Solana token. ALWAYS use token symbols like 'SOL', 'TRUMP', 'BONK', 'RAY' - do not use mint addresses unless specifically provided by user.",
       inputSchema: {
-        id: z.string().describe("Token symbol (e.g., SOL, TRUMP, BONK) or mint address"),
+        id: z.string().describe("Token symbol like 'TRUMP', 'SOL', 'BONK' (preferred) or mint address if provided by user"),
       },
       _meta: {
         "openai/resultCanProduceWidget": false,

@@ -29,6 +29,17 @@ export async function GET(request: Request) {
     let tokenId = tokenIdParam.trim();
     let tokenSymbol = tokenId;
     
+    // Handle known problematic mint addresses that ChatGPT might use
+    const KNOWN_INVALID_MINTS = {
+      '9Y2pM6yU9vYkDWZzWkRfJNVjzR4L5VECrjE1bixFqWjP': 'TRUMP'
+    };
+    
+    if (KNOWN_INVALID_MINTS[tokenId as keyof typeof KNOWN_INVALID_MINTS]) {
+      const correctedSymbol = KNOWN_INVALID_MINTS[tokenId as keyof typeof KNOWN_INVALID_MINTS];
+      console.log(`[PRICE] Correcting known invalid mint ${tokenId} to symbol ${correctedSymbol}`);
+      tokenId = correctedSymbol;
+    }
+    
     // If it's not a mint address, try to resolve it as a symbol
     if (!MINT_REGEX.test(tokenId)) {
       console.log("[PRICE] Resolving symbol to mint address:", tokenId);
@@ -47,6 +58,23 @@ export async function GET(request: Request) {
         return NextResponse.json({ 
           error: `Failed to resolve token "${tokenId}". Please provide a valid mint address.` 
         }, { status: 400 });
+      }
+    } else {
+      // It's a mint address - check if it exists in Jupiter, if not try as symbol
+      const { ok: testOk } = await fetchPriceV3(tokenId);
+      if (!testOk) {
+        console.log("[PRICE] Mint address not found in Jupiter, trying as symbol:", tokenId);
+        // Try to find a token with this as a symbol instead
+        try {
+          const tokens = await searchTokens(tokenId, 1);
+          if (tokens.length > 0) {
+            tokenId = tokens[0].id;
+            tokenSymbol = tokens[0].symbol;
+            console.log("[PRICE] Found token by symbol search:", tokenSymbol, "->", tokenId);
+          }
+        } catch (error) {
+          console.warn("[PRICE] Symbol fallback failed:", error);
+        }
       }
     }
 
