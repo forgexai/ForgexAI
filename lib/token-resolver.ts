@@ -1,9 +1,47 @@
-import { TOKENS, TOKEN_DECIMALS } from "@/lib/solana-config";
+import { TOKENS, TOKEN_DECIMALS, JUPITER_API } from "@/lib/solana-config";
 
 export type ResolvedToken = {
   mint: string;
   symbol: string;
   decimals: number;
+  name?: string;
+  icon?: string;
+  isVerified?: boolean;
+  tags?: string[];
+  usdPrice?: number;
+  mcap?: number;
+  liquidity?: number;
+};
+
+export type JupiterTokenInfo = {
+  id: string;
+  name: string;
+  symbol: string;
+  icon?: string;
+  decimals: number;
+  twitter?: string;
+  telegram?: string;
+  website?: string;
+  dev?: string;
+  circSupply?: number;
+  totalSupply?: number;
+  tokenProgram: string;
+  launchpad?: string;
+  partnerConfig?: string;
+  graduatedPool?: string;
+  graduatedAt?: string;
+  holderCount?: number;
+  fdv?: number;
+  mcap?: number;
+  usdPrice?: number;
+  priceBlockId?: number;
+  liquidity?: number;
+  organicScore: number;
+  organicScoreLabel: 'high' | 'medium' | 'low';
+  isVerified?: boolean;
+  cexes?: string[];
+  tags?: string[];
+  updatedAt: string;
 };
 
 function isMintAddress(value: string): boolean {
@@ -14,25 +52,92 @@ function sanitizeSymbol(input: string): string {
   return input.trim().replace(/^\$/i, "").toUpperCase();
 }
 
+/**
+ * Search for tokens using Jupiter's comprehensive search API
+ * Supports symbol, name, or mint address search
+ */
+export async function searchTokens(query: string, limit: number = 20): Promise<JupiterTokenInfo[]> {
+  try {
+    const encodedQuery = encodeURIComponent(query.trim());
+    const response = await fetch(`${JUPITER_API.TOKEN_SEARCH}?query=${encodedQuery}`);
+    
+    if (!response.ok) {
+      console.warn(`Jupiter token search failed: ${response.status}`);
+      return [];
+    }
+    
+    const tokens: JupiterTokenInfo[] = await response.json();
+    
+    if (!Array.isArray(tokens)) {
+      console.warn('Invalid response format from Jupiter token search');
+      return [];
+    }
+    
+    // Sort by relevance: verified > high organic score > liquidity > market cap
+    const sortedTokens = tokens.sort((a, b) => {
+      // Prioritize verified tokens
+      if (a.isVerified && !b.isVerified) return -1;
+      if (!a.isVerified && b.isVerified) return 1;
+      
+      // Then by organic score
+      const scoreWeight = { high: 3, medium: 2, low: 1 };
+      const aScore = scoreWeight[a.organicScoreLabel] || 0;
+      const bScore = scoreWeight[b.organicScoreLabel] || 0;
+      if (aScore !== bScore) return bScore - aScore;
+      
+      // Then by liquidity
+      const aLiq = a.liquidity || 0;
+      const bLiq = b.liquidity || 0;
+      if (aLiq !== bLiq) return bLiq - aLiq;
+      
+      // Finally by market cap
+      const aMcap = a.mcap || 0;
+      const bMcap = b.mcap || 0;
+      return bMcap - aMcap;
+    });
+    
+    return sortedTokens.slice(0, limit);
+  } catch (error) {
+    console.error('Error searching tokens:', error);
+    return [];
+  }
+}
+
+/**
+ * Get token information by mint address
+ */
+export async function getTokenByMint(mintAddress: string): Promise<JupiterTokenInfo | null> {
+  try {
+    const tokens = await searchTokens(mintAddress, 1);
+    return tokens.length > 0 ? tokens[0] : null;
+  } catch (error) {
+    console.error('Error fetching token by mint:', error);
+    return null;
+  }
+}
+
+/**
+ * Legacy function for backward compatibility
+ */
 async function searchLiteBySymbol(symbol: string): Promise<{ address: string; symbol: string; decimals: number } | null> {
   try {
-    const res = await fetch(`https://lite-api.jup.ag/tokens/v2/search?query=${encodeURIComponent(symbol)}`);
-    if (!res.ok) return null;
-    const arr: Array<{ id: string; symbol: string; decimals: number; tags?: string[] }> = await res.json();
-    if (!Array.isArray(arr) || arr.length === 0) return null;
-    // Prefer verified/strict if present
-    arr.sort((a, b) => {
-      const aw = (a.tags || []).some((x) => x === "verified" || x === "strict") ? 1 : 0;
-      const bw = (b.tags || []).some((x) => x === "verified" || x === "strict") ? 1 : 0;
-      return bw - aw;
-    });
-    const t = arr[0];
-    return { address: t.id, symbol: t.symbol, decimals: t.decimals ?? 9 };
+    const tokens = await searchTokens(symbol, 1);
+    if (tokens.length === 0) return null;
+    
+    const token = tokens[0];
+    return {
+      address: token.id,
+      symbol: token.symbol,
+      decimals: token.decimals
+    };
   } catch {
     return null;
   }
 }
 
+/**
+ * Enhanced token resolver with comprehensive Jupiter search
+ */
 export async function resolveTokenParam(
   input: string | null | undefined,
   fallbackSymbol: keyof typeof TOKENS
@@ -42,41 +147,96 @@ export async function resolveTokenParam(
   const fallbackDecimals = TOKEN_DECIMALS[fallbackSymbol] ?? 9;
 
   if (!input || input.trim() === "") {
-    return { mint: fallbackMint, symbol: String(fallbackSymbol), decimals: fallbackDecimals };
+    return { 
+      mint: fallbackMint, 
+      symbol: String(fallbackSymbol), 
+      decimals: fallbackDecimals 
+    };
   }
 
   const raw = input.trim();
+  
+  // Handle mint address input
   if (isMintAddress(raw)) {
-    // Best effort decimals discovery via token list; default to 9
-    try {
-      const res = await fetch("https://tokens.jup.ag/tokens");
-      if (res.ok) {
-        const tokens: Array<{ address: string; symbol: string; decimals: number }> = await res.json();
-        const t = tokens.find((t) => t.address === raw);
-        if (t) return { mint: raw, symbol: t.symbol || raw, decimals: t.decimals ?? 9 };
-      }
-    } catch {}
+    const tokenInfo = await getTokenByMint(raw);
+    if (tokenInfo) {
+      return {
+        mint: tokenInfo.id,
+        symbol: tokenInfo.symbol,
+        decimals: tokenInfo.decimals,
+        name: tokenInfo.name,
+        icon: tokenInfo.icon,
+        isVerified: tokenInfo.isVerified,
+        tags: tokenInfo.tags,
+        usdPrice: tokenInfo.usdPrice,
+        mcap: tokenInfo.mcap,
+        liquidity: tokenInfo.liquidity
+      };
+    }
+    // Fallback for mint addresses not found in Jupiter
     return { mint: raw, symbol: raw, decimals: 9 };
   }
 
-  // Symbol path
+  // Handle symbol/name search
   const sym = sanitizeSymbol(raw);
 
-  // Known map quick path
+  // Quick path for known tokens
   if ((TOKENS as any)[sym]) {
     const mint = (TOKENS as any)[sym] as string;
     const decimals = (TOKEN_DECIMALS as any)[sym] ?? 9;
     return { mint, symbol: sym, decimals };
   }
 
-  // Try lite search endpoint
-  const hit = await searchLiteBySymbol(sym);
-  if (hit) {
-    return { mint: hit.address, symbol: sym, decimals: hit.decimals };
+  // Search using Jupiter's comprehensive API
+  const searchResults = await searchTokens(raw, 1);
+  if (searchResults.length > 0) {
+    const token = searchResults[0];
+    return {
+      mint: token.id,
+      symbol: token.symbol,
+      decimals: token.decimals,
+      name: token.name,
+      icon: token.icon,
+      isVerified: token.isVerified,
+      tags: token.tags,
+      usdPrice: token.usdPrice,
+      mcap: token.mcap,
+      liquidity: token.liquidity
+    };
   }
 
-  // Fallback
-  return { mint: fallbackMint, symbol: String(fallbackSymbol), decimals: fallbackDecimals };
+  // Fallback to original token
+  return { 
+    mint: fallbackMint, 
+    symbol: String(fallbackSymbol), 
+    decimals: fallbackDecimals 
+  };
 }
 
+/**
+ * Get multiple token suggestions for autocomplete
+ */
+export async function getTokenSuggestions(query: string, limit: number = 10): Promise<ResolvedToken[]> {
+  if (!query || query.trim().length < 2) {
+    // Return popular tokens for empty/short queries
+    return [
+      { mint: TOKENS.SOL, symbol: 'SOL', decimals: 9 },
+      { mint: TOKENS.USDC, symbol: 'USDC', decimals: 6 },
+      { mint: TOKENS.USDT, symbol: 'USDT', decimals: 6 }
+    ];
+  }
 
+  const searchResults = await searchTokens(query, limit);
+  return searchResults.map(token => ({
+    mint: token.id,
+    symbol: token.symbol,
+    decimals: token.decimals,
+    name: token.name,
+    icon: token.icon,
+    isVerified: token.isVerified,
+    tags: token.tags,
+    usdPrice: token.usdPrice,
+    mcap: token.mcap,
+    liquidity: token.liquidity
+  }));
+}

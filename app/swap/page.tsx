@@ -5,11 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowDownUp } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ArrowDownUp, Search } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
 import { useDisplayMode, useMaxHeight, useWidgetProps } from "../hooks";
 // External wallet is always used - no need to import the config
-import { ensureWalletConnected, getWalletPublicKey, signAndSendTransaction } from "@/lib/wallet-utils";
+import {
+  ensureWalletConnected,
+  getWalletPublicKey,
+  signAndSendTransaction,
+} from "@/lib/wallet-utils";
+import { TokenSearch, TokenInfo } from "@/components/ui/token-search";
 
 interface SwapWidgetProps extends Record<string, unknown> {
   inputToken?: string;
@@ -22,9 +27,19 @@ export default function SwapPage() {
   const maxHeight = useMaxHeight() ?? undefined;
   const displayMode = useDisplayMode();
 
-  const [inputToken, setInputToken] = useState(toolOutput?.inputToken || "SOL");
-  const [outputToken, setOutputToken] = useState(toolOutput?.outputToken || "USDC");
-  const [inputAmount, setInputAmount] = useState(toolOutput?.initialAmount || "0.001");
+  const [inputToken, setInputToken] = useState<TokenInfo>({
+    mint: "So11111111111111111111111111111111111111112",
+    symbol: toolOutput?.inputToken || "SOL",
+    decimals: 9,
+  });
+  const [outputToken, setOutputToken] = useState<TokenInfo>({
+    mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    symbol: toolOutput?.outputToken || "USDC",
+    decimals: 6,
+  });
+  const [inputAmount, setInputAmount] = useState(
+    toolOutput?.initialAmount || "0.001"
+  );
   const [outputAmount, setOutputAmount] = useState("0");
   const [isLoading, setIsLoading] = useState(false);
   const [isSwapping, setIsSwapping] = useState(false);
@@ -35,55 +50,73 @@ export default function SwapPage() {
     explorerUrl: string;
   } | null>(null);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [showInputSearch, setShowInputSearch] = useState(false);
+  const [showOutputSearch, setShowOutputSearch] = useState(false);
 
   // Sync state with tool-provided props when they arrive/change
   useEffect(() => {
-    if (toolOutput?.inputToken && toolOutput.inputToken !== inputToken) {
-      setInputToken(String(toolOutput.inputToken));
+    if (toolOutput?.inputToken && toolOutput.inputToken !== inputToken.symbol) {
+      setInputToken((prev) => ({
+        ...prev,
+        symbol: String(toolOutput.inputToken),
+      }));
     }
-    if (toolOutput?.outputToken && toolOutput.outputToken !== outputToken) {
-      setOutputToken(String(toolOutput.outputToken));
+    if (
+      toolOutput?.outputToken &&
+      toolOutput.outputToken !== outputToken.symbol
+    ) {
+      setOutputToken((prev) => ({
+        ...prev,
+        symbol: String(toolOutput.outputToken),
+      }));
     }
     if (toolOutput?.initialAmount && toolOutput.initialAmount !== inputAmount) {
       setInputAmount(String(toolOutput.initialAmount));
     }
-  }, [toolOutput?.inputToken, toolOutput?.outputToken, toolOutput?.initialAmount]);
+  }, [
+    toolOutput?.inputToken,
+    toolOutput?.outputToken,
+    toolOutput?.initialAmount,
+    inputToken.symbol,
+    outputToken.symbol,
+    inputAmount,
+  ]);
 
   // Fetch quote when input changes
+  const fetchQuote = useCallback(async () => {
+    if (!inputAmount || parseFloat(inputAmount) <= 0) {
+      setOutputAmount("0");
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch(
+        `/api/swap/quote?inputToken=${inputToken.symbol}&outputToken=${outputToken.symbol}&amount=${inputAmount}`
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to fetch quote");
+      }
+
+      const data = await response.json();
+      setOutputAmount(data.outputAmount.toFixed(6));
+    } catch (err) {
+      console.error("Error fetching quote:", err);
+      setError(err instanceof Error ? err.message : "Failed to fetch quote");
+      setOutputAmount("0");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [inputAmount, inputToken.symbol, outputToken.symbol]);
+
   useEffect(() => {
-    const fetchQuote = async () => {
-      if (!inputAmount || parseFloat(inputAmount) <= 0) {
-        setOutputAmount("0");
-        return;
-      }
-
-      setIsLoading(true);
-      setError("");
-
-      try {
-        const response = await fetch(
-          `/api/swap/quote?inputToken=${inputToken}&outputToken=${outputToken}&amount=${inputAmount}`
-        );
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || "Failed to fetch quote");
-        }
-
-        const data = await response.json();
-        setOutputAmount(data.outputAmount.toFixed(6));
-      } catch (err) {
-        console.error("Error fetching quote:", err);
-        setError(err instanceof Error ? err.message : "Failed to fetch quote");
-        setOutputAmount("0");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     const debounceTimer = setTimeout(fetchQuote, 500);
     return () => clearTimeout(debounceTimer);
-  }, [inputAmount, inputToken, outputToken]);
+  }, [fetchQuote]);
 
   const handleSwap = async () => {
     if (!inputAmount || parseFloat(inputAmount) <= 0) {
@@ -111,8 +144,8 @@ export default function SwapPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          inputToken,
-          outputToken,
+          inputToken: inputToken.symbol,
+          outputToken: outputToken.symbol,
           amount: inputAmount,
           userPublicKey,
         }),
@@ -128,12 +161,15 @@ export default function SwapPage() {
       // Sign and send the transaction with external wallet
       if (data.swapTransaction) {
         const provider = await ensureWalletConnected();
-        const signature = await signAndSendTransaction(provider, data.swapTransaction);
-        
+        const signature = await signAndSendTransaction(
+          provider,
+          data.swapTransaction
+        );
+
         const explorerUrl = `https://solscan.io/tx/${signature}`;
         setSwapResult({
           outputAmount: data.expectedOutputAmount ?? 0,
-          outputToken,
+          outputToken: outputToken.symbol,
           explorerUrl,
         });
       } else {
@@ -179,18 +215,34 @@ export default function SwapPage() {
               />
               <Badge
                 variant="secondary"
-                className="absolute right-2 top-1/2 -translate-y-1/2"
+                className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer hover:bg-secondary/80"
+                onClick={() => setShowInputSearch(!showInputSearch)}
               >
-                {inputToken}
+                {inputToken.symbol}
+                {inputToken.isVerified && " ✓"}
               </Badge>
             </div>
-            <Input
-              type="text"
-              value={inputToken}
-              onChange={(e) => setInputToken(e.target.value)}
-              placeholder="Token symbol or mint address"
-              className="text-xs h-8"
-            />
+            {showInputSearch ? (
+              <TokenSearch
+                value={inputToken.symbol}
+                onChange={(token) => {
+                  setInputToken(token);
+                  setShowInputSearch(false);
+                }}
+                placeholder="Search input token..."
+                className="text-xs"
+              />
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowInputSearch(true)}
+                className="w-full h-8 text-xs"
+              >
+                <Search className="h-3 w-3 mr-2" />
+                Change token
+              </Button>
+            )}
           </div>
 
           {/* Swap Arrow */}
@@ -202,6 +254,8 @@ export default function SwapPage() {
                 const temp = inputToken;
                 setInputToken(outputToken);
                 setOutputToken(temp);
+                setShowInputSearch(false);
+                setShowOutputSearch(false);
               }}
               className="rounded-full h-8 w-8"
             >
@@ -225,18 +279,34 @@ export default function SwapPage() {
               />
               <Badge
                 variant="secondary"
-                className="absolute right-2 top-1/2 -translate-y-1/2"
+                className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer hover:bg-secondary/80"
+                onClick={() => setShowOutputSearch(!showOutputSearch)}
               >
-                {outputToken}
+                {outputToken.symbol}
+                {outputToken.isVerified && " ✓"}
               </Badge>
             </div>
-            <Input
-              type="text"
-              value={outputToken}
-              onChange={(e) => setOutputToken(e.target.value)}
-              placeholder="Token symbol or mint address"
-              className="text-xs h-8"
-            />
+            {showOutputSearch ? (
+              <TokenSearch
+                value={outputToken.symbol}
+                onChange={(token) => {
+                  setOutputToken(token);
+                  setShowOutputSearch(false);
+                }}
+                placeholder="Search output token..."
+                className="text-xs"
+              />
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowOutputSearch(true)}
+                className="w-full h-8 text-xs"
+              >
+                <Search className="h-3 w-3 mr-2" />
+                Change token
+              </Button>
+            )}
           </div>
 
           {/* Error Message */}
@@ -290,4 +360,3 @@ export default function SwapPage() {
     </div>
   );
 }
-

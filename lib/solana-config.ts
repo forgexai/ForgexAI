@@ -43,6 +43,8 @@ export const JUPITER_API = {
   QUOTE: "https://lite-api.jup.ag/swap/v1/quote",
   SWAP: "https://lite-api.jup.ag/swap/v1/swap",
   PRICE: "https://lite-api.jup.ag/price/v3",
+  TOKEN_SEARCH: "https://lite-api.jup.ag/tokens/v2/search",
+  TOKEN_LIST: "https://tokens.jup.ag/tokens",
 } as const;
 
 // Optional referral settings
