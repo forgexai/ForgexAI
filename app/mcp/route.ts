@@ -521,16 +521,20 @@ const handler = createMcpHandler(async (server) => {
     async ({ txHash }) => {
       try {
         const res = await fetch(
-          `${baseURL}/api/transaction/analyze?txHash=${encodeURIComponent(txHash)}`
+          `${baseURL}/api/transaction/analyze?txHash=${encodeURIComponent(
+            txHash
+          )}`
         );
         const data = await res.json();
-        
+
         if (!res.ok) {
           return {
             content: [
               {
                 type: "text",
-                text: `Error analyzing transaction: ${data?.error || "Failed to analyze transaction"}`,
+                text: `Error analyzing transaction: ${
+                  data?.error || "Failed to analyze transaction"
+                }`,
               },
             ],
           };
@@ -541,29 +545,33 @@ const handler = createMcpHandler(async (server) => {
         analysisText += `• Status: ${data.status}\n`;
         analysisText += `• Block Time: ${data.blockTime}\n`;
         analysisText += `• Fee: ${data.fee} lamports\n`;
-        
+
         if (data.transactionType) {
           analysisText += `• Type: ${data.transactionType}\n`;
         }
-        
+
         if (data.programsInvolved && data.programsInvolved.length > 0) {
           analysisText += `• Programs: ${data.programsInvolved.join(", ")}\n`;
         }
-        
+
         if (data.tokenTransfers && data.tokenTransfers.length > 0) {
           analysisText += `\nToken Transfers:\n`;
           data.tokenTransfers.forEach((transfer: any, index: number) => {
-            analysisText += `  ${index + 1}. ${transfer.amount} ${transfer.token} from ${transfer.from} to ${transfer.to}\n`;
+            analysisText += `  ${index + 1}. ${transfer.amount} ${
+              transfer.token
+            } from ${transfer.from} to ${transfer.to}\n`;
           });
         }
-        
+
         if (data.solTransfers && data.solTransfers.length > 0) {
           analysisText += `\nSOL Transfers:\n`;
           data.solTransfers.forEach((transfer: any, index: number) => {
-            analysisText += `  ${index + 1}. ${transfer.amount} SOL from ${transfer.from} to ${transfer.to}\n`;
+            analysisText += `  ${index + 1}. ${transfer.amount} SOL from ${
+              transfer.from
+            } to ${transfer.to}\n`;
           });
         }
-        
+
         if (data.description) {
           analysisText += `\nDescription: ${data.description}`;
         }
@@ -587,6 +595,634 @@ const handler = createMcpHandler(async (server) => {
             {
               type: "text",
               text: `Error analyzing transaction: ${error.message}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // Wallet history tool
+  server.registerTool(
+    "wallet_history",
+    {
+      title: "Wallet History",
+      description:
+        "Get recent transaction history for a Solana wallet address, showing the last 10 transactions with details about transfers, swaps, and other activities.",
+      inputSchema: {
+        address: z
+          .string()
+          .describe("Solana wallet address or domain (e.g., .sol domain)"),
+        limit: z
+          .number()
+          .optional()
+          .describe("Number of transactions to fetch (max 50, default 10)"),
+      },
+      _meta: {
+        "openai/resultCanProduceWidget": false,
+      },
+    },
+    async ({ address, limit = 10 }) => {
+      try {
+        const res = await fetch(
+          `${baseURL}/api/wallet/history?account=${encodeURIComponent(
+            address
+          )}&limit=${limit}`
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error fetching wallet history: ${
+                  data?.error || "Failed to fetch history"
+                }`,
+              },
+            ],
+          };
+        }
+
+        if (data.transactions.length === 0) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `No recent transactions found for wallet ${address}`,
+              },
+            ],
+          };
+        }
+
+        // Format the history response
+        let historyText = `Recent Transactions for ${address}:\n`;
+        historyText += `Resolved Address: ${data.resolvedAddress}\n\n`;
+
+        data.transactions.forEach((tx: any, index: number) => {
+          historyText += `${index + 1}. ${tx.type}\n`;
+          historyText += `   • Signature: ${tx.signature.slice(0, 16)}...\n`;
+          historyText += `   • Time: ${
+            tx.blockTime ? new Date(tx.blockTime).toLocaleString() : "Unknown"
+          }\n`;
+          historyText += `   • Status: ${tx.status}\n`;
+
+          if (tx.solChange !== 0) {
+            historyText += `   • SOL Change: ${
+              tx.solChange > 0 ? "+" : ""
+            }${tx.solChange.toFixed(6)} SOL\n`;
+          }
+
+          if (tx.programs && tx.programs.length > 0) {
+            historyText += `   • Programs: ${tx.programs.join(", ")}\n`;
+          }
+
+          if (tx.description) {
+            historyText += `   • ${tx.description}\n`;
+          }
+
+          historyText += `\n`;
+        });
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: historyText,
+            },
+          ],
+          structuredContent: {
+            address,
+            resolvedAddress: data.resolvedAddress,
+            transactions: data.transactions,
+            count: data.count,
+            timestamp: data.timestamp,
+          },
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error fetching wallet history: ${error.message}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // Token security analysis tool
+  server.registerTool(
+    "analyze_token_security",
+    {
+      title: "Token Security & RugCheck",
+      description:
+        "Analyze a Solana token for security risks, rug pull indicators, and rugcheck-style safety metrics using comprehensive on-chain data.",
+      inputSchema: {
+        mint: z
+          .string()
+          .describe("Token mint address to analyze for security or rugcheck"),
+      },
+      _meta: {
+        "openai/resultCanProduceWidget": false,
+      },
+    },
+    async ({ mint }) => {
+      try {
+        const res = await fetch(
+          `${baseURL}/api/security/analyze?mint=${encodeURIComponent(mint)}`
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error analyzing token security: ${
+                  data?.error || "Failed to analyze token"
+                }`,
+              },
+            ],
+          };
+        }
+
+        // ✅ Base Analysis
+        let analysisText = `🔍 Security & RugCheck Analysis for ${data.tokenInfo.name} (${data.tokenInfo.symbol}):\n\n`;
+        analysisText += `${data.summary}\n\n`;
+        analysisText += `• Risk Score: ${data.riskScore} (Normalized: ${data.riskScoreNormalized}/100)\n`;
+        analysisText += `• Price: $${data.price}\n`;
+        analysisText += `• Market Cap: $${
+          data.marketCap?.toLocaleString() || "N/A"
+        }\n`;
+        analysisText += `• Total Holders: ${data.totalHolders}\n`;
+        analysisText += `• Liquidity: $${
+          data.liquidity?.toLocaleString() || "N/A"
+        }\n\n`;
+
+        // ✅ Authority
+        analysisText += `Authority Status:\n`;
+        analysisText += `• Mint Authority: ${
+          data.mintAuthority ? "⚠️ Enabled" : "✅ Disabled"
+        }\n`;
+        analysisText += `• Freeze Authority: ${
+          data.freezeAuthority ? "⚠️ Enabled" : "✅ Disabled"
+        }\n\n`;
+
+        // ✅ Top Risks
+        if (data.risks?.length) {
+          analysisText += `Top Risk Factors:\n`;
+          data.risks.slice(0, 5).forEach((risk: any, index: number) => {
+            const emoji =
+              risk.level === "danger"
+                ? "🚨"
+                : risk.level === "warn"
+                ? "⚠️"
+                : "ℹ️";
+            analysisText += `${index + 1}. ${emoji} ${risk.name}\n   ${
+              risk.description
+            }\n`;
+            if (risk.value) analysisText += `   Value: ${risk.value}\n`;
+            analysisText += `\n`;
+          });
+        }
+
+        // ✅ Verification
+        if (data.verification) {
+          analysisText += `Verification:\n`;
+          analysisText += `• Jupiter Verified: ${
+            data.verification.jupiterVerified ? "✅" : "❌"
+          }\n`;
+          analysisText += `• Jupiter Strict: ${
+            data.verification.jupiterStrict ? "✅" : "❌"
+          }\n\n`;
+        }
+
+        // ✅ Insider Networks
+        if (data.insiderNetworks?.length) {
+          analysisText += `⚠️ Insider Networks Detected: ${data.insiderNetworks.length}\n`;
+          data.insiderNetworks.forEach((network: any, index: number) => {
+            analysisText += `${index + 1}. ${network.type} network with ${
+              network.activeAccounts
+            } accounts\n`;
+          });
+          analysisText += `\n`;
+        }
+
+        // ✅ RugCheck Summary (Human-friendly)
+        let rugSummary = "";
+        if (data.riskScoreNormalized < 30) {
+          rugSummary =
+            "🚨 **High Rug Pull Risk** – Multiple red flags detected. Proceed with extreme caution.";
+        } else if (data.riskScoreNormalized < 60) {
+          rugSummary =
+            "⚠️ **Moderate Rug Risk** – Some risk indicators found. Review token authorities and liquidity.";
+        } else {
+          rugSummary =
+            "✅ **Low Rug Pull Risk** – No major red flags detected, but always verify sources.";
+        }
+
+        analysisText += `\n📊 RugCheck Summary:\n${rugSummary}\n`;
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: analysisText,
+            },
+          ],
+          structuredContent: {
+            mint,
+            analysis: data,
+            rugcheck: rugSummary,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error analyzing token security: ${error.message}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // Token info tool
+  server.registerTool(
+    "token_info",
+    {
+      title: "Token Information",
+      description:
+        "Get detailed information about a Solana token including metadata, price, market cap, and trading data.",
+      inputSchema: {
+        query: z
+          .string()
+          .describe(
+            "Token symbol, name, or mint address (e.g., BONK, SOL, or mint address)"
+          ),
+      },
+      _meta: {
+        "openai/resultCanProduceWidget": false,
+      },
+    },
+    async ({ query }) => {
+      try {
+        const res = await fetch(
+          `${baseURL}/api/tokens/search?query=${encodeURIComponent(
+            query
+          )}&limit=1`
+        );
+        const data = await res.json();
+
+        if (
+          !res.ok ||
+          !data.success ||
+          !data.tokens ||
+          data.tokens.length === 0
+        ) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `No token found for "${query}". Please check the symbol, name, or mint address.`,
+              },
+            ],
+          };
+        }
+
+        const token = data.tokens[0];
+
+        // Format the token info response
+        let infoText = `Token Information for ${token.name} (${token.symbol}):\n\n`;
+
+        infoText += `• Mint Address: ${token.mint}\n`;
+        infoText += `• Decimals: ${token.decimals}\n`;
+
+        if (token.usdPrice) {
+          infoText += `• Price: $${token.usdPrice}\n`;
+        }
+
+        if (token.mcap) {
+          infoText += `• Market Cap: $${token.mcap.toLocaleString()}\n`;
+        }
+
+        if (token.fdv) {
+          infoText += `• Fully Diluted Value: $${token.fdv.toLocaleString()}\n`;
+        }
+
+        if (token.liquidity) {
+          infoText += `• Liquidity: $${token.liquidity.toLocaleString()}\n`;
+        }
+
+        if (token.holderCount) {
+          infoText += `• Holders: ${token.holderCount.toLocaleString()}\n`;
+        }
+
+        infoText += `• Verified: ${token.isVerified ? "✅ Yes" : "❌ No"}\n`;
+        infoText += `• Organic Score: ${
+          token.organicScoreLabel?.toUpperCase() || "Unknown"
+        }\n`;
+
+        if (token.tags && token.tags.length > 0) {
+          infoText += `• Tags: ${token.tags.join(", ")}\n`;
+        }
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: infoText,
+            },
+          ],
+          structuredContent: {
+            query,
+            token,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error fetching token information: ${error.message}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // Swap quote tool
+  server.registerTool(
+    "get_swap_quote",
+    {
+      title: "Get Swap Quote",
+      description:
+        "Get a real-time swap quote for trading tokens on Solana via Jupiter aggregator, showing expected output amount and price impact.",
+      inputSchema: {
+        inputToken: z
+          .string()
+          .describe("Input token symbol or mint address (e.g., SOL, USDC)"),
+        outputToken: z
+          .string()
+          .describe("Output token symbol or mint address (e.g., BONK, USDT)"),
+        amount: z
+          .string()
+          .describe(
+            "Amount to swap in human-readable format (e.g., '0.1', '1000')"
+          ),
+      },
+      _meta: {
+        "openai/resultCanProduceWidget": false,
+      },
+    },
+    async ({ inputToken, outputToken, amount }) => {
+      try {
+        const res = await fetch(
+          `${baseURL}/api/swap/quote?inputToken=${encodeURIComponent(
+            inputToken
+          )}&outputToken=${encodeURIComponent(
+            outputToken
+          )}&amount=${encodeURIComponent(amount)}`
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error getting swap quote: ${
+                  data?.error || "Failed to get quote"
+                }`,
+              },
+            ],
+          };
+        }
+
+        // Format the quote response
+        let quoteText = `Swap Quote: ${amount} ${inputToken} → ${outputToken}\n\n`;
+
+        quoteText += `• Input: ${data.inputAmount} ${data.inputToken}\n`;
+        quoteText += `• Output: ${data.outputAmount} ${data.outputToken}\n`;
+
+        if (data.priceImpact) {
+          quoteText += `• Price Impact: ${data.priceImpact}%\n`;
+        }
+
+        if (data.quote?.routePlan && data.quote.routePlan.length > 0) {
+          quoteText += `• Route: ${data.quote.routePlan.length} hop(s)\n`;
+          data.quote.routePlan.forEach((hop: any, index: number) => {
+            quoteText += `  ${index + 1}. ${
+              hop.swapInfo?.label || "Unknown DEX"
+            } (${hop.percent}%)\n`;
+          });
+        }
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: quoteText,
+            },
+          ],
+          structuredContent: {
+            inputToken,
+            outputToken,
+            amount,
+            quote: data,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error getting swap quote: ${error.message}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // Cross-chain swap widget
+  const crossChainSwapHtml = await getAppsSdkCompatibleHtml("/crosschain-swap");
+  const crossChainSwapWidget: ContentWidget = {
+    id: "crosschain_swap_widget",
+    title: "Cross-Chain Swap",
+    templateUri: "ui://widget/crosschain-swap-template.html",
+    invoking: "Loading cross-chain swap interface...",
+    invoked: "Cross-chain swap interface ready",
+    html: crossChainSwapHtml,
+    description: "Swap tokens across different blockchains using Mayan Finance",
+    widgetDomain: "https://mayan.finance",
+  };
+
+  server.registerTool(
+    crossChainSwapWidget.id,
+    {
+      title: crossChainSwapWidget.title,
+      description:
+        "Swap tokens across different blockchains (Solana, Ethereum, BSC, Polygon, Avalanche, Arbitrum) using Mayan Finance bridge.",
+      inputSchema: {
+        fromChain: z
+          .string()
+          .describe("Source blockchain (e.g., solana, ethereum, bsc)")
+          .optional(),
+        toChain: z
+          .string()
+          .describe("Destination blockchain (e.g., ethereum, solana, polygon)")
+          .optional(),
+        inputToken: z
+          .string()
+          .describe("Input token symbol (e.g., SOL, ETH, USDC)")
+          .optional(),
+        outputToken: z
+          .string()
+          .describe("Output token symbol (e.g., USDC, ETH, SOL)")
+          .optional(),
+        amount: z
+          .string()
+          .describe("Amount to swap (e.g., '0.1', '1000')")
+          .optional(),
+      },
+      _meta: {
+        ...widgetMeta(crossChainSwapWidget),
+        "openai/resultCanProduceWidget": true,
+      },
+    },
+    async ({ fromChain, toChain, inputToken, outputToken, amount }) => {
+      const finalFromChain = fromChain || "solana";
+      const finalToChain = toChain || "ethereum";
+      const finalInputToken = inputToken || "SOL";
+      const finalOutputToken = outputToken || "USDC";
+      const finalAmount = amount || "0.1";
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Preparing cross-chain swap: ${finalAmount} ${finalInputToken} (${finalFromChain}) → ${finalOutputToken} (${finalToChain})`,
+          },
+        ],
+        structuredContent: {
+          fromChain: finalFromChain,
+          toChain: finalToChain,
+          inputToken: finalInputToken,
+          outputToken: finalOutputToken,
+          initialAmount: finalAmount,
+          timestamp: new Date().toISOString(),
+        },
+        _meta: {
+          ...widgetMeta(crossChainSwapWidget),
+          "openai/resultCanProduceWidget": true,
+        },
+      };
+    }
+  );
+
+  // Cross-chain quote tool
+  server.registerTool(
+    "get_crosschain_quote",
+    {
+      title: "Get Cross-Chain Quote",
+      description:
+        "Get a real-time cross-chain swap quote using Mayan Finance, showing expected output amount, fees, and estimated time.",
+      inputSchema: {
+        fromChain: z
+          .string()
+          .describe("Source blockchain (solana, ethereum, bsc, polygon, avalanche, arbitrum)"),
+        toChain: z
+          .string()
+          .describe("Destination blockchain (solana, ethereum, bsc, polygon, avalanche, arbitrum)"),
+        inputToken: z
+          .string()
+          .describe("Input token symbol (e.g., SOL, ETH, USDC)"),
+        outputToken: z
+          .string()
+          .describe("Output token symbol (e.g., USDC, ETH, SOL)"),
+        amount: z
+          .string()
+          .describe("Amount to swap in human-readable format (e.g., '0.1', '1000')"),
+      },
+      _meta: {
+        "openai/resultCanProduceWidget": false,
+      },
+    },
+    async ({ fromChain, toChain, inputToken, outputToken, amount }) => {
+      try {
+        const response = await fetch(`${baseURL}/api/crosschain/quote`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            amount: parseFloat(amount),
+            fromToken: inputToken,
+            toToken: outputToken,
+            fromChain,
+            toChain,
+            slippage: 0.5,
+          }),
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error getting cross-chain quote: ${data?.error || "Failed to get quote"}`,
+              },
+            ],
+          };
+        }
+
+        const quote = data.quote;
+
+        // Format the quote response
+        let quoteText = `Cross-Chain Quote: ${amount} ${inputToken} (${fromChain}) → ${outputToken} (${toChain})\n\n`;
+        
+        quoteText += `• Input: ${quote.inputAmount} ${quote.inputToken} on ${quote.inputChain}\n`;
+        quoteText += `• Output: ${quote.outputAmount} ${quote.outputToken} on ${quote.outputChain}\n`;
+        quoteText += `• Estimated Time: ${quote.estimatedTime}\n`;
+        quoteText += `• Bridge Fee: ${quote.bridgeFee}\n`;
+        quoteText += `• Network Fee: ${quote.networkFee}\n`;
+        quoteText += `• Price Impact: ${quote.priceImpact}\n`;
+        quoteText += `• Route: ${quote.route}\n`;
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: quoteText,
+            },
+          ],
+          structuredContent: {
+            fromChain,
+            toChain,
+            inputToken,
+            outputToken,
+            amount,
+            quote: data.quote,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error getting cross-chain quote: ${error.message}`,
             },
           ],
         };
