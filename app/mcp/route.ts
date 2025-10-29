@@ -606,9 +606,9 @@ const handler = createMcpHandler(async (server) => {
   server.registerTool(
     "wallet_history",
     {
-      title: "Wallet History",
+      title: "Wallet Transaction History",
       description:
-        "Get recent transaction history for a Solana wallet address, showing the last 10 transactions with details about transfers, swaps, and other activities.",
+        "Show recent transaction history for a Solana wallet address. Use this when user asks to 'show transactions', 'wallet history', 'recent activity', or 'last transactions' for any Solana address.",
       inputSchema: {
         address: z
           .string()
@@ -718,7 +718,7 @@ const handler = createMcpHandler(async (server) => {
     {
       title: "Token Security & RugCheck",
       description:
-        "Analyze a Solana token for security risks, rug pull indicators, and rugcheck-style safety metrics using comprehensive on-chain data.",
+        "Analyze a Solana token for security risks and rug pull indicators. Use this when user asks to 'run rugcheck', 'analyze token security', 'check if token is safe', or 'security analysis' for any token mint address.",
       inputSchema: {
         mint: z
           .string()
@@ -858,7 +858,7 @@ const handler = createMcpHandler(async (server) => {
     {
       title: "Token Information",
       description:
-        "Get detailed information about a Solana token including metadata, price, market cap, and trading data.",
+        "Get detailed token metadata, price, market cap, and trading data for any Solana token. Use this when user asks to 'fetch token info', 'get token details', 'token metadata', or 'find token by symbol/mint'.",
       inputSchema: {
         query: z
           .string()
@@ -964,7 +964,7 @@ const handler = createMcpHandler(async (server) => {
     {
       title: "Get Swap Quote",
       description:
-        "Get a real-time swap quote for trading tokens on Solana via Jupiter aggregator, showing expected output amount and price impact.",
+        "Get real-time swap quotes for Solana tokens via Jupiter aggregator. Use this when user asks to 'quote swap', 'get swap quote', 'how much will I get', or 'swap X to Y' on Solana only.",
       inputSchema: {
         inputToken: z
           .string()
@@ -1066,6 +1066,35 @@ const handler = createMcpHandler(async (server) => {
     widgetDomain: "https://mayan.finance",
   };
 
+  // Register cross-chain swap widget
+  server.registerResource(
+    "crosschain-swap-widget",
+    crossChainSwapWidget.templateUri,
+    {
+      title: crossChainSwapWidget.title,
+      description: crossChainSwapWidget.description,
+      mimeType: "text/html+skybridge",
+      _meta: {
+        "openai/widgetDescription": crossChainSwapWidget.description,
+        "openai/widgetPrefersBorder": true,
+      },
+    },
+    async (uri) => ({
+      contents: [
+        {
+          uri: uri.href,
+          mimeType: "text/html+skybridge",
+          text: `<html>${crossChainSwapWidget.html}</html>`,
+          _meta: {
+            "openai/widgetDescription": crossChainSwapWidget.description,
+            "openai/widgetPrefersBorder": true,
+            "openai/widgetDomain": crossChainSwapWidget.widgetDomain,
+          },
+        },
+      ],
+    })
+  );
+
   server.registerTool(
     crossChainSwapWidget.id,
     {
@@ -1135,30 +1164,38 @@ const handler = createMcpHandler(async (server) => {
     {
       title: "Get Cross-Chain Quote",
       description:
-        "Get a real-time cross-chain swap quote using Mayan Finance, showing expected output amount, fees, and estimated time.",
+        "Get a real-time cross-chain swap quote using Mayan Finance for swapping tokens between different blockchains. Supports Solana → Ethereum, BSC, Polygon, Avalanche, Arbitrum.",
       inputSchema: {
         fromChain: z
           .string()
-          .describe("Source blockchain (solana, ethereum, bsc, polygon, avalanche, arbitrum)"),
+          .optional()
+          .describe("Source blockchain (default: solana)"),
         toChain: z
           .string()
-          .describe("Destination blockchain (solana, ethereum, bsc, polygon, avalanche, arbitrum)"),
+          .describe("Destination blockchain (ethereum, bsc, polygon, avalanche, arbitrum)"),
         inputToken: z
           .string()
-          .describe("Input token symbol (e.g., SOL, ETH, USDC)"),
+          .describe("Input token symbol (e.g., SOL, USDC, BONK)"),
         outputToken: z
           .string()
-          .describe("Output token symbol (e.g., USDC, ETH, SOL)"),
+          .describe("Output token symbol (e.g., USDC, ETH, USDT)"),
         amount: z
           .string()
-          .describe("Amount to swap in human-readable format (e.g., '0.1', '1000')"),
+          .describe("Amount to swap in human-readable format (e.g., '1', '0.5', '1000')"),
+        slippage: z
+          .number()
+          .optional()
+          .describe("Slippage tolerance in percentage (default: 0.5)"),
       },
       _meta: {
         "openai/resultCanProduceWidget": false,
       },
     },
-    async ({ fromChain, toChain, inputToken, outputToken, amount }) => {
+    async ({ fromChain, toChain, inputToken, outputToken, amount, slippage }) => {
       try {
+        const finalFromChain = fromChain || "solana";
+        const finalSlippage = slippage || 0.5;
+        
         const response = await fetch(`${baseURL}/api/crosschain/quote`, {
           method: 'POST',
           headers: {
@@ -1168,9 +1205,9 @@ const handler = createMcpHandler(async (server) => {
             amount: parseFloat(amount),
             fromToken: inputToken,
             toToken: outputToken,
-            fromChain,
+            fromChain: finalFromChain,
             toChain,
-            slippage: 0.5,
+            slippage: finalSlippage,
           }),
         });
 
@@ -1190,7 +1227,7 @@ const handler = createMcpHandler(async (server) => {
         const quote = data.quote;
 
         // Format the quote response
-        let quoteText = `Cross-Chain Quote: ${amount} ${inputToken} (${fromChain}) → ${outputToken} (${toChain})\n\n`;
+        let quoteText = `Cross-Chain Quote: ${amount} ${inputToken} (${finalFromChain}) → ${outputToken} (${toChain})\n\n`;
         
         quoteText += `• Input: ${quote.inputAmount} ${quote.inputToken} on ${quote.inputChain}\n`;
         quoteText += `• Output: ${quote.outputAmount} ${quote.outputToken} on ${quote.outputChain}\n`;
@@ -1208,11 +1245,12 @@ const handler = createMcpHandler(async (server) => {
             },
           ],
           structuredContent: {
-            fromChain,
+            fromChain: finalFromChain,
             toChain,
             inputToken,
             outputToken,
             amount,
+            slippage: finalSlippage,
             quote: data.quote,
             timestamp: new Date().toISOString(),
           },
