@@ -5,7 +5,15 @@ import { MayanSolanaService } from "forgexai-sdk";
 
 export async function POST(request: NextRequest) {
   try {
-    const { amount, fromToken, toToken, fromChain, toChain, slippage = 0.5, gasDrop } = await request.json();
+    const {
+      amount,
+      fromToken,
+      toToken,
+      fromChain,
+      toChain,
+      slippage = 0.5,
+      gasDrop,
+    } = await request.json();
 
     if (!amount || !fromToken || !toToken || !fromChain || !toChain) {
       return NextResponse.json(
@@ -51,7 +59,9 @@ export async function POST(request: NextRequest) {
         inputAmount: amount,
         inputToken: fromToken,
         inputChain: fromChain,
-        outputAmount: parseFloat(String(mayanQuote.expectedAmountOut || "0")) / Math.pow(10, 6), // Assuming 6 decimals for most tokens
+        outputAmount:
+          parseFloat(String(mayanQuote.expectedAmountOut || "0")) /
+          Math.pow(10, 6), // Assuming 6 decimals for most tokens
         outputToken: toToken,
         outputChain: toChain,
         estimatedTime: getEstimatedTime(fromChain, toChain),
@@ -61,7 +71,7 @@ export async function POST(request: NextRequest) {
         route: `${fromChain} → ${toChain}`,
         slippage: `${slippage}%`,
         validUntil: new Date(Date.now() + 30000).toISOString(), // 30 seconds
-        
+
         // Include raw Mayan quote for execution
         _mayanQuote: mayanQuote,
       };
@@ -71,52 +81,16 @@ export async function POST(request: NextRequest) {
         quote,
         timestamp: new Date().toISOString(),
       });
-
     } catch (mayanError: any) {
       console.error("Mayan API error:", mayanError);
-      
-      // Fallback to mock quote if Mayan API fails
-      const mockRates: { [key: string]: number } = {
-        "SOL-ETH": 0.05,
-        "SOL-USDC": 180,
-        "SOL-USDT": 180,
-        "SOL-BNB": 0.3,
-        "SOL-MATIC": 120,
-        "SOL-AVAX": 5,
-      };
-
-      const rateKey = `${fromToken}-${toToken}`;
-      const rate = mockRates[rateKey] || 1;
-      
-      const bridgeFee = 0.001; // 0.1%
-      const outputAmount = (amount * rate * (1 - bridgeFee)).toFixed(6);
-
-      const fallbackQuote = {
-        inputAmount: amount,
-        inputToken: fromToken,
-        inputChain: fromChain,
-        outputAmount: parseFloat(outputAmount),
-        outputToken: toToken,
-        outputChain: toChain,
-        estimatedTime: getEstimatedTime(fromChain, toChain),
-        bridgeFee: "0.1%",
-        networkFee: getNetworkFee(fromChain, toChain),
-        priceImpact: "0.05%",
-        route: `${fromChain} → ${toChain}`,
-        slippage: `${slippage}%`,
-        validUntil: new Date(Date.now() + 30000).toISOString(),
-        _fallback: true,
-        _error: mayanError.message,
-      };
 
       return NextResponse.json({
-        success: true,
-        quote: fallbackQuote,
+        success: false,
+        quote: null,
         fallback: true,
         timestamp: new Date().toISOString(),
       });
     }
-
   } catch (error: any) {
     console.error("Error getting cross-chain quote:", error);
     return NextResponse.json(
