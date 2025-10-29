@@ -58,11 +58,12 @@ export default function CrossChainSwapPage() {
 
   // URL parameters as fallback
   const [urlParams, setUrlParams] = useState<CrossChainSwapProps>({});
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      setUrlParams({
+      const parsedParams = {
         fromChain: params.get("fromChain") || undefined,
         toChain: params.get("toChain") || undefined,
         inputToken: params.get("inputToken") || undefined,
@@ -71,7 +72,10 @@ export default function CrossChainSwapPage() {
           params.get("amount") || params.get("initialAmount") || undefined,
         destinationWallet: params.get("destinationWallet") || undefined,
         slippage: params.get("slippage") || undefined,
-      });
+      };
+      console.log("Cross-chain swap URL params:", parsedParams);
+      setUrlParams(parsedParams);
+      setIsInitialized(true);
     }
   }, []);
 
@@ -81,22 +85,20 @@ export default function CrossChainSwapPage() {
     [urlParams, toolOutput]
   );
 
-  // State
-  const [fromChain, setFromChain] = useState(
-    effectiveProps.fromChain || "solana"
-  );
-  const [toChain, setToChain] = useState(effectiveProps.toChain || "ethereum");
+  // State - initialize with defaults first, then update with URL params
+  const [fromChain, setFromChain] = useState("solana");
+  const [toChain, setToChain] = useState("ethereum");
   const [inputToken, setInputToken] = useState<TokenInfo>({
     mint: "So11111111111111111111111111111111111111112",
-    symbol: effectiveProps.inputToken || "SOL",
+    symbol: "SOL",
     decimals: 9,
   });
   const [outputToken, setOutputToken] = useState<TokenInfo>({
     mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-    symbol: effectiveProps.outputToken || "USDC",
+    symbol: "USDC",
     decimals: 6,
   });
-  const [amount, setAmount] = useState(effectiveProps.initialAmount || "");
+  const [amount, setAmount] = useState("");
   const [quote, setQuote] = useState<any>(null);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [destinationWallet, setDestinationWallet] = useState<string>("");
@@ -125,12 +127,35 @@ export default function CrossChainSwapPage() {
     return amount.toFixed(4).replace(/\.?0+$/, "");
   };
 
-  // Update state from URL parameters
+  // Update state from URL parameters when they're available
   useEffect(() => {
-    if (effectiveProps.destinationWallet) {
-      setDestinationWallet(effectiveProps.destinationWallet);
+    if (isInitialized && effectiveProps) {
+      if (effectiveProps.fromChain) {
+        setFromChain(effectiveProps.fromChain);
+      }
+      if (effectiveProps.toChain) {
+        setToChain(effectiveProps.toChain);
+      }
+      if (effectiveProps.inputToken) {
+        setInputToken(prev => ({
+          ...prev,
+          symbol: effectiveProps.inputToken!,
+        }));
+      }
+      if (effectiveProps.outputToken) {
+        setOutputToken(prev => ({
+          ...prev,
+          symbol: effectiveProps.outputToken!,
+        }));
+      }
+      if (effectiveProps.initialAmount) {
+        setAmount(effectiveProps.initialAmount);
+      }
+      if (effectiveProps.destinationWallet) {
+        setDestinationWallet(effectiveProps.destinationWallet);
+      }
     }
-  }, [effectiveProps.destinationWallet]);
+  }, [isInitialized, effectiveProps]);
 
   // Load available tokens for chains
   useEffect(() => {
