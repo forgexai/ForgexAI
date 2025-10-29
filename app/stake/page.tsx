@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useWidgetProps } from "@/app/hooks/use-widget-props";
 import { useMaxHeight } from "@/app/hooks/use-max-height";
 import { useOpenAIGlobal } from "@/app/hooks/use-openai-global";
+import { Button } from "@/components/ui/button";
 // External wallet is always used - no need to import the config
 import { ensureWalletConnected, getWalletPublicKey, signAndSendTransaction } from "@/lib/wallet-utils";
 
@@ -162,20 +163,14 @@ export default function StakePage() {
           </div>
         ) : null}
 
-        <button
+        <Button
           disabled={isSubmitting}
           onClick={handleStake}
-          style={{
-            padding: "10px 12px",
-            borderRadius: 8,
-            border: "none",
-            background: isSubmitting ? "#6b7280" : "#2563eb",
-            color: "#fff",
-            cursor: isSubmitting ? "not-allowed" : "pointer",
-          }}
+          className="w-full h-11 font-semibold"
+          size="lg"
         >
           {isSubmitting ? "Staking..." : "Confirm & Stake"}
-        </button>
+        </Button>
       </div>
     </div>
   );
