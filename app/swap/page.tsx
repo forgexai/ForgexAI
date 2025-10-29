@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowDownUp, Search } from "lucide-react";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useDisplayMode, useMaxHeight, useWidgetProps } from "../hooks";
 // External wallet is always used - no need to import the config
 import {
@@ -27,18 +27,64 @@ export default function SwapPage() {
   const maxHeight = useMaxHeight() ?? undefined;
   const displayMode = useDisplayMode();
 
+  // Also check URL parameters as fallback
+  const [urlParams, setUrlParams] = useState<SwapWidgetProps>({});
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      setUrlParams({
+        inputToken: params.get("inputToken") || undefined,
+        outputToken: params.get("outputToken") || undefined,
+        initialAmount:
+          params.get("amount") || params.get("initialAmount") || undefined,
+      });
+    }
+  }, []);
+
+  // Merge toolOutput with URL params, prioritizing toolOutput
+  const effectiveProps = useMemo(
+    () => ({ ...urlParams, ...toolOutput }),
+    [urlParams, toolOutput]
+  );
+
+  // Debug logging
+  useEffect(() => {
+    console.log("Swap Widget Debug:", {
+      toolOutput,
+      urlParams,
+      effectiveProps,
+      windowOpenAI: typeof window !== "undefined" ? window.openai : "undefined",
+      windowOpenAIKeys:
+        typeof window !== "undefined" && window.openai
+          ? Object.keys(window.openai)
+          : "no openai object",
+    });
+
+    // Log more details about the OpenAI context
+    if (typeof window !== "undefined" && window.openai) {
+      console.log("OpenAI Context Details:", {
+        toolInput: window.openai.toolInput,
+        toolOutput: window.openai.toolOutput,
+        toolResponseMetadata: window.openai.toolResponseMetadata,
+        theme: window.openai.theme,
+        displayMode: window.openai.displayMode,
+      });
+    }
+  }, [toolOutput, urlParams, effectiveProps]);
+
   const [inputToken, setInputToken] = useState<TokenInfo>({
     mint: "So11111111111111111111111111111111111111112",
-    symbol: toolOutput?.inputToken || "SOL",
+    symbol: effectiveProps?.inputToken || "SOL",
     decimals: 9,
   });
   const [outputToken, setOutputToken] = useState<TokenInfo>({
     mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-    symbol: toolOutput?.outputToken || "USDC",
+    symbol: effectiveProps?.outputToken || "USDC",
     decimals: 6,
   });
   const [inputAmount, setInputAmount] = useState(
-    toolOutput?.initialAmount || "0.001"
+    effectiveProps?.initialAmount || "0.001"
   );
   const [outputAmount, setOutputAmount] = useState("0");
   const [isLoading, setIsLoading] = useState(false);
@@ -53,30 +99,36 @@ export default function SwapPage() {
   const [showInputSearch, setShowInputSearch] = useState(false);
   const [showOutputSearch, setShowOutputSearch] = useState(false);
 
-  // Sync state with tool-provided props when they arrive/change
+  // Sync state with effective props when they arrive/change
   useEffect(() => {
-    if (toolOutput?.inputToken && toolOutput.inputToken !== inputToken.symbol) {
+    if (
+      effectiveProps?.inputToken &&
+      effectiveProps.inputToken !== inputToken.symbol
+    ) {
       setInputToken((prev) => ({
         ...prev,
-        symbol: String(toolOutput.inputToken),
+        symbol: String(effectiveProps.inputToken),
       }));
     }
     if (
-      toolOutput?.outputToken &&
-      toolOutput.outputToken !== outputToken.symbol
+      effectiveProps?.outputToken &&
+      effectiveProps.outputToken !== outputToken.symbol
     ) {
       setOutputToken((prev) => ({
         ...prev,
-        symbol: String(toolOutput.outputToken),
+        symbol: String(effectiveProps.outputToken),
       }));
     }
-    if (toolOutput?.initialAmount && toolOutput.initialAmount !== inputAmount) {
-      setInputAmount(String(toolOutput.initialAmount));
+    if (
+      effectiveProps?.initialAmount &&
+      effectiveProps.initialAmount !== inputAmount
+    ) {
+      setInputAmount(String(effectiveProps.initialAmount));
     }
   }, [
-    toolOutput?.inputToken,
-    toolOutput?.outputToken,
-    toolOutput?.initialAmount,
+    effectiveProps?.inputToken,
+    effectiveProps?.outputToken,
+    effectiveProps?.initialAmount,
     inputToken.symbol,
     outputToken.symbol,
     inputAmount,
@@ -137,6 +189,8 @@ export default function SwapPage() {
       }
       const userPublicKey = publicKey;
       setWalletAddress(publicKey);
+
+      console.log("Wallet connected successfully:", publicKey);
 
       const response = await fetch("/api/swap/execute", {
         method: "POST",
@@ -353,7 +407,7 @@ export default function SwapPage() {
           )}
 
           <p className="text-xs text-center text-muted-foreground pt-1">
-            Powered by Jupiter • Slippage: 0.5%
+            Powered by ForgexAI • Slippage: 0.5%
           </p>
         </CardContent>
       </Card>
