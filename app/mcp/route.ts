@@ -1125,24 +1125,53 @@ const handler = createMcpHandler(async (server) => {
           .string()
           .describe("Amount to swap (e.g., '0.1', '1000')")
           .optional(),
+        destinationWallet: z
+          .string()
+          .describe("Destination wallet address for cross-chain swaps (e.g., Ethereum address)")
+          .optional(),
+        slippage: z
+          .number()
+          .describe("Slippage tolerance in percentage (e.g., 0.5 for 0.5%)")
+          .optional(),
       },
       _meta: {
         ...widgetMeta(crossChainSwapWidget),
         "openai/resultCanProduceWidget": true,
       },
     },
-    async ({ fromChain, toChain, inputToken, outputToken, amount }) => {
+    async ({
+      fromChain,
+      toChain,
+      inputToken,
+      outputToken,
+      amount,
+      destinationWallet,
+      slippage,
+    }) => {
       const finalFromChain = fromChain || "solana";
-      const finalToChain = toChain || "ethereum";
-      const finalInputToken = inputToken || "SOL";
-      const finalOutputToken = outputToken || "USDC";
-      const finalAmount = amount || "0.1";
+      const finalToChain = toChain;
+      const finalInputToken = inputToken;
+      const finalOutputToken = outputToken;
+      const finalAmount = amount;
+      const finalDestinationWallet = destinationWallet;
+
+      // Build URL with parameters for auto-population
+      const urlParams = new URLSearchParams();
+      if (finalFromChain) urlParams.set('fromChain', finalFromChain);
+      if (finalToChain) urlParams.set('toChain', finalToChain);
+      if (finalInputToken) urlParams.set('inputToken', finalInputToken);
+      if (finalOutputToken) urlParams.set('outputToken', finalOutputToken);
+      if (finalAmount) urlParams.set('amount', finalAmount);
+      if (finalDestinationWallet) urlParams.set('destinationWallet', finalDestinationWallet);
+      if (slippage) urlParams.set('slippage', slippage.toString());
+
+      const widgetUrl = `${baseURL}/crosschain-swap?${urlParams.toString()}`;
 
       return {
         content: [
           {
             type: "text",
-            text: `Preparing cross-chain swap: ${finalAmount} ${finalInputToken} (${finalFromChain}) → ${finalOutputToken} (${finalToChain})`,
+            text: `✅ Cross-chain swap interface is ready — you can now bridge ${finalAmount} ${finalInputToken} → ${finalOutputToken} (${finalToChain}) ${finalDestinationWallet ? `to wallet ${finalDestinationWallet}` : ''} using the Mayan bridge. Confirm the transaction in your connected wallet to execute.`,
           },
         ],
         structuredContent: {
@@ -1151,6 +1180,9 @@ const handler = createMcpHandler(async (server) => {
           inputToken: finalInputToken,
           outputToken: finalOutputToken,
           initialAmount: finalAmount,
+          destinationWallet: finalDestinationWallet,
+          slippage: slippage,
+          widgetUrl: widgetUrl,
           timestamp: new Date().toISOString(),
         },
         _meta: {

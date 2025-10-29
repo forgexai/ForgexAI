@@ -28,6 +28,8 @@ interface CrossChainSwapProps extends Record<string, unknown> {
   inputToken?: string;
   outputToken?: string;
   initialAmount?: string;
+  destinationWallet?: string;
+  slippage?: string;
 }
 
 // Supported chains for cross-chain swaps
@@ -67,6 +69,8 @@ export default function CrossChainSwapPage() {
         outputToken: params.get("outputToken") || undefined,
         initialAmount:
           params.get("amount") || params.get("initialAmount") || undefined,
+        destinationWallet: params.get("destinationWallet") || undefined,
+        slippage: params.get("slippage") || undefined,
       });
     }
   }, []);
@@ -107,19 +111,26 @@ export default function CrossChainSwapPage() {
   // Format output amount to avoid scientific notation
   const formatOutputAmount = (amount: number): string => {
     if (amount === 0) return "0.0";
-    
+
     // For very small numbers, use more decimal places
     if (amount < 0.001) {
       return amount.toFixed(8).replace(/\.?0+$/, "");
     }
-    
+
     // For normal numbers, use appropriate decimal places
     if (amount < 1) {
       return amount.toFixed(6).replace(/\.?0+$/, "");
     }
-    
+
     return amount.toFixed(4).replace(/\.?0+$/, "");
   };
+
+  // Update state from URL parameters
+  useEffect(() => {
+    if (effectiveProps.destinationWallet) {
+      setDestinationWallet(effectiveProps.destinationWallet);
+    }
+  }, [effectiveProps.destinationWallet]);
 
   // Load available tokens for chains
   useEffect(() => {
@@ -235,11 +246,15 @@ export default function CrossChainSwapPage() {
             const walletSigner = async (transaction: any) => {
               // Serialize the transaction for wallet signing
               const serialized = transaction.serialize();
-              const base64Transaction = Buffer.from(serialized).toString('base64');
-              
+              const base64Transaction =
+                Buffer.from(serialized).toString("base64");
+
               // Sign with browser wallet
-              const signature = await signAndSendTransaction(provider, base64Transaction);
-              
+              const signature = await signAndSendTransaction(
+                provider,
+                base64Transaction
+              );
+
               // Return the signed transaction (this is what Mayan expects)
               return transaction;
             };
@@ -251,23 +266,35 @@ export default function CrossChainSwapPage() {
                 throw new Error("Wallet public key not available");
               }
               const userPubkey = new PublicKey(publicKey);
-              const mayanService = new MayanSolanaService(connection, userPubkey);
-              
+              const mayanService = new MayanSolanaService(
+                connection,
+                userPubkey
+              );
+
               // For cross-chain swaps, use the destination wallet from UI input
               const destinationAddress = destinationWallet;
-              
+
               // Validate destination address for cross-chain swaps
               if (toChain === "ethereum") {
                 if (!destinationAddress) {
-                  throw new Error("Ethereum wallet address is required for cross-chain swap");
+                  throw new Error(
+                    "Ethereum wallet address is required for cross-chain swap"
+                  );
                 }
-                
+
                 // Basic validation for Ethereum address
-                if (!destinationAddress.startsWith("0x") || destinationAddress.length !== 42) {
-                  throw new Error("Invalid Ethereum address format. Must start with 0x and be 42 characters long.");
+                if (
+                  !destinationAddress.startsWith("0x") ||
+                  destinationAddress.length !== 42
+                ) {
+                  throw new Error(
+                    "Invalid Ethereum address format. Must start with 0x and be 42 characters long."
+                  );
                 }
               } else if (toChain !== "solana" && !destinationAddress) {
-                throw new Error(`${toChain} wallet address is required for cross-chain swap`);
+                throw new Error(
+                  `${toChain} wallet address is required for cross-chain swap`
+                );
               }
 
               const swapResult = await mayanService.swap(
@@ -278,7 +305,7 @@ export default function CrossChainSwapPage() {
               );
 
               const explorerUrl = `https://solscan.io/tx/${swapResult.signature}`;
-              
+
               alert(
                 `Cross-chain swap initiated!\n\nTransaction: ${swapResult.signature}\n\nFrom: ${amount} ${inputToken.symbol} on ${fromChain}\nTo: ~${quote.outputAmount} ${outputToken.symbol} on ${toChain}\n\nView: ${explorerUrl}`
               );
@@ -368,6 +395,8 @@ export default function CrossChainSwapPage() {
                     <span className="flex items-center gap-2">
                       {inputToken.symbol}
                       {inputToken.isVerified && " ✓"}
+                      {inputToken.riskLevel === 'high' && " ⚠️"}
+                      {inputToken.riskLevel === 'medium' && " ⚡"}
                     </span>
                     <Search className="h-4 w-4" />
                   </Button>
@@ -376,7 +405,16 @@ export default function CrossChainSwapPage() {
                       <TokenSearch
                         value={inputToken.symbol}
                         onChange={(token) => {
-                          setInputToken(token);
+                          setInputToken({
+                            mint: token.mint,
+                            symbol: token.symbol,
+                            decimals: token.decimals,
+                            name: token.name,
+                            isVerified: token.isVerified,
+                            riskLevel: token.riskLevel,
+                            securityScore: token.securityScore,
+                            isRugged: token.isRugged,
+                          });
                           setShowInputSearch(false);
                         }}
                         placeholder="Search input token..."
@@ -513,12 +551,11 @@ export default function CrossChainSwapPage() {
 
             <div className="p-3 bg-muted rounded-lg">
               <div className="text-lg font-medium">
-                {isLoading 
-                  ? "..." 
-                  : quote 
-                    ? formatOutputAmount(quote.outputAmount)
-                    : "0.0"
-                }
+                {isLoading
+                  ? "..."
+                  : quote
+                  ? formatOutputAmount(quote.outputAmount)
+                  : "0.0"}
               </div>
               <div className="text-sm text-muted-foreground">
                 {outputToken.symbol} on{" "}
@@ -553,17 +590,21 @@ export default function CrossChainSwapPage() {
           {toChain !== "solana" && (
             <div className="space-y-2">
               <Label className="text-sm font-medium">
-                Destination Wallet Address ({toChain === "ethereum" ? "Ethereum" : toChain})
+                Destination Wallet Address (
+                {toChain === "ethereum" ? "Ethereum" : toChain})
               </Label>
               <Input
                 type="text"
-                placeholder={`Enter your ${toChain === "ethereum" ? "Ethereum" : toChain} wallet address (0x...)`}
+                placeholder={`Enter your ${
+                  toChain === "ethereum" ? "Ethereum" : toChain
+                } wallet address (0x...)`}
                 value={destinationWallet}
                 onChange={(e) => setDestinationWallet(e.target.value)}
                 className="text-sm"
               />
               <p className="text-xs text-gray-500">
-                This is where you&apos;ll receive your {outputToken.symbol} tokens
+                This is where you&apos;ll receive your {outputToken.symbol}{" "}
+                tokens
               </p>
             </div>
           )}
@@ -578,7 +619,11 @@ export default function CrossChainSwapPage() {
           {/* Swap Button */}
           <Button
             onClick={handleSwap}
-            disabled={!quote || isLoading || (toChain !== "solana" && !destinationWallet)}
+            disabled={
+              !quote ||
+              isLoading ||
+              (toChain !== "solana" && !destinationWallet)
+            }
             className="w-full"
             size="lg"
           >

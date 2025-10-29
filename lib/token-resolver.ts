@@ -55,6 +55,7 @@ function sanitizeSymbol(input: string): string {
 /**
  * Search for tokens using Jupiter's comprehensive search API
  * Supports symbol, name, or mint address search
+ * Also enriches with RugCheck security data when available
  */
 export async function searchTokens(query: string, limit: number = 20): Promise<JupiterTokenInfo[]> {
   try {
@@ -72,6 +73,32 @@ export async function searchTokens(query: string, limit: number = 20): Promise<J
       console.warn('Invalid response format from Jupiter token search');
       return [];
     }
+
+    // Enrich tokens with security data from RugCheck (for top results)
+    const enrichedTokens = await Promise.all(
+      tokens.slice(0, Math.min(5, tokens.length)).map(async (token) => {
+        try {
+          const securityResponse = await fetch(`/api/security/analyze?mint=${token.id}`);
+          if (securityResponse.ok) {
+            const securityData = await securityResponse.json();
+            return {
+              ...token,
+              securityScore: securityData.riskScoreNormalized,
+              isRugged: securityData.isRugged,
+              riskLevel: securityData.riskScoreNormalized > 70 ? 'high' : 
+                        securityData.riskScoreNormalized > 40 ? 'medium' : 'low'
+            };
+          }
+        } catch (error) {
+          console.warn(`Failed to fetch security data for ${token.symbol}:`, error);
+        }
+        return token;
+      })
+    );
+
+    // Add remaining tokens without security data
+    const remainingTokens = tokens.slice(Math.min(5, tokens.length));
+    const allTokens = [...enrichedTokens, ...remainingTokens];
     
     // Sort by relevance: verified > high organic score > liquidity > market cap
     const sortedTokens = tokens.sort((a, b) => {

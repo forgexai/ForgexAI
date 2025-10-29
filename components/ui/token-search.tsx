@@ -23,6 +23,10 @@ export interface TokenInfo {
   organicScoreLabel?: "high" | "medium" | "low";
   holderCount?: number;
   fdv?: number;
+  // Security properties from RugCheck
+  securityScore?: number;
+  isRugged?: boolean;
+  riskLevel?: "high" | "medium" | "low";
 }
 
 interface TokenSearchProps {
