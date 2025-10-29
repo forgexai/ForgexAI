@@ -501,6 +501,98 @@ const handler = createMcpHandler(async (server) => {
       };
     }
   );
+
+  // Transaction analysis tool
+  server.registerTool(
+    "analyze_transaction",
+    {
+      title: "Analyze Transaction",
+      description:
+        "Analyze and explain what a Solana transaction hash represents, including transaction type, amounts, tokens involved, and program interactions.",
+      inputSchema: {
+        txHash: z
+          .string()
+          .describe("Solana transaction signature/hash to analyze"),
+      },
+      _meta: {
+        "openai/resultCanProduceWidget": false,
+      },
+    },
+    async ({ txHash }) => {
+      try {
+        const res = await fetch(
+          `${baseURL}/api/transaction/analyze?txHash=${encodeURIComponent(txHash)}`
+        );
+        const data = await res.json();
+        
+        if (!res.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error analyzing transaction: ${data?.error || "Failed to analyze transaction"}`,
+              },
+            ],
+          };
+        }
+
+        // Format the analysis response
+        let analysisText = `Transaction Analysis for ${txHash}:\n\n`;
+        analysisText += `• Status: ${data.status}\n`;
+        analysisText += `• Block Time: ${data.blockTime}\n`;
+        analysisText += `• Fee: ${data.fee} lamports\n`;
+        
+        if (data.transactionType) {
+          analysisText += `• Type: ${data.transactionType}\n`;
+        }
+        
+        if (data.programsInvolved && data.programsInvolved.length > 0) {
+          analysisText += `• Programs: ${data.programsInvolved.join(", ")}\n`;
+        }
+        
+        if (data.tokenTransfers && data.tokenTransfers.length > 0) {
+          analysisText += `\nToken Transfers:\n`;
+          data.tokenTransfers.forEach((transfer: any, index: number) => {
+            analysisText += `  ${index + 1}. ${transfer.amount} ${transfer.token} from ${transfer.from} to ${transfer.to}\n`;
+          });
+        }
+        
+        if (data.solTransfers && data.solTransfers.length > 0) {
+          analysisText += `\nSOL Transfers:\n`;
+          data.solTransfers.forEach((transfer: any, index: number) => {
+            analysisText += `  ${index + 1}. ${transfer.amount} SOL from ${transfer.from} to ${transfer.to}\n`;
+          });
+        }
+        
+        if (data.description) {
+          analysisText += `\nDescription: ${data.description}`;
+        }
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: analysisText,
+            },
+          ],
+          structuredContent: {
+            txHash,
+            analysis: data,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error analyzing transaction: ${error.message}`,
+            },
+          ],
+        };
+      }
+    }
+  );
 });
 
 export const GET = handler;
