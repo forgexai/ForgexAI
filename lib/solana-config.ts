@@ -27,7 +27,8 @@ export const LST_DECIMALS = {
 // Initialize Solana connection
 export function getSolanaConnection(): Connection {
   const rpcUrl =
-    process.env.SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
+    process.env.SOLANA_RPC_URL ||
+    "https://solana-mainnet.g.alchemy.com/v2/demo";
   return new Connection(rpcUrl, "confirmed");
 }
 

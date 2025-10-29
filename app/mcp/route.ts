@@ -1,7 +1,10 @@
 import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
 
-const baseURL = "https://forgex-ai-frontend.vercel.app";
+const baseURL =
+  process.env.NEXT_PUBLIC_FRONTEND_URL ||
+  "https://forgex-ai-frontend.vercel.app";
+
 const getAppsSdkCompatibleHtml = async (path: string) => {
   const result = await fetch(`${baseURL}${path}`);
   return await result.text();
@@ -1172,7 +1175,9 @@ const handler = createMcpHandler(async (server) => {
           .describe("Source blockchain (default: solana)"),
         toChain: z
           .string()
-          .describe("Destination blockchain (ethereum, bsc, polygon, avalanche, arbitrum)"),
+          .describe(
+            "Destination blockchain (ethereum, bsc, polygon, avalanche, arbitrum)"
+          ),
         inputToken: z
           .string()
           .describe("Input token symbol (e.g., SOL, USDC, BONK)"),
@@ -1181,7 +1186,9 @@ const handler = createMcpHandler(async (server) => {
           .describe("Output token symbol (e.g., USDC, ETH, USDT)"),
         amount: z
           .string()
-          .describe("Amount to swap in human-readable format (e.g., '1', '0.5', '1000')"),
+          .describe(
+            "Amount to swap in human-readable format (e.g., '1', '0.5', '1000')"
+          ),
         slippage: z
           .number()
           .optional()
@@ -1191,15 +1198,22 @@ const handler = createMcpHandler(async (server) => {
         "openai/resultCanProduceWidget": false,
       },
     },
-    async ({ fromChain, toChain, inputToken, outputToken, amount, slippage }) => {
+    async ({
+      fromChain,
+      toChain,
+      inputToken,
+      outputToken,
+      amount,
+      slippage,
+    }) => {
       try {
         const finalFromChain = fromChain || "solana";
         const finalSlippage = slippage || 0.5;
-        
+
         const response = await fetch(`${baseURL}/api/crosschain/quote`, {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             amount: parseFloat(amount),
@@ -1212,13 +1226,15 @@ const handler = createMcpHandler(async (server) => {
         });
 
         const data = await response.json();
-        
+
         if (!response.ok) {
           return {
             content: [
               {
                 type: "text",
-                text: `Error getting cross-chain quote: ${data?.error || "Failed to get quote"}`,
+                text: `Error getting cross-chain quote: ${
+                  data?.error || "Failed to get quote"
+                }`,
               },
             ],
           };
@@ -1228,7 +1244,7 @@ const handler = createMcpHandler(async (server) => {
 
         // Format the quote response
         let quoteText = `Cross-Chain Quote: ${amount} ${inputToken} (${finalFromChain}) → ${outputToken} (${toChain})\n\n`;
-        
+
         quoteText += `• Input: ${quote.inputAmount} ${quote.inputToken} on ${quote.inputChain}\n`;
         quoteText += `• Output: ${quote.outputAmount} ${quote.outputToken} on ${quote.outputChain}\n`;
         quoteText += `• Estimated Time: ${quote.estimatedTime}\n`;

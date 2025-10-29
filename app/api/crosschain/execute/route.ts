@@ -38,29 +38,20 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Use real Mayan Finance SDK to create swap instructions
-      const swapInstructions = await mayanService.createSwapInstructions(
-        quote._mayanQuote,
-        destinationWallet || userPublicKey,
-        null // No referrer for now
-      );
-
-      // Create a versioned transaction with the swap instructions
-      const { blockhash } = await connection.getLatestBlockhash();
-
-      // Use the proper Mayan SDK transaction building
-      const transaction = new VersionedTransaction({
-        instructions: swapInstructions.instructions,
-        recentBlockhash: blockhash,
-        feePayer: userPubkey,
-      } as any);
-
-      // Serialize the transaction for client signing
-      const serializedTransaction = transaction.serialize();
+      // For now, return the quote data and let frontend handle Mayan SDK directly
+      // This avoids server-side SDK issues with wallet interactions
+      const transactionData = {
+        quote: quote._mayanQuote,
+        userPublicKey,
+        destinationWallet: destinationWallet || userPublicKey,
+        fromChain,
+        toChain,
+        requiresClientSideExecution: true
+      };
 
       return NextResponse.json({
         success: true,
-        swapTransaction: Buffer.from(serializedTransaction).toString("base64"),
+        swapTransaction: transactionData,
         quote,
         message:
           "Mayan cross-chain swap transaction prepared using real Mayan Finance SDK.",
