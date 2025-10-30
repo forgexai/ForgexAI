@@ -357,7 +357,7 @@ This project is licensed under the MIT License - see the [LICENSE](./LICENSE) fi
 **Building the future of decentralized automation**
 
 - 🌐 **Website**: [https://forgexai.com](https://forgexai.com/)
-- 📧 **Contact**: team@forgexai.com
+- 📧 **Contact**: Anurag@forgexai.com
 - 🐦 **Twitter**: [@ForgexAI](https://x.com/ForgeX_ai)
 - ➤ **Telegram**: [Join our community](https://t.me/ForgeXai)
 
