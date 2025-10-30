@@ -1,9 +1,6 @@
+import { baseURL } from "@/lib/config";
 import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
-
-const baseURL =
-  process.env.NEXT_PUBLIC_FRONTEND_URL ||
-  "https://forgex-ai-frontend.vercel.app";
 
 const getAppsSdkCompatibleHtml = async (path: string) => {
   const result = await fetch(`${baseURL}${path}`);
@@ -1127,7 +1124,9 @@ const handler = createMcpHandler(async (server) => {
           .optional(),
         destinationWallet: z
           .string()
-          .describe("Destination wallet address for cross-chain swaps (e.g., Ethereum address)")
+          .describe(
+            "Destination wallet address for cross-chain swaps (e.g., Ethereum address)"
+          )
           .optional(),
         slippage: z
           .number()
@@ -1157,13 +1156,14 @@ const handler = createMcpHandler(async (server) => {
 
       // Build URL with parameters for auto-population
       const urlParams = new URLSearchParams();
-      if (finalFromChain) urlParams.set('fromChain', finalFromChain);
-      if (finalToChain) urlParams.set('toChain', finalToChain);
-      if (finalInputToken) urlParams.set('inputToken', finalInputToken);
-      if (finalOutputToken) urlParams.set('outputToken', finalOutputToken);
-      if (finalAmount) urlParams.set('amount', finalAmount);
-      if (finalDestinationWallet) urlParams.set('destinationWallet', finalDestinationWallet);
-      if (slippage) urlParams.set('slippage', slippage.toString());
+      if (finalFromChain) urlParams.set("fromChain", finalFromChain);
+      if (finalToChain) urlParams.set("toChain", finalToChain);
+      if (finalInputToken) urlParams.set("inputToken", finalInputToken);
+      if (finalOutputToken) urlParams.set("outputToken", finalOutputToken);
+      if (finalAmount) urlParams.set("amount", finalAmount);
+      if (finalDestinationWallet)
+        urlParams.set("destinationWallet", finalDestinationWallet);
+      if (slippage) urlParams.set("slippage", slippage.toString());
 
       const widgetUrl = `${baseURL}/crosschain-swap?${urlParams.toString()}`;
 
@@ -1171,7 +1171,11 @@ const handler = createMcpHandler(async (server) => {
         content: [
           {
             type: "text",
-            text: `✅ Cross-chain swap interface is ready — you can now bridge ${finalAmount} ${finalInputToken} → ${finalOutputToken} (${finalToChain}) ${finalDestinationWallet ? `to wallet ${finalDestinationWallet}` : ''} using the Mayan bridge. Confirm the transaction in your connected wallet to execute.`,
+            text: `✅ Cross-chain swap interface is ready — you can now bridge ${finalAmount} ${finalInputToken} → ${finalOutputToken} (${finalToChain}) ${
+              finalDestinationWallet
+                ? `to wallet ${finalDestinationWallet}`
+                : ""
+            } using the Mayan bridge. Confirm the transaction in your connected wallet to execute.`,
           },
         ],
         structuredContent: {

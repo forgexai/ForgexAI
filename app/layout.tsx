@@ -6,7 +6,7 @@ import { AuthInitializer } from "@/components/auth/AuthInitializer";
 import { GlobalAuthLoader } from "@/components/auth/GlobalAuthLoader";
 import { Toaster } from "@/components/ui/sonner";
 import "@/lib/suppress-privy-warnings";
-import { baseURL } from "@/baseUrl";
+import { baseURL } from "@/lib/config";
 
 const poppins = Poppins({
   variable: "--font-poppins",
