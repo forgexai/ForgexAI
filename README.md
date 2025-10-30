@@ -8,7 +8,12 @@
 
 ## 🎬 Live Demo
 
-📹 **[Watch Our Demo Video](./forgexai-fe/public/ForgexAI-Final%20Submission.mp4)**
+📹 **Live demo (playable)** — embedded below. GitHub serves raw files via raw.githubusercontent.com; we reference the raw URL so the video can be played directly in the README.
+
+<video controls width="720" poster="./forgexai-fe/public/logo.jpg">
+  <source src="https://raw.githubusercontent.com/forgexai/ForgexAI/main/public/ForgexAI-Final%20Submission.mp4" type="video/mp4">
+  Your browser does not support the video tag. You can also watch the demo directly: [Demo (blob link)](https://github.com/forgexai/ForgexAI/blob/main/public/ForgexAI-Final%20Submission.mp4) or open the file in the `forgexai-fe/public/` folder.
+</video>
 
 🎨 **[View Our Pitch Deck](https://www.canva.com/design/DAG3RxEiYHI/frqYycbg3JyE857rHwImFQ/edit?utm_content=DAG3RxEiYHI&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)**
 
@@ -358,7 +363,7 @@ This project is licensed under the MIT License - see the [LICENSE](./LICENSE) fi
 
 - 🌐 **Website**: [https://forgexai.com](https://forgexai.com/)
 - 📧 **Contact**: team@forgexai.com
-- 🐦 **Twitter**: [@ForgexAI](https://twitter.com/ForgexAI)
+- 🐦 **Twitter**: [@ForgexAI](https://x.com/ForgeX_ai)
 - 📱 **Discord**: [Join our community](https://discord.gg/forgexai)
 
 ---
