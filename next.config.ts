@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
-import { baseURL } from "./baseUrl";
+import { baseURL } from "./lib/config";
 
 const nextConfig: NextConfig = {
-  assetPrefix: baseURL,
+  assetPrefix: baseURL || "",
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
