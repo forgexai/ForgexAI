@@ -6,16 +6,11 @@
 
 ---
 
-## 🎬 Live Demo
+## 🌐 Live Links
 
-📹 **Live demo (playable)**
+📹 **[View Our Live Demo](https://www.youtube.com/watch?v=xCjJbFg8hq8)**
 
-<video autoPlay playsInline controls width="720" poster="/logo.jpg">
-
-  <source src="/demo.mp4" type="video/mp4">
-</video>
-
-🎨 **[View Our Pitch Deck](https://www.canva.com/design/DAG3RxEiYHI/frqYycbg3JyE857rHwImFQ/edit?utm_content=DAG3RxEiYHI&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)**
+🎨 **[View Our Pitch Deck](https://www.canva.com/design/DAG3RxEiYHI/XHuzcUBW-bNybPj27Xhhpw/view?utm_content=DAG3RxEiYHI&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h7fde651296)**
 
 📦 **[ForgeX SDK on NPM](https://www.npmjs.com/package/forgexai-sdk)**
 
