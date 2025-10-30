@@ -8,11 +8,11 @@
 
 ## 🎬 Live Demo
 
-📹 **Live demo (playable)** — embedded below. GitHub serves raw files via raw.githubusercontent.com; we reference the raw URL so the video can be played directly in the README.
+📹 **Live demo (playable)**
 
-<video controls width="720" poster="./forgexai-fe/public/logo.jpg">
-  <source src="https://raw.githubusercontent.com/forgexai/ForgexAI/main/public/ForgexAI-Final%20Submission.mp4" type="video/mp4">
-  Your browser does not support the video tag. You can also watch the demo directly: [Demo (blob link)](https://github.com/forgexai/ForgexAI/blob/main/public/ForgexAI-Final%20Submission.mp4) or open the file in the `forgexai-fe/public/` folder.
+<video autoPlay playsInline controls width="720" poster="/logo.jpg">
+
+  <source src="/demo.mp4" type="video/mp4">
 </video>
 
 🎨 **[View Our Pitch Deck](https://www.canva.com/design/DAG3RxEiYHI/frqYycbg3JyE857rHwImFQ/edit?utm_content=DAG3RxEiYHI&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)**
