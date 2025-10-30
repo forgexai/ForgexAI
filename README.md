@@ -326,7 +326,7 @@ await mcp.call("analyze_token_security", {
 
 ## 🤝 Contributing
 
-We welcome contributions from the Solana community! See our [Contributing Guide](./CONTRIBUTING.md) for details.
+We welcome contributions from the Solana community!.
 
 ### Development Setup
 
@@ -359,7 +359,7 @@ This project is licensed under the MIT License - see the [LICENSE](./LICENSE) fi
 - 🌐 **Website**: [https://forgexai.com](https://forgexai.com/)
 - 📧 **Contact**: team@forgexai.com
 - 🐦 **Twitter**: [@ForgexAI](https://x.com/ForgeX_ai)
-- 📱 **Discord**: [Join our community](https://discord.gg/forgexai)
+- ➤ **Telegram**: [Join our community](https://t.me/ForgeXai)
 
 ---
 
