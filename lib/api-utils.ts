@@ -224,8 +224,13 @@ class ForgexApiClient {
 
     if (this.config.authToken) {
       headers.Authorization = `Bearer ${this.config.authToken}`;
+      console.log("✅ Adding auth header to request:", endpoint);
     } else {
-      console.warn("No auth token found for API request to:", endpoint);
+      console.warn("⚠️ No auth token found for API request to:", endpoint);
+      console.warn("📊 API Client config:", {
+        hasToken: !!this.config.authToken,
+        baseUrl: this.config.baseUrl,
+      });
     }
 
     try {

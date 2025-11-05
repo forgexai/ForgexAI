@@ -4,6 +4,7 @@ import "./globals.css";
 import ClientProvider from "@/lib/providers/ClientProvider";
 import { AuthInitializer } from "@/components/auth/AuthInitializer";
 import { GlobalAuthLoader } from "@/components/auth/GlobalAuthLoader";
+import { AuthCleaner } from "@/components/auth/AuthCleaner";
 import { Toaster } from "@/components/ui/sonner";
 import "@/lib/suppress-privy-warnings";
 import { baseURL } from "@/lib/config";
@@ -29,6 +30,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${poppins.variable} font-sans antialiased`}>
         <ClientProvider>
+          <AuthCleaner />
           <AuthInitializer />
           <NextChatSDKBootstrap baseUrl={baseURL} />
           <GlobalAuthLoader />

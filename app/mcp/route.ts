@@ -1319,6 +1319,1220 @@ const handler = createMcpHandler(async (server) => {
       }
     }
   );
+
+  // 1. NFT Operations Tools
+  server.registerTool(
+    "get_nft_collections",
+    {
+      title: "NFT Collections",
+      description:
+        "Search NFT collections by floor price, volume, and other metrics",
+      inputSchema: {
+        query: z
+          .string()
+          .optional()
+          .describe("Collection name or search query"),
+        sortBy: z
+          .enum(["floor_price", "volume_24h", "market_cap"])
+          .optional()
+          .describe("Sort criteria"),
+        limit: z
+          .number()
+          .optional()
+          .describe("Number of results (default: 20)"),
+      },
+      _meta: { "openai/resultCanProduceWidget": false },
+    },
+    async ({ query, sortBy = "floor_price", limit = 20 }) => {
+      try {
+        const res = await fetch(
+          `${baseURL}/api/nft/collections?query=${encodeURIComponent(
+            query || ""
+          )}&sortBy=${sortBy}&limit=${limit}`
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error: ${data?.error || "Failed to fetch collections"}`,
+              },
+            ],
+          };
+        }
+
+        const resultText =
+          `Found ${data.collections.length} NFT collections:\n` +
+          data.collections
+            .map(
+              (c: any) =>
+                `• ${c.name}: Floor ${c.floorPrice} SOL, Volume ${c.volume24h} SOL`
+            )
+            .join("\n");
+
+        return {
+          content: [{ type: "text", text: resultText }],
+          structuredContent: {
+            query,
+            sortBy,
+            collections: data.collections,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error fetching NFT collections: ${error.message}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  server.registerTool(
+    "get_nft_metadata",
+    {
+      title: "NFT Metadata",
+      description: "Get detailed NFT metadata from mint address",
+      inputSchema: {
+        mintAddress: z.string().describe("NFT mint address"),
+      },
+      _meta: { "openai/resultCanProduceWidget": false },
+    },
+    async ({ mintAddress }) => {
+      try {
+        const res = await fetch(
+          `${baseURL}/api/nft/metadata?mint=${encodeURIComponent(mintAddress)}`
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error: ${data?.error || "Failed to fetch NFT metadata"}`,
+              },
+            ],
+          };
+        }
+
+        const resultText = `NFT: ${data.name}\nCollection: ${data.collection}\nDescription: ${data.description}`;
+
+        return {
+          content: [{ type: "text", text: resultText }],
+          structuredContent: {
+            mintAddress,
+            metadata: data,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error fetching NFT metadata: ${error.message}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  server.registerTool(
+    "list_wallet_nfts",
+    {
+      title: "Wallet NFTs",
+      description: "Show all NFTs owned by a wallet address",
+      inputSchema: {
+        walletAddress: z.string().describe("Wallet address or domain"),
+        limit: z
+          .number()
+          .optional()
+          .describe("Number of NFTs to return (default: 50)"),
+      },
+      _meta: { "openai/resultCanProduceWidget": false },
+    },
+    async ({ walletAddress, limit = 50 }) => {
+      try {
+        const res = await fetch(
+          `${baseURL}/api/nft/wallet?address=${encodeURIComponent(
+            walletAddress
+          )}&limit=${limit}`
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error: ${data?.error || "Failed to fetch wallet NFTs"}`,
+              },
+            ],
+          };
+        }
+
+        const resultText =
+          `Found ${data.nfts.length} NFTs in wallet:\n` +
+          data.nfts
+            .map(
+              (nft: any) =>
+                `• ${nft.name} (${nft.collection}) - Floor: ${nft.floorPrice} SOL`
+            )
+            .join("\n");
+
+        return {
+          content: [{ type: "text", text: resultText }],
+          structuredContent: {
+            walletAddress,
+            nfts: data.nfts,
+            count: data.nfts.length,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error fetching wallet NFTs: ${error.message}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  server.registerTool(
+    "get_nft_floor_price",
+    {
+      title: "NFT Floor Price",
+      description: "Get collection floor price from Magic Eden/Tensor",
+      inputSchema: {
+        collectionSymbol: z
+          .string()
+          .describe("Collection symbol or mint address"),
+        marketplace: z
+          .enum(["magic_eden", "tensor", "all"])
+          .optional()
+          .describe("Marketplace to check"),
+      },
+      _meta: { "openai/resultCanProduceWidget": false },
+    },
+    async ({ collectionSymbol, marketplace = "all" }) => {
+      try {
+        const res = await fetch(
+          `${baseURL}/api/nft/floor-price?collection=${encodeURIComponent(
+            collectionSymbol
+          )}&marketplace=${marketplace}`
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error: ${data?.error || "Failed to fetch floor price"}`,
+              },
+            ],
+          };
+        }
+
+        const resultText =
+          `Floor prices for ${collectionSymbol}:\n` +
+          `• Magic Eden: ${data.magicEden?.floorPrice || "N/A"} SOL\n` +
+          `• Tensor: ${data.tensor?.floorPrice || "N/A"} SOL`;
+
+        return {
+          content: [{ type: "text", text: resultText }],
+          structuredContent: {
+            collectionSymbol,
+            marketplace,
+            floorData: data,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error fetching floor price: ${error.message}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // 2. DeFi Analytics & Portfolio Tracking Tools
+  server.registerTool(
+    "get_portfolio_value",
+    {
+      title: "Portfolio Value",
+      description: "Get total portfolio value in USD across all protocols",
+      inputSchema: {
+        walletAddress: z.string().describe("Wallet address to analyze"),
+        includeNFTs: z
+          .boolean()
+          .optional()
+          .describe("Include NFT valuations (default: true)"),
+      },
+      _meta: { "openai/resultCanProduceWidget": false },
+    },
+    async ({ walletAddress, includeNFTs = true }) => {
+      try {
+        const res = await fetch(
+          `${baseURL}/api/portfolio/value?address=${encodeURIComponent(
+            walletAddress
+          )}&includeNFTs=${includeNFTs}`
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error: ${
+                  data?.error || "Failed to fetch portfolio value"
+                }`,
+              },
+            ],
+          };
+        }
+
+        const resultText =
+          `Portfolio Value for ${walletAddress}:\n` +
+          `• SOL: ${data.sol.toFixed(4)} SOL ($${(data.sol * 180).toFixed(
+            2
+          )})\n` +
+          `• Tokens: $${data.tokens.toFixed(2)}\n` +
+          (includeNFTs ? `• NFTs: $${data.nfts.toFixed(2)}\n` : "") +
+          `• DeFi Positions: $${data.defi.toFixed(2)}\n` +
+          `• Total: $${data.total.toFixed(2)}`;
+
+        return {
+          content: [{ type: "text", text: resultText }],
+          structuredContent: {
+            walletAddress,
+            totalValue: data,
+            includeNFTs,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error fetching portfolio value: ${error.message}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  server.registerTool(
+    "track_portfolio_pnl",
+    {
+      title: "Portfolio P&L",
+      description: "Track profit/loss over time for a wallet",
+      inputSchema: {
+        walletAddress: z.string().describe("Wallet address to track"),
+        timeframe: z
+          .enum(["24h", "7d", "30d", "90d"])
+          .optional()
+          .describe("Time period"),
+      },
+      _meta: { "openai/resultCanProduceWidget": false },
+    },
+    async ({ walletAddress, timeframe = "24h" }) => {
+      try {
+        const res = await fetch(
+          `${baseURL}/api/portfolio/pnl?address=${encodeURIComponent(
+            walletAddress
+          )}&timeframe=${timeframe}`
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error: ${data?.error || "Failed to fetch P&L data"}`,
+              },
+            ],
+          };
+        }
+
+        const resultText =
+          `P&L Tracking for ${walletAddress} (${timeframe}):\n` +
+          `• Total P&L: ${data.totalPnl > 0 ? "+" : ""}$${data.totalPnl.toFixed(
+            2
+          )} (${data.pnlPercentage > 0 ? "+" : ""}${data.pnlPercentage.toFixed(
+            2
+          )}%)\n` +
+          `• Best Trade: ${data.bestTrade.token} +$${data.bestTrade.pnl.toFixed(
+            2
+          )}\n` +
+          `• Worst Trade: ${
+            data.worstTrade.token
+          } $${data.worstTrade.pnl.toFixed(2)}\n` +
+          `• Total Trades: ${data.trades.length}`;
+
+        return {
+          content: [{ type: "text", text: resultText }],
+          structuredContent: {
+            walletAddress,
+            timeframe,
+            pnlData: data,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            { type: "text", text: `Error fetching P&L data: ${error.message}` },
+          ],
+        };
+      }
+    }
+  );
+
+  server.registerTool(
+    "get_token_holdings",
+    {
+      title: "Token Holdings",
+      description: "Get all SPL tokens held by a wallet with values",
+      inputSchema: {
+        walletAddress: z.string().describe("Wallet address"),
+        minValue: z
+          .number()
+          .optional()
+          .describe("Minimum USD value to include (default: 0.01)"),
+      },
+      _meta: { "openai/resultCanProduceWidget": false },
+    },
+    async ({ walletAddress, minValue = 0.01 }) => {
+      try {
+        const res = await fetch(
+          `${baseURL}/api/portfolio/holdings?address=${encodeURIComponent(
+            walletAddress
+          )}&minValue=${minValue}`
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error: ${
+                  data?.error || "Failed to fetch token holdings"
+                }`,
+              },
+            ],
+          };
+        }
+
+        const resultText =
+          `Token Holdings for ${walletAddress}:\n` +
+          data.holdings
+            .map(
+              (token: any) =>
+                `• ${
+                  token.symbol
+                }: ${token.balance.toLocaleString()} ($${token.valueUsd.toFixed(
+                  2
+                )})`
+            )
+            .join("\n") +
+          `\n\nTotal Value: $${data.totalValue.toFixed(2)}`;
+
+        return {
+          content: [{ type: "text", text: resultText }],
+          structuredContent: {
+            walletAddress,
+            holdings: data.holdings,
+            totalValue: data.totalValue,
+            minValue,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error fetching token holdings: ${error.message}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  server.registerTool(
+    "get_defi_positions",
+    {
+      title: "DeFi Positions",
+      description:
+        "Get active DeFi positions across protocols (Raydium, Orca, etc.)",
+      inputSchema: {
+        walletAddress: z.string().describe("Wallet address"),
+        protocols: z
+          .array(z.string())
+          .optional()
+          .describe("Specific protocols to check"),
+      },
+      _meta: { "openai/resultCanProduceWidget": false },
+    },
+    async ({ walletAddress, protocols }) => {
+      try {
+        const queryParams = new URLSearchParams({ address: walletAddress });
+        if (protocols) queryParams.set("protocols", protocols.join(","));
+
+        const res = await fetch(
+          `${baseURL}/api/portfolio/defi-positions?${queryParams}`
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error: ${
+                  data?.error || "Failed to fetch DeFi positions"
+                }`,
+              },
+            ],
+          };
+        }
+
+        const resultText =
+          `DeFi Positions for ${walletAddress}:\n` +
+          `• Raydium LP: $${(data.raydium?.totalValue || 0).toFixed(2)}\n` +
+          `• Marinade Staking: $${(data.marinade?.totalValue || 0).toFixed(
+            2
+          )}\n` +
+          `• Kamino Lending: $${(data.kamino?.totalValue || 0).toFixed(2)}\n` +
+          `• Total Value: $${data.totalValue.toFixed(2)}`;
+
+        return {
+          content: [{ type: "text", text: resultText }],
+          structuredContent: {
+            walletAddress,
+            protocols,
+            positions: data,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error fetching DeFi positions: ${error.message}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // 3. Limit Orders Tools
+  server.registerTool(
+    "place_limit_order",
+    {
+      title: "Place Limit Order",
+      description: "Place limit order on Jupiter",
+      inputSchema: {
+        inputToken: z.string().describe("Input token symbol or mint"),
+        outputToken: z.string().describe("Output token symbol or mint"),
+        amount: z.string().describe("Amount to trade"),
+        price: z.string().describe("Limit price"),
+        orderType: z.enum(["buy", "sell"]).describe("Order type"),
+      },
+      _meta: {
+        "openai/resultCanProduceWidget": true,
+        "openai/widgetUrl": `${baseURL}/widgets/limit-orders`,
+        "openai/widgetDescription": "Manage and track your limit orders",
+        "openai/widgetPrefersBorder": true,
+      },
+    },
+    async ({ inputToken, outputToken, amount, price, orderType }) => {
+      try {
+        const res = await fetch(`${baseURL}/api/limit-orders/place`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            inputToken,
+            outputToken,
+            amount,
+            price,
+            orderType,
+          }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error: ${data?.error || "Failed to place limit order"}`,
+              },
+            ],
+          };
+        }
+
+        const resultText =
+          `Limit Order Placed:\n` +
+          `• Order ID: ${data.orderId}\n` +
+          `• Type: ${orderType.toUpperCase()} ${amount} ${inputToken} at ${price} ${outputToken}\n` +
+          `• Estimated Fill: ${data.estimatedFill}\n` +
+          `• Status: ${data.status}`;
+
+        return {
+          content: [{ type: "text", text: resultText }],
+          structuredContent: { ...data, timestamp: new Date().toISOString() },
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error placing limit order: ${error.message}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  server.registerTool(
+    "get_open_orders",
+    {
+      title: "Open Orders",
+      description: "View all open limit orders for a wallet",
+      inputSchema: {
+        walletAddress: z.string().describe("Wallet address"),
+      },
+      _meta: { "openai/resultCanProduceWidget": false },
+    },
+    async ({ walletAddress }) => {
+      try {
+        const res = await fetch(
+          `${baseURL}/api/limit-orders/open?address=${encodeURIComponent(
+            walletAddress
+          )}`
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error: ${data?.error || "Failed to fetch open orders"}`,
+              },
+            ],
+          };
+        }
+
+        const resultText =
+          `Open Orders for ${walletAddress}:\n` +
+          data.orders
+            .map(
+              (order: any) =>
+                `• ${order.orderType.toUpperCase()} ${order.amount} ${
+                  order.inputToken
+                } at ${order.price} ${order.outputToken} (${order.status})`
+            )
+            .join("\n") +
+          `\n\nTotal Orders: ${data.orders.length}`;
+
+        return {
+          content: [{ type: "text", text: resultText }],
+          structuredContent: {
+            walletAddress,
+            orders: data.orders,
+            count: data.orders.length,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error fetching open orders: ${error.message}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  server.registerTool(
+    "cancel_order",
+    {
+      title: "Cancel Order",
+      description: "Cancel a specific limit order",
+      inputSchema: {
+        orderId: z.string().describe("Order ID to cancel"),
+      },
+      _meta: { "openai/resultCanProduceWidget": false },
+    },
+    async ({ orderId }) => {
+      try {
+        const res = await fetch(`${baseURL}/api/limit-orders/cancel`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error: ${data?.error || "Failed to cancel order"}`,
+              },
+            ],
+          };
+        }
+
+        const resultText =
+          `Order Cancelled:\n` +
+          `• Order ID: ${orderId}\n` +
+          `• Status: ${data.status}\n` +
+          `• Cancelled At: ${new Date().toLocaleString()}`;
+
+        return {
+          content: [{ type: "text", text: resultText }],
+          structuredContent: {
+            orderId,
+            status: data.status,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            { type: "text", text: `Error cancelling order: ${error.message}` },
+          ],
+        };
+      }
+    }
+  );
+
+  // 4. Priority Fee Estimation Tools
+  server.registerTool(
+    "estimate_priority_fee",
+    {
+      title: "Priority Fee Estimation",
+      description: "Get optimal priority fee for transaction speed",
+      inputSchema: {
+        speed: z
+          .enum(["slow", "medium", "fast", "turbo"])
+          .optional()
+          .describe("Transaction speed preference"),
+        transactionType: z
+          .string()
+          .optional()
+          .describe("Type of transaction (swap, transfer, etc.)"),
+      },
+      _meta: { "openai/resultCanProduceWidget": false },
+    },
+    async ({ speed = "medium", transactionType }) => {
+      try {
+        const res = await fetch(
+          `${baseURL}/api/priority-fee/estimate?speed=${speed}&type=${encodeURIComponent(
+            transactionType || ""
+          )}`
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error: ${
+                  data?.error || "Failed to estimate priority fee"
+                }`,
+              },
+            ],
+          };
+        }
+
+        const resultText =
+          `Priority Fee Estimate (${speed}):\n` +
+          `• Fee: ${data.microLamports} microLamports (${data.solAmount.toFixed(
+            9
+          )} SOL)\n` +
+          `• Estimated Time: ${data.estimatedTime}\n` +
+          `• Current Slot: ${data.currentSlot}`;
+
+        return {
+          content: [{ type: "text", text: resultText }],
+          structuredContent: {
+            speed,
+            transactionType,
+            ...data,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error estimating priority fee: ${error.message}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  server.registerTool(
+    "get_network_congestion",
+    {
+      title: "Network Congestion",
+      description: "Get current Solana network congestion status",
+      inputSchema: {},
+      _meta: { "openai/resultCanProduceWidget": false },
+    },
+    async () => {
+      try {
+        const res = await fetch(`${baseURL}/api/network/congestion`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error: ${data?.error || "Failed to get network status"}`,
+              },
+            ],
+          };
+        }
+
+        const resultText =
+          `Solana Network Status:\n` +
+          `• Current Slot: ${data.currentSlot}\n` +
+          `• Average TPS: ${data.averageTps.toFixed(0)}\n` +
+          `• Congestion Level: ${data.congestionLevel.toUpperCase()}\n` +
+          `• Block Time: ${
+            data.blockTime
+              ? new Date(data.blockTime * 1000).toISOString()
+              : "Unknown"
+          }`;
+
+        return {
+          content: [{ type: "text", text: resultText }],
+          structuredContent: { ...data, timestamp: new Date().toISOString() },
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error getting network status: ${error.message}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // 5. Wallet Security Scanner Tools
+  server.registerTool(
+    "scan_wallet_security",
+    {
+      title: "Wallet Security Scanner",
+      description: "Comprehensive wallet security check for threats",
+      inputSchema: {
+        walletAddress: z.string().describe("Wallet address to scan"),
+      },
+      _meta: { "openai/resultCanProduceWidget": false },
+    },
+    async ({ walletAddress }) => {
+      try {
+        const res = await fetch(
+          `${baseURL}/api/security/scan-wallet?address=${encodeURIComponent(
+            walletAddress
+          )}`
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error: ${data?.error || "Failed to scan wallet"}`,
+              },
+            ],
+          };
+        }
+
+        const resultText =
+          `Security Scan for ${walletAddress}:\n` +
+          `• Risk Level: ${data.riskLevel.toUpperCase()}\n` +
+          `• Security Score: ${data.score}/100\n` +
+          `• Active Approvals: ${data.tokenApprovals.length}\n` +
+          `• Issues Found: ${data.issues.length}\n` +
+          `• Recommendations: ${data.recommendations.length}`;
+
+        return {
+          content: [{ type: "text", text: resultText }],
+          structuredContent: {
+            walletAddress,
+            ...data,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            { type: "text", text: `Error scanning wallet: ${error.message}` },
+          ],
+        };
+      }
+    }
+  );
+
+  server.registerTool(
+    "detect_malicious_approvals",
+    {
+      title: "Detect Malicious Approvals",
+      description: "Find dangerous token approvals and authorities",
+      inputSchema: {
+        walletAddress: z.string().describe("Wallet address to check"),
+      },
+      _meta: { "openai/resultCanProduceWidget": false },
+    },
+    async ({ walletAddress }) => {
+      try {
+        const res = await fetch(
+          `${baseURL}/api/security/approvals?address=${encodeURIComponent(
+            walletAddress
+          )}`
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error: ${data?.error || "Failed to check approvals"}`,
+              },
+            ],
+          };
+        }
+
+        const resultText =
+          `Token Approvals for ${walletAddress}:\n` +
+          data.approvals
+            .map(
+              (approval: any) =>
+                `• ${approval.token}: ${approval.spender} (${approval.risk} risk)`
+            )
+            .join("\n") +
+          `\n\nDangerous Approvals: ${data.dangerousCount}\nTotal Approvals: ${data.approvals.length}`;
+
+        return {
+          content: [{ type: "text", text: resultText }],
+          structuredContent: {
+            walletAddress,
+            ...data,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error checking approvals: ${error.message}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  server.registerTool(
+    "revoke_approvals",
+    {
+      title: "Revoke Token Approvals",
+      description: "Revoke dangerous token authorities",
+      inputSchema: {
+        walletAddress: z.string().describe("Wallet address"),
+        tokenAddress: z
+          .string()
+          .optional()
+          .describe("Token to revoke approval for (optional)"),
+      },
+      _meta: {
+        "openai/resultCanProduceWidget": true,
+        "openai/widgetUrl": `${baseURL}/widgets/revoke-approvals`,
+        "openai/widgetDescription": "Revoke dangerous token approvals",
+        "openai/widgetPrefersBorder": true,
+      },
+    },
+    async ({ walletAddress, tokenAddress }) => {
+      try {
+        const res = await fetch(`${baseURL}/api/security/revoke`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ walletAddress, tokenAddress }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error: ${data?.error || "Failed to revoke approvals"}`,
+              },
+            ],
+          };
+        }
+
+        const resultText = tokenAddress
+          ? `Revoked approval for ${tokenAddress}\nTransaction: ${data.signature}`
+          : `Revoked ${data.revokedCount} approvals\nTransactions: ${data.signatures.length}`;
+
+        return {
+          content: [{ type: "text", text: resultText }],
+          structuredContent: {
+            walletAddress,
+            tokenAddress,
+            ...data,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error revoking approvals: ${error.message}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // 6. Advanced RugCheck Tools
+  server.registerTool(
+    "get_token_social_scores",
+    {
+      title: "Token Social Scores",
+      description: "Get token social media scores and community metrics",
+      inputSchema: {
+        tokenAddress: z.string().describe("Token mint address"),
+      },
+      _meta: { "openai/resultCanProduceWidget": false },
+    },
+    async ({ tokenAddress }) => {
+      try {
+        const res = await fetch(
+          `${baseURL}/api/rugcheck/social-scores?token=${encodeURIComponent(
+            tokenAddress
+          )}`
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error: ${
+                  data?.error || "Failed to fetch social scores"
+                }`,
+              },
+            ],
+          };
+        }
+
+        const resultText =
+          `Social Scores for ${tokenAddress}:\n` +
+          `• Overall Score: ${data.overallScore}/100\n` +
+          `• Twitter: ${data.twitter.followers.toLocaleString()} followers (${
+            data.twitter.engagement
+          }/10 engagement)\n` +
+          `• Telegram: ${data.telegram.members.toLocaleString()} members\n` +
+          `• Discord: ${data.discord.members.toLocaleString()} members\n` +
+          `• Risk Level: ${data.riskLevel.toUpperCase()}`;
+
+        return {
+          content: [{ type: "text", text: resultText }],
+          structuredContent: {
+            tokenAddress,
+            ...data,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error fetching social scores: ${error.message}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  server.registerTool(
+    "check_liquidity_locks",
+    {
+      title: "Check Liquidity Locks",
+      description: "Check if token liquidity is locked",
+      inputSchema: {
+        tokenAddress: z.string().describe("Token mint address"),
+      },
+      _meta: { "openai/resultCanProduceWidget": false },
+    },
+    async ({ tokenAddress }) => {
+      try {
+        const res = await fetch(
+          `${baseURL}/api/rugcheck/liquidity-locks?token=${encodeURIComponent(
+            tokenAddress
+          )}`
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error: ${
+                  data?.error || "Failed to check liquidity locks"
+                }`,
+              },
+            ],
+          };
+        }
+
+        const resultText =
+          `Liquidity Lock Status for ${tokenAddress}:\n` +
+          `• Locked: ${data.isLocked ? "Yes" : "No"}\n` +
+          `• Lock Percentage: ${data.lockPercentage}%\n` +
+          `• Lock Duration: ${data.lockDuration}\n` +
+          `• Lock Expiry: ${new Date(data.lockExpiry).toLocaleDateString()}\n` +
+          `• Locked Amount: $${data.lockedAmount.toLocaleString()}\n` +
+          `• Provider: ${data.lockProvider}\n` +
+          `• Risk Level: ${data.riskLevel.toUpperCase()}`;
+
+        return {
+          content: [{ type: "text", text: resultText }],
+          structuredContent: {
+            tokenAddress,
+            ...data,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error checking liquidity locks: ${error.message}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  server.registerTool(
+    "analyze_holder_distribution",
+    {
+      title: "Analyze Holder Distribution",
+      description: "Analyze token holder distribution for concentration risk",
+      inputSchema: {
+        tokenAddress: z.string().describe("Token mint address"),
+      },
+      _meta: { "openai/resultCanProduceWidget": false },
+    },
+    async ({ tokenAddress }) => {
+      try {
+        const res = await fetch(
+          `${baseURL}/api/rugcheck/holder-distribution?token=${encodeURIComponent(
+            tokenAddress
+          )}`
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error: ${
+                  data?.error || "Failed to analyze holder distribution"
+                }`,
+              },
+            ],
+          };
+        }
+
+        const resultText =
+          `Holder Distribution for ${tokenAddress}:\n` +
+          `• Total Holders: ${data.totalHolders.toLocaleString()}\n` +
+          `• Top 10 Control: ${data.top10Percentage}%\n` +
+          `• Top 100 Control: ${data.top100Percentage}%\n` +
+          `• Concentration Risk: ${data.concentrationRisk.toUpperCase()}\n` +
+          `• Gini Coefficient: ${data.giniCoefficient}\n` +
+          `• Whales (${data.distribution.whales.threshold}): ${data.distribution.whales.count} (${data.distribution.whales.percentage}%)`;
+
+        return {
+          content: [{ type: "text", text: resultText }],
+          structuredContent: {
+            tokenAddress,
+            ...data,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error analyzing holder distribution: ${error.message}`,
+            },
+          ],
+        };
+      }
+    }
+  );
 });
 
 export const GET = handler;

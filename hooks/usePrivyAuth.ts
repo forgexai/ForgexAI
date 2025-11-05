@@ -7,17 +7,24 @@ import { useRouter } from "next/navigation";
 import { defaultApiClient } from "@/lib/api-utils";
 import { forgexAuthAtom, hasAttemptedAuthAtom } from "@/lib/state/atoms";
 
-let lastSIWSData: { message: string; signature: string; timestamp: number } | null = null;
+let lastSIWSData: {
+  message: string;
+  signature: string;
+  timestamp: number;
+} | null = null;
 
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   const originalFetch = window.fetch;
   window.fetch = async (...args) => {
     const [url, options] = args;
-    
-    if (typeof url === 'string' && url.includes('auth.privy.io/api/v1/siws/authenticate')) {
+
+    if (
+      typeof url === "string" &&
+      url.includes("auth.privy.io/api/v1/siws/authenticate")
+    ) {
       try {
         const body = options?.body ? JSON.parse(options.body as string) : null;
-        
+
         if (body?.message && body?.signature) {
           lastSIWSData = {
             message: body.message,
@@ -26,10 +33,10 @@ if (typeof window !== 'undefined') {
           };
         }
       } catch (e) {
-        console.error('[SIWS Interceptor] Failed to parse body:', e);
+        console.error("[SIWS Interceptor] Failed to parse body:", e);
       }
     }
-    
+
     return originalFetch(...args);
   };
 }
@@ -62,122 +69,48 @@ export function usePrivyAuth() {
 
     isAuthenticatingRef.current = true;
     setHasAttemptedAuth(true);
-    setForgexAuth(prev => ({ ...prev, isLoading: true }));
+    setForgexAuth((prev) => ({ ...prev, isLoading: true }));
 
     try {
-      const solanaAccount = user?.linkedAccounts?.find((account: any) => 
-        account.type === 'wallet' && account.chainType === 'solana'
-      );
+      console.log("🔐 Starting ForgexAI authentication...");
 
-      if (!solanaAccount) {
-        throw new Error('No Solana wallet found. Please connect a Solana wallet to use ForgexAI.');
-      }
+      // ALWAYS try Privy OAuth token first
+      console.log("📱 Using Privy OAuth token authentication");
+      const privyToken = await getAccessToken();
 
-      const walletAddress = (solanaAccount as any).address;
-      const walletClient = (solanaAccount as any).walletClientType;
+      if (privyToken) {
+        console.log("✅ Got Privy token:", privyToken.substring(0, 20) + "...");
+        // Use Privy token directly for backend authentication
+        defaultApiClient.setAuthToken(privyToken);
 
-      let wallet = null;
-      
-      // First try to find wallet in the wallets array
-      if (wallets && wallets.length > 0) {
-        wallet = wallets.find((w: any) => 
-          w.address?.toLowerCase() === walletAddress.toLowerCase()
-        );
-      }
-      
-      // If no wallet found in array, try to access Phantom directly
-      if (!wallet && typeof window !== 'undefined' && (window as any).phantom?.solana) {
-        const phantomWallet = (window as any).phantom.solana;
-        
-        if (phantomWallet.isConnected && phantomWallet.publicKey?.toString() === walletAddress) {
-          wallet = {
-            address: walletAddress,
-            signMessage: async (message: Uint8Array) => {
-              const { signature } = await phantomWallet.signMessage(message, 'utf8');
-              return signature;
-            }
-          } as any;
+        if (typeof window !== "undefined") {
+          localStorage.setItem("authToken", privyToken);
+          localStorage.setItem("authTokenType", "privy");
+          localStorage.setItem("authTokenExpiry", String(Date.now() + 3600000)); // 1 hour
         }
-      }
-      
-      // If still no wallet, try to create a minimal wallet object for signing
-      if (!wallet) {
-        if (typeof window !== 'undefined' && (window as any).phantom?.solana) {
-          const phantomWallet = (window as any).phantom.solana;
-          if (phantomWallet.isConnected) {
-            wallet = {
-              address: walletAddress,
-              signMessage: async (message: Uint8Array) => {
-                try {
-                  const { signature } = await phantomWallet.signMessage(message, 'utf8');
-                  return signature;
-                } catch (error) {
-                  console.error('Error signing with Phantom:', error);
-                  throw error;
-                }
-              }
-            } as any;
-          }
-        }
-      }
-      
-      if (!wallet) {
-        throw new Error('Solana wallet not ready for signing. Please ensure Phantom is connected.');
-      }
 
-      if (!lastSIWSData) {
-        setHasAttemptedAuth(false);
-        setForgexAuth(prev => ({ ...prev, isLoading: false }));
+        setForgexAuth({
+          isAuthenticated: true,
+          sessionToken: privyToken,
+          user: {
+            userId: user?.id || "",
+            walletAddress: user?.email?.address || user?.google?.email || "",
+          },
+          isLoading: false,
+        });
+
+        isAuthenticatingRef.current = false;
+        console.log("✅ Authentication complete, redirecting to /workflows");
+        router.push("/workflows");
         return;
       }
-      
-      const challengeResponse = await defaultApiClient.generateAuthChallenge(walletAddress);
-      
-      if (!challengeResponse.success || !challengeResponse.data) {
-        throw new Error('Failed to generate auth challenge');
-      }
- 
-      // Get the challenge message from the backend
-      const challengeMessage = challengeResponse.data.message;
-      const challengeTimestamp = challengeResponse.data.timestamp;
-      
-      // Use the SIWS signature and message (the ones that were actually signed)
-      const bs58 = await import('bs58');
-      const signatureBytes = Buffer.from(lastSIWSData.signature, 'base64');
-      const signatureString = bs58.default.encode(signatureBytes);
-      
-      const siwsMessage = lastSIWSData.message;
-      const siwsTimestamp = lastSIWSData.timestamp;
-      
-      const loginResponse = await defaultApiClient.loginWithWallet({
-        walletAddress,
-        signature: signatureString,
-        message: siwsMessage,
-        timestamp: siwsTimestamp,
-      });
 
-      if (!loginResponse.success || !loginResponse.data) {
-        throw new Error(loginResponse.error || 'Failed to login with wallet');
-      }
-
-
-      defaultApiClient.setAuthToken(loginResponse.data.sessionToken);
-
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('authToken', loginResponse.data.sessionToken);
-      }
-
-      setForgexAuth({
-        isAuthenticated: true,
-        sessionToken: loginResponse.data.sessionToken,
-        user: loginResponse.data.user,
-        isLoading: false,
-      });
-
-
-      router.push('/workflows');
-
+      // If Privy token fails, throw error
+      throw new Error(
+        "Failed to get Privy access token. Please try logging in again."
+      );
     } catch (error: any) {
+      console.error("❌ Authentication failed:", error);
       setForgexAuth({
         isAuthenticated: false,
         isLoading: false,
@@ -186,20 +119,39 @@ export function usePrivyAuth() {
     } finally {
       isAuthenticatingRef.current = false;
     }
-  }, [authenticated, wallets, hasAttemptedAuth, setForgexAuth, setHasAttemptedAuth]);
+  }, [
+    authenticated,
+    hasAttemptedAuth,
+    setForgexAuth,
+    setHasAttemptedAuth,
+    user,
+    getAccessToken,
+    router,
+  ]);
 
-  
   // Check for existing session token on mount
   useEffect(() => {
-    if (typeof window !== 'undefined' && !hasAttemptedAuth) {
-      const storedToken = localStorage.getItem('authToken');
-      
+    if (typeof window !== "undefined" && !hasAttemptedAuth) {
+      const storedToken = localStorage.getItem("authToken");
+      const tokenType = localStorage.getItem("authTokenType");
+      const tokenExpiry = localStorage.getItem("authTokenExpiry");
+
       if (storedToken) {
+        // Check if token is expired
+        if (tokenExpiry && Date.now() > parseInt(tokenExpiry)) {
+          console.warn("⏰ Stored token expired, clearing...");
+          localStorage.removeItem("authToken");
+          localStorage.removeItem("authTokenType");
+          localStorage.removeItem("authTokenExpiry");
+          return;
+        }
+
+        console.log("✅ Found stored token, type:", tokenType);
         // Set the token in the API client
         defaultApiClient.setAuthToken(storedToken);
-        
+
         // Set auth state as authenticated
-        setForgexAuth(prev => ({
+        setForgexAuth((prev) => ({
           ...prev,
           isAuthenticated: true,
           sessionToken: storedToken,
@@ -211,13 +163,24 @@ export function usePrivyAuth() {
   }, [hasAttemptedAuth, setForgexAuth, setHasAttemptedAuth]);
 
   useEffect(() => {
+    console.log("🔍 Auth Effect Triggered:", {
+      ready,
+      authenticated,
+      hasAttemptedAuth,
+      walletsCount: wallets?.length,
+    });
+
     if (ready && authenticated && !hasAttemptedAuth) {
+      console.log("🚀 Attempting to authenticate with ForgexAI...");
       if (wallets && wallets.length > 0) {
         authenticateWithForgex();
       } else {
         // Add a small delay to allow wallets to load
         const timeoutId = setTimeout(() => {
           if (!hasAttemptedAuth) {
+            console.log(
+              "⏰ Timeout reached, authenticating with or without wallets"
+            );
             if (wallets && wallets.length > 0) {
               authenticateWithForgex();
             } else {
@@ -225,20 +188,69 @@ export function usePrivyAuth() {
             }
           }
         }, 1000);
-        
+
         return () => clearTimeout(timeoutId);
       }
     }
-  }, [ready, authenticated, wallets?.length, hasAttemptedAuth, authenticateWithForgex]);
+  }, [ready, authenticated, wallets, hasAttemptedAuth, authenticateWithForgex]);
+
+  // Auto-refresh Privy token periodically
+  useEffect(() => {
+    if (!authenticated || !forgexAuth.isAuthenticated) return;
+
+    const tokenType =
+      typeof window !== "undefined"
+        ? localStorage.getItem("authTokenType")
+        : null;
+
+    // Only refresh Privy tokens
+    if (tokenType !== "privy") return;
+
+    const refreshInterval = setInterval(async () => {
+      try {
+        console.log("🔄 Refreshing Privy token...");
+        const newToken = await getAccessToken();
+
+        if (newToken) {
+          console.log("✅ Token refreshed successfully");
+          defaultApiClient.setAuthToken(newToken);
+
+          if (typeof window !== "undefined") {
+            localStorage.setItem("authToken", newToken);
+            localStorage.setItem(
+              "authTokenExpiry",
+              String(Date.now() + 3600000)
+            );
+          }
+
+          setForgexAuth((prev) => ({
+            ...prev,
+            sessionToken: newToken,
+          }));
+        }
+      } catch (error) {
+        console.error("❌ Failed to refresh token:", error);
+      }
+    }, 30 * 60 * 1000); // Refresh every 30 minutes
+
+    return () => clearInterval(refreshInterval);
+  }, [
+    authenticated,
+    forgexAuth.isAuthenticated,
+    getAccessToken,
+    setForgexAuth,
+  ]);
 
   const enhancedLogout = useCallback(async () => {
     try {
       await defaultApiClient.logout();
       defaultApiClient.clearAuth();
-      
+
       // Clear local storage
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('authToken');
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("authTokenType");
+        localStorage.removeItem("authTokenExpiry");
       }
 
       setForgexAuth({
@@ -247,12 +259,12 @@ export function usePrivyAuth() {
       });
       setHasAttemptedAuth(false);
       isAuthenticatingRef.current = false;
-    
+
       lastSIWSData = null;
 
       await logout();
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     }
   }, [logout, setForgexAuth, setHasAttemptedAuth]);
 
